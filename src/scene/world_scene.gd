@@ -328,14 +328,14 @@ func _build_plaza() -> void:
 	_plaza.add_child(kerb_disc)
 	var kerb_box := MeshInstance3D.new()
 	var kerb_court := BoxMesh.new()
-	kerb_court.size = Vector3(27.0, 0.1, 32.5)
+	kerb_court.size = Vector3((PLAZA_RADIUS + 0.5) * 2.0, 0.1, 32.5)
 	kerb_box.mesh = kerb_court
 	kerb_box.position = Vector3(0, -0.04, 16.25)
 	kerb_box.material_override = kerb_stone
 	_plaza.add_child(kerb_box)
 	var court := MeshInstance3D.new()
 	var court_shape := BoxMesh.new()
-	court_shape.size = Vector3(26.0, 0.1, 32.0)
+	court_shape.size = Vector3(PLAZA_RADIUS * 2.0, 0.1, 32.0)
 	court.mesh = court_shape
 	court.position = Vector3(0, -0.03, 16.0)
 	court.material_override = stone

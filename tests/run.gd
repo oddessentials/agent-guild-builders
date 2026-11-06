@@ -517,6 +517,15 @@ func _land() -> bool:
 	scene.update_things([doc.add_thing("grass", 1.0, 1.0, 0.0, 1.0)], [])
 	check(scene._nodes.get(WorldScene._key_of(other)) == far_node, "land: placing leaves other areas alone")
 	check(scene._by_cell[near_key].things.size() == 2, "land: placing adds to its own area")
+	var paved := 0.0
+	for child in scene._plaza.get_children():
+		if child.mesh is BoxMesh and is_equal_approx(child.position.y, -0.03):
+			paved = child.mesh.size.x / 2.0
+	for id in Yard.data().halls:
+		var hall: Dictionary = Yard.data().halls[id]
+		var half: float = Yard.data().hall.docker if id == "docker" else Yard.data().hall.half
+		if float(hall.z) >= 0.0:
+			check(absf(float(hall.x)) + half <= paved, "land: the " + id + " hall stands on the paving")
 	scene.free()
 	return true
 
