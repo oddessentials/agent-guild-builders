@@ -154,7 +154,7 @@ static func _frame(doc: WorldDoc, rng: Rng, tall: Array, tall_count: int) -> voi
 			x = cos(a) * r
 			z = sin(a) * r
 		else:
-			x = (1.0 if rng.next() < 0.5 else -1.0) * rng.range_f(13.8, 22.0)
+			x = (1.0 if rng.next() < 0.5 else -1.0) * rng.range_f(14.5, 22.0)
 			z = rng.range_f(-2.0, 38.0)
 		_try(doc, rng, kind, x, z, rng.range_f(0.9, 1.5))
 	var placed := 0
