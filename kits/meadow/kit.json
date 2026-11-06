@@ -1,0 +1,278 @@
+{
+ "id": "meadow",
+ "title": "Meadow",
+ "models": {
+  "tree_oak": {
+   "label": "Broadleaf tree",
+   "group": "trees",
+   "spacing": 9,
+   "height": 9,
+   "radius": 4.31,
+   "triangles": 519809,
+   "source": "island_tree_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 25881980
+  },
+  "tree_elm": {
+   "label": "Spreading tree",
+   "group": "trees",
+   "spacing": 9,
+   "height": 8,
+   "radius": 4.92,
+   "triangles": 322050,
+   "source": "island_tree_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 16403920
+  },
+  "tree_fir": {
+   "label": "Fir",
+   "group": "trees",
+   "spacing": 6,
+   "height": 16,
+   "radius": 2.73,
+   "triangles": 156076,
+   "source": "fir_tree_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 7901912
+  },
+  "tree_young": {
+   "label": "Young tree",
+   "group": "trees",
+   "spacing": 6,
+   "height": 6,
+   "radius": 2.82,
+   "triangles": 495533,
+   "source": "tree_small_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 33783252
+  },
+  "shrub_round": {
+   "label": "Round shrub",
+   "group": "plants",
+   "spacing": 3,
+   "height": 1.4,
+   "radius": 0.43,
+   "triangles": 2276,
+   "source": "shrub_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 376456
+  },
+  "shrub_low": {
+   "label": "Low shrub",
+   "group": "plants",
+   "spacing": 2.5,
+   "height": 1.1,
+   "radius": 0.47,
+   "triangles": 4670,
+   "source": "shrub_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 345716
+  },
+  "shrub_wild": {
+   "label": "Wild shrub",
+   "group": "plants",
+   "spacing": 2.5,
+   "height": 1.0,
+   "radius": 0.35,
+   "triangles": 1862,
+   "source": "shrub_04",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 227484
+  },
+  "fern": {
+   "label": "Fern",
+   "group": "plants",
+   "spacing": 1.5,
+   "height": 0.7,
+   "radius": 0.75,
+   "triangles": 784,
+   "source": "fern_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 230784
+  },
+  "grass": {
+   "label": "Long grass",
+   "group": "plants",
+   "spacing": 0.8,
+   "height": 0.5,
+   "radius": 0.25,
+   "triangles": 4638,
+   "source": "grass_medium_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 980824
+  },
+  "dandelion": {
+   "label": "Dandelions",
+   "group": "plants",
+   "spacing": 1.2,
+   "height": 0.25,
+   "radius": 0.2,
+   "triangles": 1933,
+   "source": "dandelion_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 380576
+  },
+  "celandine": {
+   "label": "Celandines",
+   "group": "plants",
+   "spacing": 1.0,
+   "height": 0.2,
+   "radius": 0.15,
+   "triangles": 828,
+   "source": "celandine_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 338964
+  },
+  "boulder": {
+   "label": "Boulder",
+   "group": "rocks",
+   "spacing": 6,
+   "height": 1.6,
+   "radius": 1.46,
+   "triangles": 16530,
+   "source": "boulder_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1173640
+  },
+  "stone": {
+   "label": "Stone",
+   "group": "rocks",
+   "spacing": 2,
+   "height": 0.35,
+   "radius": 0.36,
+   "triangles": 13380,
+   "source": "stone_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 906532
+  },
+  "stump": {
+   "label": "Tree stump",
+   "group": "rocks",
+   "spacing": 6,
+   "height": 0.6,
+   "radius": 0.83,
+   "triangles": 41046,
+   "source": "tree_stump_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1711840
+  },
+  "trunk": {
+   "label": "Fallen trunk",
+   "group": "rocks",
+   "spacing": 10,
+   "height": 0.7,
+   "radius": 3.68,
+   "triangles": 101802,
+   "source": "dead_tree_trunk",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 2858804
+  },
+  "lantern": {
+   "label": "Lantern",
+   "group": "lights",
+   "spacing": 8,
+   "height": 0.5,
+   "radius": 0.1,
+   "triangles": 30830,
+   "source": "Lantern_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1186704,
+   "light": {
+    "watts": 60.0,
+    "color": [
+     1.0,
+     0.6,
+     0.3
+    ],
+    "height": 0.3
+   }
+  },
+  "barrel": {
+   "label": "Barrel",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.9,
+   "radius": 0.29,
+   "triangles": 2682,
+   "source": "Barrel_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 557088
+  },
+  "table": {
+   "label": "Table",
+   "group": "props",
+   "spacing": 3,
+   "height": 0.75,
+   "radius": 1.23,
+   "triangles": 952,
+   "source": "WoodenTable_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 335988
+  },
+  "bench": {
+   "label": "Bench",
+   "group": "props",
+   "spacing": 3,
+   "height": 0.9,
+   "radius": 0.59,
+   "triangles": 630,
+   "source": "painted_wooden_bench",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 378988
+  }
+ },
+ "grounds": {
+  "grass": {
+   "label": "Meadow grass",
+   "source": "agent-guild concept-art/guild-yard/env/textures/meadow.jpg",
+   "licence": "AGPL-3.0-only (Agent Guild)",
+   "note": "Generated locally for the shipped Yard worlds; see ART.md in agent-guild."
+  },
+  "dirt": {
+   "label": "Forest floor",
+   "source": "forest_ground_04",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "rock": {
+   "label": "Rocky ground",
+   "source": "rocky_trail",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "gravel": {
+   "label": "Gravel",
+   "source": "gravel_floor",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "cobble": {
+   "label": "Cobbles",
+   "source": "cobblestone_floor_04",
+   "licence": "CC0-1.0 (Poly Haven)"
+  }
+ },
+ "skies": {
+  "day": {
+   "label": "Clear day",
+   "strength": 0.9,
+   "source": "kloofendal_48d_partly_cloudy_puresky",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "overcast": {
+   "label": "Misty morning",
+   "strength": 0.9,
+   "source": "kloofendal_misty_morning_puresky",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "dusk": {
+   "label": "Warm dusk",
+   "strength": 0.5,
+   "source": "qwantani_dusk_2_puresky",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "moon": {
+   "label": "Moonrise",
+   "strength": 0.3,
+   "source": "qwantani_moonrise_puresky",
+   "licence": "CC0-1.0 (Poly Haven)"
+  }
+ }
+}

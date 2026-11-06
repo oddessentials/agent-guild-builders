@@ -1,0 +1,12 @@
+.godot/
+/build/
+/.cache/
+/kits/*/models/
+/kits/*/textures/
+__pycache__/
+*.tmp
+/kits/halls/
+/kits/*/skies/
+/.godot-bin/
+/.agent-guild/
+/.smoke/

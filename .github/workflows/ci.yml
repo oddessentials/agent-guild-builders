@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GODOT_VERSION: 4.7.2
+  AGENT_GUILD_COMMIT: a33d038c21011e712b48c34e5e9c6a5f243e12cd
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      AGENT_GUILD_CHECKOUT: ${{ github.workspace }}/.agent-guild
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: oddessentials/agent-guild
+          ref: ${{ env.AGENT_GUILD_COMMIT }}
+          path: .agent-guild
+          sparse-checkout: web/yard/assets/gnomeland
+      - name: Find Godot's folders
+        run: |
+          Add-Content $env:GITHUB_ENV "TEMPLATES=$env:APPDATA\Godot\export_templates"
+          Add-Content $env:GITHUB_ENV "GODOT=$PWD\.godot-bin\Godot_v$env:GODOT_VERSION-stable_win64_console.exe"
+      - uses: actions/cache@v4
+        id: godot
+        with:
+          path: |
+            .godot-bin
+            ${{ env.TEMPLATES }}
+          key: godot-${{ env.GODOT_VERSION }}-windows
+      - name: Install Godot
+        if: steps.godot.outputs.cache-hit != 'true'
+        run: |
+          $base = "https://github.com/godotengine/godot/releases/download/$env:GODOT_VERSION-stable"
+          New-Item -ItemType Directory -Force .godot-bin | Out-Null
+          Invoke-WebRequest "$base/Godot_v$env:GODOT_VERSION-stable_win64.exe.zip" -OutFile editor.zip
+          Expand-Archive editor.zip .godot-bin
+          Remove-Item editor.zip
+          Invoke-WebRequest "$base/Godot_v$env:GODOT_VERSION-stable_export_templates.tpz" -OutFile templates.zip
+          Expand-Archive templates.zip templates-out
+          $dest = "$env:TEMPLATES\$env:GODOT_VERSION.stable"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Move-Item templates-out/templates/* $dest
+          Remove-Item -Recurse templates-out, templates.zip
+      - uses: actions/cache@v4
+        with:
+          path: build/kit-*.tar.gz
+          key: kit-${{ hashFiles('kits/kit-lock.json') }}
+      - name: Fetch the kit
+        run: python tools/fetch_kit.py
+      - name: Import
+        run: |
+          & $env:GODOT --headless --path . --editor --import --quit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test
+        run: |
+          foreach ($suite in 'run', 'hardening', 'clearance_hardening', 'package_hardening') {
+            & $env:GODOT --headless --path . --script "res://tests/$suite.gd"
+            if ($LASTEXITCODE -ne 0) { throw "$suite failed" }
+          }
+      - name: File lock checks
+        run: ./tests/file_locks.ps1 -Godot $env:GODOT
+      - name: Package
+        run: ./tools/package_windows.ps1 -Godot $env:GODOT
+      - name: Run the packaged app
+        run: |
+          Expand-Archive build/AgentGuildBuilders-windows.zip .smoke
+          $world = Join-Path $PWD '.smoke/world'
+          $app = Start-Process .smoke/AgentGuildBuilders/AgentGuildBuilders.exe -ArgumentList '--headless', '--', '--new=meadow', '--title=Smoke', "--save=$world" -Wait -PassThru
+          if ($app.ExitCode -ne 0 -or -not (Test-Path "$world/world.json")) { throw 'The packaged app did not create a world.' }
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push'
+        with:
+          name: windows-zip
+          path: build/AgentGuildBuilders-windows.zip
+          compression-level: 0
+          retention-days: 1
+
+  release:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-zip
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" AgentGuildBuilders-windows.zip \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "Build ${{ github.run_number }}" --generate-notes --latest
