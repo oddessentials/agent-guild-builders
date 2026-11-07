@@ -13,6 +13,9 @@ const COMMIT_SECONDS := 0.35
 const ZONE_RES := 131
 const DEFAULT_ZOOM := 1.02
 const WIDE_ZOOM := 0.45
+const PLACED_RING_SECONDS := 1.4
+const PLACED_QUIET_PIXELS := 6.0
+const NO_POINTER := Vector2(-1, -1)
 const TOOL_KEYS := {KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
 var doc: WorldDoc
@@ -34,6 +37,13 @@ var _env: Environment
 var _brush: MeshInstance3D
 var _brush_material: StandardMaterial3D
 var _ghost: MeshInstance3D
+var _wide_ring: TorusMesh
+var _spot_ring: TorusMesh
+var _placed_ring: MeshInstance3D
+var _placed_ring_until := 0.0
+var _placed_pointer := NO_POINTER
+var _click_pointer := NO_POINTER
+var _placed_note := ""
 var _zones: Decal
 var _zone_masks := {}
 var _zone_wanted := -1.0
@@ -389,6 +399,11 @@ func _build_world() -> void:
 	ring.outer_radius = 1.0
 	ring.rings = 64
 	_brush.mesh = ring
+	_wide_ring = ring
+	_spot_ring = TorusMesh.new()
+	_spot_ring.inner_radius = 0.86
+	_spot_ring.outer_radius = 1.0
+	_spot_ring.rings = 64
 	_brush_material = StandardMaterial3D.new()
 	_brush_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_brush_material.albedo_color = ProTheme.color("accent")
@@ -402,6 +417,14 @@ func _build_world() -> void:
 	_ghost.transparency = 0.25
 	_ghost.visible = false
 	_viewport.add_child(_ghost)
+	_placed_ring = MeshInstance3D.new()
+	_placed_ring.mesh = _spot_ring
+	var placed_material: StandardMaterial3D = _brush_material.duplicate()
+	placed_material.albedo_color = ProTheme.color("ok")
+	_placed_ring.material_override = placed_material
+	_placed_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_placed_ring.visible = false
+	_viewport.add_child(_placed_ring)
 	_zones = Decal.new()
 	_zones.size = Vector3(WorldDoc.TERRAIN_SIZE, 400.0, WorldDoc.TERRAIN_SIZE)
 	_zones.modulate = Color(ProTheme.color("danger"), 0.28)
@@ -763,7 +786,7 @@ func _tallest_chosen() -> float:
 ## Whether anything chosen could stand tall enough to be refused for its height,
 ## at the largest size it may be placed.
 func _chosen_is_tall() -> bool:
-	return _tallest_chosen() * 1.2 > 1.0
+	return _tallest_chosen() * (Placing.SMALLEST if place_mode == "one" else Placing.LARGEST) > 1.0
 
 func _brush_slider() -> void:
 	_slider("Brush size", 1.0, 40.0, 0.5, brush_radius, "%.1f m", func(v):
@@ -860,7 +883,18 @@ func _ground_at(pos: Vector2) -> Variant:
 	for i in 800:
 		var p := o + d * t
 		if p.y <= doc.height_at(p.x, p.z):
-			return p
+			if i == 0:
+				return p
+			var above := t - dt
+			var below := t
+			for step in 12:
+				var middle := (above + below) / 2.0
+				var q := o + d * middle
+				if q.y <= doc.height_at(q.x, q.z):
+					below = middle
+				else:
+					above = middle
+			return o + d * below
 		t += dt
 	return null
 
@@ -943,6 +977,7 @@ func _update_cursor(pos: Vector2) -> void:
 		_on_stage_left()
 		return
 	_brush.visible = true
+	_brush.mesh = _spot_ring if tool == Tool.SCATTER and place_mode == "one" else _wide_ring
 	_brush.position = hit + Vector3.UP * 0.1
 	_redraw()
 	var colour := ProTheme.color("accent")
@@ -950,13 +985,21 @@ func _update_cursor(pos: Vector2) -> void:
 	match tool:
 		Tool.SCATTER:
 			if place_mode == "one":
-				var info: Dictionary = WorldScene.load_kit().get("models", {}).get(place_kind, {})
-				text = Placing.why_not(doc, place_kind, hit.x, hit.z, _next_scale)
-				_brush.scale = Vector3.ONE * maxf(float(info.get("spacing", 2.0)) * 0.6 * _next_scale, 0.6)
+				if _placed_pointer != NO_POINTER:
+					if pos.distance_to(_placed_pointer) <= PLACED_QUIET_PIXELS:
+						_on_stage_left()
+						return
+					_placed_pointer = NO_POINTER
+				text = _why_not_place(hit)
+				var fitted := Placing.fitted_scale(doc, place_kind, hit.x, hit.z, _next_scale)
+				_brush.scale = Vector3.ONE * _footprint(place_kind, fitted)
 				_ghost.visible = text == ""
 				if text == "":
 					_ghost.mesh = WorldScene.mesh_of(place_kind)
-					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": _next_turn, "scale": _next_scale})
+					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": _next_turn, "scale": fitted})
+					var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
+					if behind != "":
+						text = "Behind the %s: this may be hidden from view." % behind
 				else:
 					colour = ProTheme.color("danger")
 			else:
@@ -976,14 +1019,25 @@ func _update_cursor(pos: Vector2) -> void:
 	_brush_material.albedo_color = colour
 	_show_hint(text, pos)
 
+func _why_not_place(hit: Vector3) -> String:
+	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z)
+	if why == "" and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
+		return "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(place_kind)
+	return why
+
+func _footprint(kind: String, scale: float) -> float:
+	return maxf(float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("radius", 0.5)) * scale, 0.8)
+
 func _roll_next() -> void:
-	_next_scale = _rng.range_f(0.85, 1.2)
+	_next_scale = _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
 	_next_turn = _rng.range_f(0.0, TAU)
 	_update_zones()
 
 func _begin_stroke(pos: Vector2) -> void:
 	_finish_edits()
 	_dismiss_preview()
+	_click_pointer = pos
+	_placed_pointer = NO_POINTER
 	var hit = _ground_at(pos)
 	if hit == null:
 		return
@@ -1036,17 +1090,24 @@ func _apply_brush(hit: Vector3, first: bool) -> void:
 
 func _scatter_at(hit: Vector3, first: bool) -> void:
 	if place_mode == "one":
-		var why := Placing.why_not(doc, place_kind, hit.x, hit.z, _next_scale)
+		var why := _why_not_place(hit)
 		if why != "":
 			_set_status(why)
+			_update_cursor(_click_pointer)
 			return
-		_add_stroke_thing(place_kind, hit.x, hit.z, _next_turn, _next_scale)
+		var fitted := Placing.fitted_scale(doc, place_kind, hit.x, hit.z, _next_scale)
+		var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
+		_placed_note = " It's behind the %s, so it may be hidden from view." % behind if behind != "" else ""
+		_add_stroke_thing(place_kind, hit.x, hit.z, _next_turn, fitted)
+		_show_placed_ring(hit, fitted)
+		_placed_pointer = _click_pointer
+		_on_stage_left()
 		_roll_next()
 		return
 	var kinds := _chosen_kinds()
 	for attempt in (1 if first else 2):
 		var kind: String = kinds[int(_rng.next() * kinds.size()) % kinds.size()]
-		var s := _rng.range_f(0.85, 1.2)
+		var s := _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
 		var a := _rng.range_f(0.0, TAU)
 		var r: float = sqrt(_rng.next()) * brush_radius
 		var x := hit.x + cos(a) * r
@@ -1055,6 +1116,13 @@ func _scatter_at(hit: Vector3, first: bool) -> void:
 			_stroke_skipped += 1
 			continue
 		_add_stroke_thing(kind, x, z, _rng.range_f(0.0, TAU), s)
+
+func _show_placed_ring(hit: Vector3, scale: float) -> void:
+	_placed_ring.position = hit + Vector3.UP * 0.1
+	_placed_ring.scale = Vector3.ONE * _footprint(place_kind, scale)
+	_placed_ring.visible = true
+	_placed_ring_until = Time.get_ticks_msec() / 1000.0 + PLACED_RING_SECONDS
+	_redraw()
 
 func _add_stroke_thing(kind: String, x: float, z: float, turn: float, s: float) -> void:
 	var thing := doc.add_thing(kind, x, z, turn, s)
@@ -1151,7 +1219,8 @@ func _finish_stroke() -> void:
 		var label := "Place " + _thing_name(_stroke_added[0].kind) if _stroke_added.size() == 1 and place_mode == "one" else "Paint %d things" % _stroke_added.size()
 		history.things_edit(label, _stroke_added, [], true)
 		var skipped := " Some spots were skipped by the placement rules." if _stroke_skipped > 3 else ""
-		_set_status(label + "." + skipped)
+		_set_status(("Placed " + _thing_name(_stroke_added[0].kind) if label.begins_with("Place ") else label) + "." + skipped + _placed_note)
+		_placed_note = ""
 		_stroke_added = []
 	elif tool == Tool.SCATTER and place_mode == "paint" and _stroke_skipped > 0:
 		_set_status("Nothing fits here: too close to the Yard or to other things.")
@@ -1336,7 +1405,7 @@ func _update_zones() -> void:
 	if tool == Tool.LAND:
 		wanted = 0.0
 	elif tool == Tool.SCATTER and (_chosen_is_tall() or _raised_land):
-		wanted = ceilf(_tallest_chosen() * (_next_scale if place_mode == "one" else 1.2) * 10.0) / 10.0
+		wanted = ceilf(_tallest_chosen() * (Placing.SMALLEST if place_mode == "one" else Placing.LARGEST) * 10.0) / 10.0
 	_zone_wanted = wanted
 	_show_zone()
 
@@ -1401,6 +1470,9 @@ func _process(_delta: float) -> void:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
 	_check_zone_task()
+	if _placed_ring.visible and now >= _placed_ring_until:
+		_placed_ring.visible = false
+		_redraw()
 	if _redraw_frames > 0 and not _exporting:
 		_redraw_frames -= 1
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE

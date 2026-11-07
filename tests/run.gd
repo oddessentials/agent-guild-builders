@@ -295,6 +295,29 @@ func _editor() -> bool:
 	_click(view, plaza_hit, false)
 	check(doc.data.things.size() == 1, "editor: won't place on the plaza")
 	check(view._status.text != "", "editor: says why it refused")
+	check(view._hint.visible and view._hint_text.text == view._status.text, "editor: says why at the pointer without the mouse moving")
+	var aim := _open_ground(view) + Vector2(60, 40)
+	var aim_from: Vector3 = view._camera.project_ray_origin(aim)
+	var aim_along: Vector3 = view._camera.project_ray_normal(aim)
+	var flat_hit: Vector3 = aim_from + aim_along * (-aim_from.y / aim_along.y)
+	var aim_hit: Vector3 = view._ground_at(aim)
+	check(flat_hit.distance_to(aim_hit) < 0.01, "editor: a click lands on the ground under the pointer")
+	var placed_before: int = doc.data.things.size()
+	_click(view, aim, true)
+	_click(view, aim, false)
+	var placed: Dictionary = doc.data.things[-1]
+	check(doc.data.things.size() == placed_before + 1 and Vector2(placed.x, placed.z).distance_to(Vector2(flat_hit.x, flat_hit.z)) < 0.01, "editor: one thing lands exactly where clicked")
+	check(view._placed_ring.visible and not view._ghost.visible and not view._hint.visible, "editor: a placed thing is marked, with no refusal showing")
+	check(view._status.text.begins_with("Placed "), "editor: says it was placed")
+	_drag(view, aim + Vector2(2, 0))
+	check(not view._hint.visible, "editor: a small jitter after placing shows no refusal")
+	_click(view, aim, true)
+	_click(view, aim, false)
+	check(doc.data.things.size() == placed_before + 1 and view._hint.visible, "editor: clicking the same spot again is refused at the pointer")
+	view._placed_ring_until = 0.0
+	view._process(0.0)
+	check(not view._placed_ring.visible, "editor: the placed marker goes away")
+	view.history.undo()
 	view._select_tool(view.Tool.ERASE)
 	_click(view, spot, true)
 	_click(view, spot, false)
@@ -391,7 +414,10 @@ func _editor() -> bool:
 	view._select_tool(view.Tool.SCATTER)
 	check(view._zone_wanted < 0.0, "editor: low things shade nothing")
 	view._choose("tree_oak")
-	check(view._zone_wanted >= 9.0 * view._next_scale, "editor: tall things show clearance for their actual size")
+	var zone_shown: float = view._zone_wanted
+	check(zone_shown >= 9.0 * Placing.SMALLEST, "editor: tall things show clearance for their size")
+	view._roll_next()
+	check(view._zone_wanted == zone_shown, "editor: the clearance shown doesn't change from one click to the next")
 	view._select_tool(view.Tool.LAND)
 	check(view._zone_wanted == 0.0, "editor: shaping shows the ground that stays flat")
 	view._select_tool(view.Tool.LOOK)
@@ -542,6 +568,55 @@ func _placing() -> bool:
 	doc.add_thing("boulder", 120, -120, 0, 1.0)
 	var why := Placing.why_not(doc, "fern", 120, -120, 1.0)
 	check(why.contains("boulder"), "placing: a crowded spot names what's in the way, not nothing: " + why)
+	var lantern_doc := WorldDoc.create("guild", "T", 1)
+	lantern_doc.add_thing("grass", 120, -120, 0, 1.0)
+	check(Placing.why_not_one(lantern_doc, "lantern", 121, -120) == "", "placing: one chosen item may stand beside grass")
+	check(Placing.why_not(lantern_doc, "lantern", 121, -120, 1.0) != "", "placing: painting keeps its spacing")
+	check(Placing.why_not_one(lantern_doc, "grass", 120, -120).contains("long grass"), "placing: the same spot twice is refused")
+	check(Placing.why_not_one(lantern_doc, "tree_fir", 0, 0) != "", "placing: one chosen item still keeps off the plaza")
+	var fit_doc := Templates.create("meadow", "guild", "T", 7)
+	var fit_rng := Templates.Rng.new(5)
+	var same_answer := true
+	var in_range := true
+	fit_doc.data.things = []
+	var near_kinds := ["barrel", "shrub_wild", "shrub_round", "boulder", "tree_young", "tree_fir"]
+	for attempt in 200:
+		var fit_kind: String = near_kinds[attempt % near_kinds.size()]
+		var fit_x := fit_rng.range_f(-70.0, 70.0)
+		var fit_z := fit_rng.range_f(-70.0, 70.0)
+		var answer := Placing.why_not_one(fit_doc, fit_kind, fit_x, fit_z)
+		check(Placing.why_not_one(fit_doc, fit_kind, fit_x, fit_z) == answer, "placing: a spot's answer doesn't change on asking again")
+		if answer == "":
+			var fitted := Placing.fitted_scale(fit_doc, fit_kind, fit_x, fit_z, fit_rng.range_f(Placing.SMALLEST, Placing.LARGEST))
+			in_range = in_range and fitted >= Placing.SMALLEST and fitted <= Placing.LARGEST
+			var top := fit_doc.height_at(fit_x, fit_z) + float(models[fit_kind].height) * fitted
+			in_range = in_range and Clearance.refuse(fit_x, fit_z, top) == ""
+	check(in_range, "placing: every fitted size stays in range and keeps the Yard clear")
+	var fit_world := Templates.create("meadow", "guild", "T", 7)
+	var fit_world_ok := true
+	for attempt in 60:
+		var fit_kind: String = near_kinds[attempt % near_kinds.size()]
+		var fit_x := fit_rng.range_f(-70.0, 70.0)
+		var fit_z := fit_rng.range_f(-70.0, 70.0)
+		if Placing.why_not_one(fit_world, fit_kind, fit_x, fit_z) == "":
+			fit_world.add_thing(fit_kind, fit_x, fit_z, 0.0, Placing.fitted_scale(fit_world, fit_kind, fit_x, fit_z, Placing.LARGEST))
+	fit_world_ok = Clearance.check_world(fit_world).get("valid", false)
+	check(fit_world_ok, "placing: a world with single placements still passes the export check")
+	var wet := WorldDoc.create("guild", "T", 1)
+	wet.data.water_level = -0.5
+	var wet_i := 40
+	var wet_at := WorldDoc.cell_to_world(wet_i, wet_i)
+	wet.heights[wet_i * WorldDoc.TERRAIN_RES + wet_i] = -3.0
+	check(Placing.why_not_one(wet, "fern", wet_at.x, wet_at.y).contains("under the water"), "placing: refuses a spot under the water")
+	check(Placing.why_not(wet, "fern", wet_at.x, wet_at.y, 1.0).contains("under the water"), "placing: painting refuses it too")
+	var shade := WorldDoc.create("guild", "T", 1)
+	var shade_up := Clearance._ground_up()
+	shade.add_thing("tree_fir", 120, -120, 0, 1.0)
+	var behind_fir := Vector2(120, -120) + shade_up * 6.0
+	var before_fir := Vector2(120, -120) - shade_up * 6.0
+	check(Placing.hidden_behind(shade, "fern", behind_fir.x, behind_fir.y, 1.0) == "fir", "placing: knows when a tree would hide an item")
+	check(Placing.hidden_behind(shade, "fern", before_fir.x, before_fir.y, 1.0) == "", "placing: an item in front of a tree isn't hidden")
+	check(Placing.hidden_behind(shade, "tree_fir", behind_fir.x, behind_fir.y, 1.0) == "", "placing: a tree as tall isn't hidden")
 	var res := 65
 	var mask := Clearance.mask(16.0, res)
 	var agrees := true
