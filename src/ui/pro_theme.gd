@@ -138,7 +138,6 @@ static func _tick_box(fill: Color, edge: Color, tick: Color) -> ImageTexture:
 			img.fill_rect(Rect2i(7 + i, 9 - i, 2, 2), tick)
 	return ImageTexture.create_from_image(img)
 
-## A small picture of a kit item or template, if one has been made.
 static func brand(name: String, height: float) -> TextureRect:
 	var picture := TextureRect.new()
 	picture.texture = load("res://data/brand/%s.webp" % name)
@@ -148,6 +147,7 @@ static func brand(name: String, height: float) -> TextureRect:
 	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return picture
 
+## A small picture of a kit item or template, if one has been made.
 static func thumb(name: String) -> Texture2D:
 	if _thumbs.has(name):
 		return _thumbs[name]
@@ -182,6 +182,38 @@ static func tool_button(button: Button) -> void:
 	var on := box(Color(color("accent"), 0.12), Color(color("accent"), 0.45))
 	button.add_theme_stylebox_override("pressed", on)
 	button.add_theme_stylebox_override("hover_pressed", on)
+
+## Words as if rubber-stamped in red ink. It's free-standing: place and turn it
+## inside a plain Control.
+static func stamp(text: String, size := 30) -> Control:
+	var ink := ShaderMaterial.new()
+	ink.shader = load("res://src/ui/stamp.gdshader")
+	var red := color("danger")
+	var outer := PanelContainer.new()
+	outer.material = ink
+	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var outer_line := box(Color.TRANSPARENT, red, 5, 4, 4)
+	outer_line.set_border_width_all(4)
+	outer.add_theme_stylebox_override("panel", outer_line)
+	var inner := PanelContainer.new()
+	inner.use_parent_material = true
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_theme_stylebox_override("panel", box(Color.TRANSPARENT, red, 3, 12, 1))
+	outer.add_child(inner)
+	var words := Label.new()
+	words.text = text
+	words.use_parent_material = true
+	words.add_theme_font_size_override("font_size", size)
+	words.add_theme_color_override("font_color", red)
+	var heavy := SystemFont.new()
+	heavy.font_names = PackedStringArray(["Arial Black", "Segoe UI Black", "Segoe UI", "Roboto", "sans-serif"])
+	heavy.font_weight = 900
+	var spaced := FontVariation.new()
+	spaced.base_font = heavy
+	spaced.spacing_glyph = 5
+	words.add_theme_font_override("font", spaced)
+	inner.add_child(words)
+	return outer
 
 static func heading(text: String, size := 15) -> Label:
 	var l := Label.new()

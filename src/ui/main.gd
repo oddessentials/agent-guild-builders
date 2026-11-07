@@ -12,6 +12,8 @@ const HERO_WIDTH := 1440.0
 const HERO_HEIGHT := 330.0
 const HERO_MAX_HEIGHT := 480.0
 const HERO_CREW_STARTS := 0.51
+const STAMP_TURN := -8.0
+const STAMP_GAP := 22.0
 
 var _args := {}
 var _gui := false
@@ -177,7 +179,19 @@ func _hero() -> Control:
 	var eyebrow := ProTheme.heading("AGENT GUILD", 13)
 	eyebrow.add_theme_color_override("font_color", ProTheme.color("accent"))
 	words.add_child(eyebrow)
-	words.add_child(ProTheme.heading("Builders", 54))
+	var title := HBoxContainer.new()
+	title.add_theme_constant_override("separation", 0)
+	title.add_child(ProTheme.heading("Builders", 54))
+	var stamp_spot := Control.new()
+	stamp_spot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title.add_child(stamp_spot)
+	var stamp := ProTheme.stamp("BETA")
+	stamp.name = "BetaStamp"
+	stamp.rotation_degrees = STAMP_TURN
+	stamp_spot.add_child(stamp)
+	stamp.resized.connect(func(): stamp.pivot_offset = stamp.size / 2.0)
+	stamp_spot.resized.connect(func(): stamp.position = Vector2(STAMP_GAP, (stamp_spot.size.y - stamp.size.y) / 2.0))
+	words.add_child(title)
 	var line := ProTheme.note("Build an environment for your Agent Guild Yard.")
 	line.add_theme_font_size_override("font_size", 17)
 	line.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
