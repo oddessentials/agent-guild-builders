@@ -335,7 +335,7 @@ def main():
             kit['models'][key] = entry
     for key, (name, label) in GROUNDS.items():
         for m in ('diff', 'nor_gl', 'rough'):
-            if not (KIT / 'textures' / f'{key}_{m}.jpg').exists():
+            if (key, m) != ('grass', 'diff') and not (KIT / 'textures' / f'{key}_{m}.jpg').exists():
                 shutil.copyfile(SOURCE / name / f'{name}_{m}_2k.jpg', KIT / 'textures' / f'{key}_{m}.jpg')
         kit['grounds'][key] = {'label': label, 'source': name, 'licence': LICENCE}
     if not (KIT / 'textures' / 'grass_diff.jpg').exists():

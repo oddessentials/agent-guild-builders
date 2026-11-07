@@ -95,6 +95,17 @@ static func create(template: String, base: String, title: String, seed_value: in
 	_scatter(doc, rng, noise, ["stone", "boulder"], 80, 18.0, 140.0, 0.0, 1.0)
 	return doc
 
+## The last word on any land shape: flat where crews stand, easing out from there,
+## and never high enough to hide the Yard.
+static func _clear_the_yard(doc: WorldDoc) -> void:
+	var res := WorldDoc.TERRAIN_RES
+	var limits := Clearance.terrain_limits()
+	for j in res:
+		for i in res:
+			var p := WorldDoc.cell_to_world(i, j)
+			var o := j * res + i
+			doc.heights[o] = minf(doc.heights[o], limits[o]) * smoothstep(2.0, 24.0, Clearance.live_distance(p.x, p.y))
+
 static func _blank(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
 	_shape(doc, noise, 2.5, 6.0)
 	_paint(doc, noise, 1000.0, 0.62)
@@ -103,7 +114,6 @@ static func _blank(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
 static func _island(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
 	doc.data.water_level = -0.6
 	var res := WorldDoc.TERRAIN_RES
-	var limits := Clearance.terrain_limits()
 	var centre := Vector2(0.0, 10.0)
 	for j in res:
 		for i in res:
@@ -112,9 +122,10 @@ static func _island(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
 			var a := off.angle()
 			var coast := 66.0 + (noise.fbm(cos(a) * 1.7 + 4.0, sin(a) * 1.7 + 6.0) - 0.5) * 54.0
 			var d := off.length()
-			var bump := (noise.fbm(p.x * 0.03, p.y * 0.03) - 0.35) * 5.0 * smoothstep(2.0, 22.0, Clearance.live_distance(p.x, p.y))
+			var bump := (noise.fbm(p.x * 0.03, p.y * 0.03) - 0.35) * 5.0
 			var land := maxf(bump, float(doc.data.water_level) + 0.5)
-			doc.heights[j * res + i] = minf(lerpf(land, -7.0, smoothstep(coast - 12.0, coast + 14.0, d)), limits[j * res + i])
+			doc.heights[j * res + i] = lerpf(land, -7.0, smoothstep(coast - 12.0, coast + 14.0, d))
+	_clear_the_yard(doc)
 	_paint(doc, noise, 30.0, 0.62, 1.2)
 	_scatter(doc, rng, noise, ["tree_young", "tree_oak"], 18, 24.0, 62.0, 0.36, 1.0)
 	_scatter(doc, rng, noise, ["shrub_low", "shrub_wild", "shrub_round"], 60, 16.0, 70.0, 0.3, 1.0)
@@ -130,21 +141,20 @@ static func _canyon_reach(p: Vector2, noise: ValueNoise) -> float:
 static func _canyon(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
 	doc.data.water_level = -11.0
 	var res := WorldDoc.TERRAIN_RES
-	var limits := Clearance.terrain_limits()
 	var up := Clearance._ground_up()
 	const LEDGE := 7.0
 	for j in res:
 		for i in res:
 			var p := WorldDoc.cell_to_world(i, j)
-			var near := smoothstep(2.0, 24.0, Clearance.live_distance(p.x, p.y))
 			var reach := _canyon_reach(p, noise)
 			var cliff := 20.0 * smoothstep(0.0, 12.0, reach) + 34.0 * smoothstep(12.0, 52.0, reach)
 			var layer := floorf(cliff / LEDGE)
 			var h := (layer + smoothstep(0.0, 0.3, cliff / LEDGE - layer)) * LEDGE
 			var broken := (noise.fbm(p.x * 0.06 + 3.0, p.y * 0.06) - 0.5) * 2.0
-			h = (h + broken * lerpf(3.0, 12.0, smoothstep(0.0, 18.0, reach))) * near
+			h += broken * lerpf(3.0, 12.0, smoothstep(0.0, 18.0, reach))
 			var gorge := absf(p.dot(up) + 62.0 + (noise.fbm(p.x * 0.015 + 9.0, p.y * 0.015) - 0.5) * 16.0)
-			doc.heights[j * res + i] = minf(lerpf(h, -14.0, 1.0 - smoothstep(9.0, 22.0, gorge)), limits[j * res + i])
+			doc.heights[j * res + i] = lerpf(h, -14.0, 1.0 - smoothstep(9.0, 22.0, gorge))
+	_clear_the_yard(doc)
 	_paint(doc, noise, 14.0, 0.5, 0.3, 1, 3)
 	var placed := 0
 	for attempt in 800:

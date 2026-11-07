@@ -21,6 +21,7 @@ const PICK_PIXELS := 10.0
 const TURN_STEP := PI / 12.0
 const SMALLEST_SIZE := 0.5
 const LARGEST_SIZE := 2.0
+const WATER_LOWEST := -20.0
 const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["holiday", "Holiday"]]
 const TOOL_KEYS := {KEY_M: Tool.ARRANGE, KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
@@ -49,6 +50,8 @@ var _placed_ring: MeshInstance3D
 var _selected_ring: MeshInstance3D
 var _selected_id := -1
 var _drag := {}
+var _arrange_was := {}
+var _panel_stale := false
 var _place_group := ""
 var _place_search := ""
 var _place_items: VBoxContainer
@@ -561,6 +564,7 @@ func _select_tool(id: int) -> void:
 	_dismiss_preview()
 	tool = id
 	_selected_id = -1
+	_arrange_was.clear()
 	_show_selection()
 	for k in _tools:
 		_tools[k].button_pressed = k == id
@@ -631,8 +635,8 @@ func _build_options() -> void:
 			on.text = "This world has water"
 			on.button_pressed = float(doc.data.water_level) > -50.0
 			_options.add_child(on)
-			var level := clampf(doc.safe_water_level(), -8.0, WorldDoc.MAX_WATER_LEVEL) if on.button_pressed else -0.6
-			var s := _slider("Water level", -8.0, WorldDoc.MAX_WATER_LEVEL, 0.1, level, "%.1f m",
+			var level := doc.safe_water_level() if on.button_pressed else -0.6
+			var s := _slider("Water level", minf(WATER_LOWEST, floorf(level)), WorldDoc.MAX_WATER_LEVEL, 0.1, level, "%.1f m",
 				func(v):
 					doc.data.water_level = v
 					_scene.refresh_water()
@@ -912,7 +916,7 @@ func _slider(label: String, lo: float, hi: float, step: float, value: float, for
 	s.max_value = hi
 	s.step = step
 	s.value = value
-	var state := {"start": s.value, "dragging": false, "pending": false}
+	var state := {"start": s.value, "exact": value, "touched": false, "dragging": false, "pending": false}
 	_slider_states.append(state)
 	var settle := Timer.new()
 	settle.one_shot = true
@@ -922,10 +926,17 @@ func _slider(label: String, lo: float, hi: float, step: float, value: float, for
 		settle.stop()
 		state.dragging = false
 		state.pending = false
-		if commit.is_valid() and s.value != state.start:
-			var was: float = state.start
+		if not commit.is_valid():
+			return
+		if s.value != state.start:
+			var was: float = state.exact
 			state.start = s.value
+			state.exact = s.value
+			state.touched = false
 			commit.call(s.value, was)
+		elif state.touched:
+			state.touched = false
+			live.call(state.exact)
 	_slider_finishes.append(finish)
 	settle.timeout.connect(finish)
 	s.drag_started.connect(func(): state.dragging = true)
@@ -934,6 +945,7 @@ func _slider(label: String, lo: float, hi: float, step: float, value: float, for
 		finish.call())
 	s.value_changed.connect(func(v):
 		_dismiss_preview()
+		state.touched = true
 		state.pending = v != state.start
 		readout.text = format % v
 		live.call(v)
@@ -955,6 +967,9 @@ func _finish_edits() -> void:
 	for finish in _slider_finishes.duplicate():
 		finish.call()
 	_finishing_edits = false
+	if _panel_stale:
+		_panel_stale = false
+		_build_options()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and not event.pressed:
@@ -1156,13 +1171,15 @@ func _build_arrange_options() -> void:
 	if thing.is_empty():
 		return
 	_options.add_child(ProTheme.heading(_thing_name(thing.kind), 13))
-	_slider("Turn", 0.0, 360.0, 1.0, rad_to_deg(wrapf(float(thing.turn), 0.0, TAU)), "%.0f°",
-		func(v): _preview_selected("turn", deg_to_rad(v)),
-		func(v, was): _commit_selected("Turn", "turn", deg_to_rad(v), deg_to_rad(was)))
+	var exact_turn: float = thing.turn
+	var shown_turn := rad_to_deg(wrapf(exact_turn, 0.0, TAU))
+	_slider("Turn", 0.0, 360.0, 1.0, shown_turn, "%.0f°",
+		func(v): _preview_selected("turn", exact_turn if v == shown_turn else deg_to_rad(v)),
+		func(_v, _was): _commit_selected("Turn", "turn"))
 	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
 	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
 		func(v): _preview_selected("scale", v),
-		func(v, was): _commit_selected("Resize", "scale", v, was))
+		func(_v, _was): _commit_selected("Resize", "scale"))
 	var remove := Button.new()
 	remove.text = "Remove"
 	remove.pressed.connect(_remove_selected)
@@ -1175,9 +1192,21 @@ func _selected() -> Dictionary:
 				return t
 	return {}
 
+## Everything shown about the chosen thing depends on where it stands, so any
+## change to the world redraws it, once the edit in progress has finished.
+func _refresh_selection() -> void:
+	if _selected().is_empty():
+		_selected_id = -1
+	_show_selection()
+	if _finishing_edits:
+		_panel_stale = true
+	else:
+		_build_options()
+
 func _select_thing(id: int) -> void:
 	_finish_edits()
 	_selected_id = id
+	_arrange_was.clear()
 	_show_selection()
 	_build_options()
 
@@ -1195,18 +1224,21 @@ func _preview_selected(field: String, value: Variant) -> void:
 	var thing := _selected()
 	if thing.is_empty():
 		return
+	if not _arrange_was.has(field):
+		_arrange_was[field] = thing[field]
 	var changed: Dictionary = thing.duplicate()
 	changed[field] = value
 	doc.data.things[doc.data.things.find(thing)] = changed
 	_scene.update_things([changed], [thing])
 	_show_selection()
 
-func _commit_selected(label: String, field: String, value: Variant, was: Variant) -> void:
+func _commit_selected(label: String, field: String) -> void:
 	var thing := _selected()
-	if thing.is_empty():
+	if thing.is_empty() or not _arrange_was.has(field):
 		return
 	var before: Dictionary = thing.duplicate()
-	before[field] = was
+	before[field] = _arrange_was[field]
+	_arrange_was.erase(field)
 	history.things_edit("%s %s" % [label, _thing_name(thing.kind)], [thing], [before], true)
 
 func _turn_selected(by: float) -> void:
@@ -1258,7 +1290,8 @@ func _press_thing(pos: Vector2) -> void:
 	var over := _thing_at(pos)
 	_select_thing(int(over.id) if not over.is_empty() else -1)
 	if not over.is_empty():
-		_drag = {"from": pos, "moving": false, "why": "", "hit": null}
+		var base := _camera.unproject_position(Vector3(over.x, doc.height_at(over.x, over.z), over.z))
+		_drag = {"from": pos, "grip": (base - pos) * _camera.size / float(_viewport.size.y), "moving": false, "why": "", "hit": null}
 
 func _drag_thing(pos: Vector2) -> void:
 	var thing := _selected()
@@ -1271,7 +1304,7 @@ func _drag_thing(pos: Vector2) -> void:
 		_drag.moving = true
 		_scene.update_things([], [thing])
 		_selected_ring.visible = false
-	var hit = _ground_at(pos)
+	var hit = _ground_at(pos + _drag.grip * float(_viewport.size.y) / _camera.size)
 	if hit != null:
 		_drag.hit = hit
 		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z)
@@ -1570,12 +1603,6 @@ func _on_changed(part: int, detail: Variant) -> void:
 	match part:
 		History.Part.THINGS:
 			_scene.update_things(detail.added, detail.removed)
-			if tool == Tool.ARRANGE:
-				_show_selection()
-				if not _finishing_edits:
-					if _selected().is_empty():
-						_selected_id = -1
-					_build_options()
 		History.Part.LAND:
 			_scene.mark_land(detail)
 			_invalidate_zones()
@@ -1587,6 +1614,8 @@ func _on_changed(part: int, detail: Variant) -> void:
 				_title_box.text = str(doc.data.title)
 			if not _own_commit and tool in [Tool.WATER, Tool.MOOD]:
 				_build_options()
+	if tool == Tool.ARRANGE:
+		_refresh_selection()
 
 func _on_steps_changed() -> void:
 	_mark_dirty()
@@ -1814,8 +1843,11 @@ func _process(_delta: float) -> void:
 		if not _scene.land_pending():
 			_last_settle = now
 			_scene.settle_things()
-	if _dirty_at > 0.0 and now - _dirty_at > AUTOSAVE_SECONDS and not _painting and not _slider_states.any(func(s): return s.dragging or s.pending):
+	if _dirty_at > 0.0 and now - _dirty_at > AUTOSAVE_SECONDS and not _in_gesture():
 		_save_now(false)
+
+func _in_gesture() -> bool:
+	return _painting or not _drag.is_empty() or _slider_states.any(func(s): return s.dragging or s.pending)
 
 func _project_folder() -> String:
 	return path if path != "" else WorldLibrary.folder_for(str(doc.data.title))
