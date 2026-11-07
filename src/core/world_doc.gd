@@ -5,6 +5,7 @@ extends RefCounted
 
 const FORMAT := 1
 const GENERATOR := 1
+const SEASONS := ["summer", "autumn", "winter"]
 const BASES := ["guild", "orbital", "grove", "professional", "goblinville", "gnomeland"]
 const TERRAIN_RES := 257
 const TERRAIN_SIZE := 520.0
@@ -38,6 +39,9 @@ static func create(base: String, title: String, seed_value: int) -> WorldDoc:
 	doc.heights.resize(TERRAIN_RES * TERRAIN_RES)
 	doc.ground.resize(TERRAIN_RES * TERRAIN_RES)
 	return doc
+
+func season() -> String:
+	return str(data.get("season", "summer"))
 
 static func cell_to_world(i: int, j: int) -> Vector2:
 	var step := TERRAIN_SIZE / (TERRAIN_RES - 1)
@@ -260,6 +264,8 @@ static func _valid_data(d: Dictionary) -> bool:
 	if d.get("base") not in BASES or not d.get("title") is String or d.title.strip_edges().is_empty() or d.title.length() > 128:
 		return false
 	if not _number(d.get("water_level")) or not d.get("mood") is Dictionary or not d.get("things") is Array:
+		return false
+	if d.has("season") and d.season not in SEASONS:
 		return false
 	if d.has("next_id") and (not _integer(d.next_id) or d.next_id < 1):
 		return false

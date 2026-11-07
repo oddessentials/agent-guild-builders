@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -156,13 +156,30 @@ func _templates() -> bool:
 				if Clearance.live_distance(p.x, p.y) < 0.5 and absf(a.heights[j * WorldDoc.TERRAIN_RES + i]) > 0.001:
 					flat = false
 		check(flat, key + ": the ground crews stand on is flat")
-		if float(a.data.water_level) > -50.0:
+		check(Clearance.check_world(a).get("valid", false), key + ": a new world is ready to export")
+		if float(a.data.water_level) > -50.0 and key != "island":
 			var wet := 0
 			for h in a.heights:
 				if h < float(a.data.water_level):
 					wet += 1
 			check(float(wet) / a.heights.size() < 0.12, key + ": water stays in its lake")
 			check(a.ground[(WorldDoc.TERRAIN_RES * WorldDoc.TERRAIN_RES) / 2] != 3, key + ": the plaza isn't shore")
+	var blank := Templates.create("blank", "guild", "T", 42)
+	check(blank.data.things.size() <= 12, "blank: nearly empty")
+	var island := Templates.create("island", "guild", "T", 42)
+	var at_edge := true
+	for t in [[-200.0, 0.0], [200.0, 0.0], [0.0, -200.0], [0.0, 200.0]]:
+		at_edge = at_edge and island.height_at(t[0], t[1]) < float(island.data.water_level)
+	check(at_edge, "island: water on every side")
+	check(island.height_at(0.0, 0.0) > float(island.data.water_level), "island: the Yard is dry")
+	check(island.data.things.size() < 500, "island: stays sparse")
+	var canyon := Templates.create("canyon", "guild", "T", 42)
+	var up := Clearance._ground_up()
+	var behind := up * 70.0
+	var front := up * -62.0
+	check(canyon.height_at(behind.x, behind.y) > 20.0, "canyon: cliffs rise behind the Yard")
+	check(canyon.height_at(front.x, front.y) < float(canyon.data.water_level), "canyon: a gorge runs in front of it")
+	check(canyon.data.things.any(func(t): return t.kind == "rock_face"), "canyon: rock faces dress the walls")
 	return true
 
 func _pack(path: String, changes: Dictionary = {}, drop: Array = [], meta_changes: Dictionary = {}, relist := true) -> void:
@@ -659,4 +676,378 @@ func _loader() -> bool:
 		await process_frame
 	check(bad.doc == null, "loader: reports a world that can't be opened")
 	made.free()
+	return true
+
+func _arrange_view(doc: WorldDoc) -> Control:
+	var script: GDScript = load("res://src/ui/editor_view.gd")
+	var view: Control = script.new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(doc, "")
+	await process_frame
+	view._select_tool(view.Tool.ARRANGE)
+	return view
+
+func _screen_of(view: Control, t: Dictionary) -> Vector2:
+	return view._camera.unproject_position(Vector3(t.x, view.doc.height_at(t.x, t.z), t.z))
+
+func _arrange() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var stone := doc.add_thing("stone", 24.0, 8.0, 0.5, 1.0)
+	var fir := doc.add_thing("tree_fir", 40.0, -40.0, 0.0, 1.0)
+	var view: Control = await _arrange_view(doc)
+	var at := _screen_of(view, stone)
+	check(view._thing_at(at).get("id") == stone.id, "arrange: finds the thing under the pointer")
+	check(view._thing_at(Vector2(2, 2)).is_empty(), "arrange: empty ground finds nothing")
+	_click(view, at, true)
+	_click(view, at, false)
+	check(view._selected_id == stone.id and view._selected_ring.visible, "arrange: a click chooses it")
+	check(doc.data.things.size() == 2 and not view.history.can_undo(), "arrange: choosing changes nothing")
+	var to := at + Vector2(60, 30)
+	var hit_to: Vector3 = view._ground_at(to)
+	_click(view, at, true)
+	_drag(view, to)
+	_click(view, to, false)
+	var moved: Dictionary = view._selected()
+	check(Vector2(moved.x, moved.z).distance_to(Vector2(hit_to.x, hit_to.z)) < 0.01 and moved.id == stone.id, "arrange: a drag moves it")
+	check(view.history.undo_label().begins_with("Move"), "arrange: a move is one undo step")
+	view.history.undo()
+	var back: Dictionary = view._selected()
+	check(is_equal_approx(back.x, 24.0) and is_equal_approx(back.z, 8.0), "arrange: undo puts it back")
+	view.history.redo()
+	check(view._selected().x == moved.x, "arrange: redo moves it again")
+	var from_here := _screen_of(view, view._selected())
+	var plaza: Vector2 = view._camera.unproject_position(Vector3.ZERO)
+	var kept: Dictionary = view._selected()
+	_click(view, from_here, true)
+	_drag(view, plaza)
+	check(view._drag.why != "", "arrange: says why while over a refused spot")
+	_click(view, plaza, false)
+	check(view._selected().x == kept.x and view._selected().z == kept.z, "arrange: a refused move leaves it where it was")
+	check(view._status.text != "", "arrange: says why it was refused")
+	check(view._scene._by_cell.has(view._scene._key_of(kept)) and view._scene._by_cell[view._scene._key_of(kept)].things.size() == 1, "arrange: a refused move still draws it")
+	view._turn_selected(view.TURN_STEP)
+	check(is_equal_approx(view._selected().turn, wrapf(kept.turn + view.TURN_STEP, 0.0, TAU)), "arrange: Q and E turn it")
+	view.history.undo()
+	check(is_equal_approx(view._selected().turn, kept.turn), "arrange: undo turns it back")
+	var before_scale: float = view._selected().scale
+	view._preview_selected("scale", 1.5)
+	view._commit_selected("Resize", "scale", before_scale)
+	check(view._selected().scale == 1.5, "arrange: resizes it")
+	view.history.undo()
+	check(view._selected().scale == before_scale, "arrange: undo restores the size")
+	view._select_thing(fir.id)
+	check(Placing.largest_scale(doc, "tree_fir", fir.x, fir.z) * 16.0 + doc.height_at(fir.x, fir.z) <= maxf(1.0, Clearance.max_elevation(fir.x, fir.z)), "arrange: the largest size keeps the Yard clear")
+	view._remove_selected()
+	check(doc.data.things.size() == 1 and view._selected_id == -1, "arrange: remove takes it away and clears the choice")
+	view.history.undo()
+	check(doc.data.things.size() == 2, "arrange: undo brings it back")
+	check(Placing.why_not_moved(doc, view._selected() if not view._selected().is_empty() else fir, fir.x, fir.z) == "", "arrange: a thing never blocks itself")
+	view.free()
+	return true
+
+func _place_panel() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var script: GDScript = load("res://src/ui/editor_view.gd")
+	var view: Control = script.new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(doc, "")
+	await process_frame
+	check(view._place_group == "plants", "panel: shows the chosen item's group")
+	check(view._item_buttons.has("fern") and not view._item_buttons.has("tree_oak"), "panel: shows one group at a time")
+	view._place_search = "tree"
+	view._fill_place_items()
+	check(view._item_buttons.has("tree_oak") and view._item_buttons.has("stump") and not view._item_buttons.has("fern"), "panel: search looks through every group")
+	view._place_search = "no such thing"
+	view._fill_place_items()
+	check(view._item_buttons.is_empty(), "panel: search can find nothing")
+	view._place_search = ""
+	view.free()
+	var opened := WorldDoc.create("guild", "T", 3)
+	opened.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
+	var used := {}
+	for t in opened.data.things:
+		used[t.kind] = true
+	var made := WorldLoader.new()
+	root.add_child(made)
+	var result := {}
+	made.done.connect(func(d): result.doc = d)
+	made.start(func(): return opened)
+	while not result.has("doc"):
+		await process_frame
+	made.free()
+	check(result.doc != null and WorldScene.mesh_ready("stone"), "panel: opening a world loads what it uses")
+	return true
+
+func _alpha_surfaces(mesh: Mesh) -> int:
+	var count := 0
+	for s in mesh.get_surface_count():
+		var m := mesh.surface_get_material(s) as StandardMaterial3D
+		if m and m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			count += 1
+	return count
+
+func _seasons() -> bool:
+	check(not Templates.create("meadow", "guild", "T", 1).data.has("season"), "seasons: a new world says nothing until one is chosen")
+	check(WorldDoc.create("guild", "T", 1).season() == "summer", "seasons: worlds start in summer")
+	check(WorldScene.season_mesh("tree_oak", "summer") == WorldScene.mesh_of("tree_oak"), "seasons: summer draws the very same model")
+	var bare := WorldScene.season_mesh("tree_oak", "winter")
+	var plain := WorldScene.mesh_of("tree_oak")
+	check(_alpha_surfaces(plain) > 0 and _alpha_surfaces(bare) == 0 and bare.get_surface_count() > 0, "seasons: broadleaf trees are bare in winter")
+	check(_alpha_surfaces(WorldScene.season_mesh("tree_fir", "winter")) == _alpha_surfaces(WorldScene.mesh_of("tree_fir")), "seasons: firs stay green")
+	check(WorldScene.season_mesh("grass", "winter").get_surface_count() == 0, "seasons: long grass is gone in winter")
+	var turned := WorldScene.season_mesh("tree_oak", "autumn")
+	var changed := false
+	for s in turned.get_surface_count():
+		var m := turned.surface_get_material(s) as StandardMaterial3D
+		if m and m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			changed = m.albedo_color == WorldScene.AUTUMN_LEAVES.tree_oak
+	check(changed, "seasons: leaves turn in autumn")
+	for s in plain.get_surface_count():
+		var m := plain.surface_get_material(s) as StandardMaterial3D
+		check(m == null or m.next_pass == null, "seasons: dressing a model leaves the original alone")
+	var folder := OS.get_user_data_dir().path_join("season-test")
+	WorldDoc.remove_folder(folder)
+	var doc := WorldDoc.create("guild", "T", 1)
+	doc.data.season = "winter"
+	check(doc.save(folder) == OK and WorldDoc.open(folder).season() == "winter", "seasons: saved and opened again")
+	WorldDoc.remove_folder(folder)
+	var odd := doc.data.duplicate(true)
+	odd.season = "monsoon"
+	check(not WorldDoc._valid_data(odd), "seasons: an unknown season is refused")
+	var script: GDScript = load("res://src/ui/editor_view.gd")
+	var view: Control = script.new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	var live := WorldDoc.create("guild", "T", 1)
+	live.add_thing("tree_oak", 60.0, -60.0, 0.0, 1.0)
+	view.open(live, "")
+	await process_frame
+	view._set_season("winter")
+	check(live.season() == "winter" and view._scene._drawn_season == "winter", "seasons: one click dresses the world")
+	check(view._scene._nodes.values()[0].multimesh.mesh == WorldScene.season_mesh("tree_oak", "winter"), "seasons: things redraw for it")
+	check(view.history.undo_label() == "Season", "seasons: one undo step")
+	var moved_before: Dictionary = live.data.things[0].duplicate()
+	view.history.undo()
+	check(live.season() == "summer" and view._scene._drawn_season == "summer", "seasons: undo goes back")
+	check(view._scene._nodes.values()[0].multimesh.mesh == WorldScene.mesh_of("tree_oak"), "seasons: and redraws the summer tree")
+	check(JSON.stringify(live.data.things[0]) == JSON.stringify(moved_before), "seasons: nothing moved")
+	view.free()
+	return true
+
+func _sliders(view: Control) -> Array:
+	return view._options.get_children().filter(func(c): return c is HSlider)
+
+func _land_is_protected(doc: WorldDoc) -> bool:
+	var checked := Clearance.check_world(doc)
+	return checked.get("valid", false) or checked.issues.all(func(i): return i.kind != "land")
+
+func _review() -> bool:
+	var keep := WorldLibrary.root_override
+	WorldLibrary.root_override = OS.get_user_data_dir().path_join("review-test")
+	var doc := WorldDoc.create("guild", "T", 3)
+	var elm := doc.add_thing("tree_elm", -40.0, -40.0, 0.5, 1.0)
+	var fir := doc.add_thing("tree_fir", 60.0, -60.0, 0.5, 1.0)
+	var odd := doc.add_thing("stone", 40.0, 40.0, 0.5, 1.0045)
+	var view: Control = await _arrange_view(doc)
+	view._zoom = 0.3
+	view._place_camera()
+	var from := _screen_of(view, elm)
+	var to: Vector2 = view._camera.unproject_position(Vector3(0.0, 0.0, 48.0))
+	_click(view, from, true)
+	_drag(view, to)
+	_click(view, to, false)
+	var moved: Dictionary = view._selected()
+	check(Vector2(moved.x, moved.z).distance_to(Vector2(0.0, 48.0)) < 0.5, "review: the elm moved near the Yard")
+	var limit := Placing.largest_scale(doc, "tree_elm", moved.x, moved.z)
+	check(_sliders(view)[1].max_value <= limit, "review: the size limit follows a move, %f against %f" % [_sliders(view)[1].max_value, limit])
+	_sliders(view)[1].value = 2.0
+	view._finish_edits()
+	check(Clearance.check_world(doc).get("valid", false), "review: resizing after a move keeps the world exportable")
+	view._zoom = view.DEFAULT_ZOOM
+	view._target = Vector3(fir.x, 1.0, fir.z)
+	view._place_camera()
+	var base := _screen_of(view, fir)
+	var per_pixel: float = view._camera.size / float(view._viewport.size.y)
+	var grabbed := base + Vector2(0.0, -14.0 * Yard.axes().up.y / per_pixel)
+	check(view._thing_at(grabbed).get("id") == fir.id, "review: a fir can be grabbed high up")
+	_click(view, grabbed, true)
+	_drag(view, grabbed + Vector2(7, 0))
+	_click(view, grabbed + Vector2(7, 0), false)
+	var nudged: Dictionary = view._selected()
+	var went := Vector2(nudged.x, nudged.z).distance_to(Vector2(fir.x, fir.z))
+	check(went > 0.0 and went < 1.0, "review: a small drag moves it a small way, went %f m" % went)
+	_click(view, _screen_of(view, nudged), true)
+	_drag(view, _screen_of(view, nudged) + Vector2(20, 0))
+	while Time.get_ticks_msec() < 2100:
+		await process_frame
+	view._dirty_at = 0.001
+	view._process(0.0)
+	check(not view._drag.is_empty() and view._drag.moving, "review: autosave waits for a drag to finish")
+	view._dirty_at = -1.0
+	_click(view, _screen_of(view, nudged) + Vector2(20, 0), false)
+	view._zoom = 0.3
+	view._target = Vector3(0, 1, 0)
+	view._place_camera()
+	view._select_thing(odd.id)
+	var exact: Dictionary = view._selected().duplicate()
+	var undo_before: int = view.history._undo.get_current_action()
+	_sliders(view)[0].value = 90.0
+	var turn_start: float = _sliders(view)[0].value
+	view._finish_edits()
+	view.history.undo()
+	check(view._selected().turn == exact.turn, "review: undo restores the exact turn, %f against %f" % [view._selected().turn, exact.turn])
+	view._select_thing(odd.id)
+	_sliders(view)[1].value = 1.5
+	view._finish_edits()
+	view.history.undo()
+	check(view._selected().scale == exact.scale, "review: undo restores the exact size, %f against %f" % [view._selected().scale, exact.scale])
+	view._select_thing(odd.id)
+	var start: float = _sliders(view)[0].value
+	_sliders(view)[0].value = start + 40.0
+	_sliders(view)[0].value = start
+	view._finish_edits()
+	check(view._selected().turn == exact.turn and view.history._undo.get_current_action() == undo_before, "review: dragging back to the start changes nothing")
+	var raised := WorldDoc.create("guild", "T", 3)
+	raised.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
+	view._select_thing(-1)
+	view.free()
+	var land_view: Control = await _arrange_view(raised)
+	land_view._select_thing(raised.data.things[0].id)
+	var size_cap: float = _sliders(land_view)[1].max_value
+	var cell := roundi((40.0 + WorldDoc.TERRAIN_SIZE / 2.0) / (WorldDoc.TERRAIN_SIZE / (WorldDoc.TERRAIN_RES - 1)))
+	var cells := {}
+	for dj in range(-4, 5):
+		for di in range(-4, 5):
+			var at := (cell + dj) * WorldDoc.TERRAIN_RES + cell + di
+			cells[at] = [Clearance.max_elevation(40.0, 40.0) - 0.05, raised.ground[at]]
+	land_view.history.land_stroke("Raise", cells)
+	check(_sliders(land_view)[1].max_value < size_cap, "review: the size limit follows the land under the chosen thing")
+	check(absf(land_view._selected_ring.position.y - (raised.height_at(40.0, 40.0) + 0.1)) < 0.001, "review: the marker follows the land too")
+	land_view.free()
+	var wet := WorldDoc.create("guild", "T", 3)
+	wet.data.water_level = -11.0
+	var water_view: Control = await _arrange_view(wet)
+	water_view._select_tool(water_view.Tool.WATER)
+	check(_sliders(water_view)[0].value == -11.0, "review: the water slider shows the real level, %f" % _sliders(water_view)[0].value)
+	_sliders(water_view)[0].value = -7.9
+	water_view._finish_edits()
+	water_view.history.undo()
+	check(float(wet.data.water_level) == -11.0, "review: undo restores the real water level, %f" % wet.data.water_level)
+	wet.data.water_level = -33.33
+	water_view._build_options()
+	_sliders(water_view)[0].value = -2.0
+	water_view._finish_edits()
+	water_view.history.undo()
+	check(float(wet.data.water_level) == -33.33, "review: any water level survives a slider and undo")
+	water_view.free()
+	WorldLibrary.root_override = keep
+	var sun_doc := WorldDoc.create("guild", "T", 3)
+	sun_doc.data.mood.light.sun_energy = 3.37
+	var sun_view: Control = await _arrange_view(sun_doc)
+	sun_view._select_tool(sun_view.Tool.MOOD)
+	_sliders(sun_view)[0].value = 4.0
+	sun_view._finish_edits()
+	sun_view.history.undo()
+	check(float(sun_doc.data.mood.light.sun_energy) == 3.37, "review: every slider's undo is exact")
+	sun_view.free()
+	check(Clearance.check_world(Templates.create("canyon", "guild", "T", 1941)).get("valid", false), "review: canyon seed 1941 can export")
+	for key in ["canyon", "island"]:
+		for seed_value in [1, 2, 3, 1941, 99999]:
+			check(_land_is_protected(Templates.create(key, "guild", "T", seed_value)), "review: %s seed %d keeps the Yard's ground" % [key, seed_value])
+	return true
+
+func _review_slider_edits() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var stone := doc.add_thing("stone", 40.0, 40.0, 0.5, 1.0)
+	var view: Control = await _arrange_view(doc)
+	view._zoom = 0.3
+	view._place_camera()
+	view._select_thing(stone.id)
+	_sliders(view)[0].value = _sliders(view)[0].value + 15.0
+	var turned: float = view._selected().turn
+	_sliders(view)[1].value = 1.01
+	view._finish_edits()
+	check(view.history.undo_label().begins_with("Resize"), "slider edits: the last slider is the last undo step")
+	view.history.undo()
+	check(view._selected().scale == 1.0 and view._selected().turn == turned, "slider edits: the first undo restores only the size")
+	view.history.undo()
+	check(view._selected().scale == 1.0 and view._selected().turn == 0.5, "slider edits: the second restores only the turn")
+	view.history.redo()
+	view.history.redo()
+	check(view._selected().scale == 1.01 and view._selected().turn == turned, "slider edits: redo brings both back")
+	view.history.undo()
+	view.history.undo()
+	view._select_thing(stone.id)
+	var start: float = _sliders(view)[0].value
+	_sliders(view)[0].value = start + 40.0
+	_sliders(view)[0].value = start
+	view._finish_edits()
+	check(view._selected().turn == 0.5, "slider edits: moving away and back restores the exact turn")
+	view._turn_selected(view.TURN_STEP)
+	var after_key: float = view._selected().turn
+	_sliders(view)[0].value = _sliders(view)[0].value + 20.0
+	view._finish_edits()
+	view.history.undo()
+	check(view._selected().turn == after_key, "slider edits: undo returns to the keyed turn, %f against %f" % [view._selected().turn, after_key])
+	view.history.undo()
+	check(view._selected().turn == 0.5, "slider edits: and then to the one before it")
+	_sliders(view)[0].value = 90.0
+	view._finish_edits()
+	var ninety: float = view._selected().turn
+	_sliders(view)[0].value = 120.0
+	view._finish_edits()
+	view.history.undo()
+	check(view._selected().turn == ninety, "slider edits: a second edit on one slider undoes to the first")
+	view.free()
+	var mood_doc := WorldDoc.create("guild", "T", 3)
+	mood_doc.data.mood.light.sun_energy = 3.37
+	mood_doc.data.mood.light.strength = 0.93
+	var mood_view: Control = await _arrange_view(mood_doc)
+	mood_view._select_tool(mood_view.Tool.MOOD)
+	_sliders(mood_view)[0].value = 4.0
+	_sliders(mood_view)[1].value = 1.2
+	mood_view._finish_edits()
+	mood_view.history.undo()
+	mood_view.history.undo()
+	check(float(mood_doc.data.mood.light.sun_energy) == 3.37 and float(mood_doc.data.mood.light.strength) == 0.93, "slider edits: other panels follow the same rule")
+	mood_view.free()
+	return true
+
+func _review_hidden() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var stone := doc.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
+	var up := Clearance._ground_up()
+	var ahead := Vector2(40.0, 40.0) - up * 0.6
+	var fern := doc.add_thing("fern", ahead.x, ahead.y, 0.0, 1.0)
+	var view: Control = await _arrange_view(doc)
+	view._target = Vector3(40.0, 1.0, 40.0)
+	view._place_camera()
+	var near_fern: Vector2 = _screen_of(view, stone).lerp(_screen_of(view, fern), 0.75)
+	check(view._thing_at(near_fern).get("id") == fern.id, "hidden: a visible fern can be chosen in summer")
+	view._select_thing(fern.id)
+	view.history.set_value("Season", doc.data, "season", "winter", "summer")
+	check(view._selected_id == -1 and not view._selected_ring.visible, "hidden: a chosen fern is let go when winter hides it")
+	check(view._thing_at(near_fern).get("id") == stone.id, "hidden: clicking in winter chooses the visible stone")
+	check(view._thing_at(_screen_of(view, fern)).get("id", -1) != fern.id, "hidden: a hidden plant can't be chosen")
+	check(Placing.why_not_moved(doc, stone, fern.x, fern.z) == "", "hidden: a hidden plant doesn't block a move")
+	check(Placing.why_not_one(doc, "stone", fern.x, fern.z) == "", "hidden: or a placement")
+	check(Placing.why_not(doc, "stone", fern.x, fern.z, 1.0).contains("stone"), "hidden: visible things still crowd")
+	var far := doc.add_thing("grass", 70.0, 70.0, 0.0, 1.0)
+	check(Placing.crowded_by(doc, 70.0, 70.0, 3.0) == "", "hidden: or crowd painting")
+	view._select_tool(view.Tool.ERASE)
+	view.brush_radius = 4.0
+	view._erase_at(Vector3(70.0, 0.0, 70.0))
+	view._finish_edits()
+	check(doc.data.things.any(func(t): return t.id == far.id), "hidden: clearing leaves what can't be seen")
+	view._erase_at(Vector3(40.0, 0.0, 40.0))
+	view._finish_edits()
+	check(not doc.data.things.any(func(t): return t.id == stone.id) and doc.data.things.any(func(t): return t.id == fern.id), "hidden: clearing still takes what can")
+	view.history.set_value("Season", doc.data, "season", "summer", "winter")
+	check(Placing.why_not_one(doc, "fern", fern.x, fern.z) != "", "hidden: back in summer the plant counts again")
+	view.free()
 	return true

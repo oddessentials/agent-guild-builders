@@ -9,6 +9,8 @@ const MIXES := {
 	"undergrowth": {"label": "Undergrowth", "kinds": ["shrub_low", "shrub_wild", "shrub_round", "fern"]},
 	"woodland": {"label": "Mixed woodland", "kinds": ["tree_oak", "tree_elm", "tree_young", "tree_fir"]},
 	"rocks": {"label": "Scattered rocks", "kinds": ["stone", "stone", "boulder"]},
+	"garden": {"label": "Flower garden", "kinds": ["gazania", "ursinia", "empodium", "stinkkruid"]},
+	"camp": {"label": "Camp clutter", "kinds": ["crate", "crate_long", "barrel_rusty", "bucket", "basket"]},
 }
 
 static func kinds_of(choice: String) -> Array:
@@ -20,6 +22,8 @@ static func kinds_of(choice: String) -> Array:
 static func crowded_by(doc: WorldDoc, x: float, z: float, spacing: float) -> String:
 	var limit := spacing * 0.6
 	for t in doc.data.things:
+		if WorldScene.gone_in(t.kind, doc.season()):
+			continue
 		var dx: float = float(t.x) - x
 		var dz: float = float(t.z) - z
 		if dx * dx + dz * dz < limit * limit:
@@ -44,11 +48,22 @@ static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float) -> Stri
 		return why
 	return _too_close(models, _standing_on(doc, models, kind, x, z))
 
+## The same question for a placed item moving to (x, z).
+static func why_not_moved(doc: WorldDoc, thing: Dictionary, x: float, z: float) -> String:
+	var models: Dictionary = WorldScene.load_kit().get("models", {})
+	var why := _why_not_here(doc, models.get(thing.kind, {}), x, z, float(thing.scale))
+	if why != "":
+		return why
+	return _too_close(models, _standing_on(doc, models, thing.kind, x, z, int(thing.id)))
+
+## The largest size that keeps the Yard clear at this spot.
+static func largest_scale(doc: WorldDoc, kind: String, x: float, z: float) -> float:
+	var height := float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("height", 1.0))
+	return (maxf(1.0, Clearance.max_elevation(x, z)) - doc.height_at(x, z) - 0.001) / height
+
 ## `rolled`, capped to the largest size that keeps the Yard clear at this spot.
 static func fitted_scale(doc: WorldDoc, kind: String, x: float, z: float, rolled: float) -> float:
-	var height := float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("height", 1.0))
-	var room := maxf(1.0, Clearance.max_elevation(x, z)) - doc.height_at(x, z) - 0.001
-	return maxf(SMALLEST, minf(rolled, room / height))
+	return maxf(SMALLEST, minf(rolled, largest_scale(doc, kind, x, z)))
 
 ## What would mostly hide this item on screen, or "" if nothing would.
 static func hidden_behind(doc: WorldDoc, kind: String, x: float, z: float, scale: float) -> String:
@@ -56,6 +71,8 @@ static func hidden_behind(doc: WorldDoc, kind: String, x: float, z: float, scale
 	var up := Clearance._ground_up()
 	var top := doc.height_at(x, z) + float(models.get(kind, {}).get("height", 1.0)) * scale
 	for t in doc.data.things:
+		if WorldScene.gone_in(t.kind, doc.season()):
+			continue
 		var info: Dictionary = models.get(t.kind, {})
 		var s := float(t.scale)
 		if _covers(Vector2(x, z), top, Vector2(t.x, t.z), doc.height_at(t.x, t.z) + float(info.get("height", 1.0)) * s, float(info.get("radius", 0.5)) * s, up):
@@ -83,9 +100,11 @@ static func _why_not_here(doc: WorldDoc, info: Dictionary, x: float, z: float, s
 		return "This would be under the water. Choose a spot on land, or lower the water."
 	return ""
 
-static func _standing_on(doc: WorldDoc, models: Dictionary, kind: String, x: float, z: float) -> String:
+static func _standing_on(doc: WorldDoc, models: Dictionary, kind: String, x: float, z: float, ignore_id := -1) -> String:
 	var own := float(models.get(kind, {}).get("radius", 0.5))
 	for t in doc.data.things:
+		if int(t.id) == ignore_id or WorldScene.gone_in(t.kind, doc.season()):
+			continue
 		var limit := minf(own, float(models.get(t.kind, {}).get("radius", 0.5)))
 		var dx: float = float(t.x) - x
 		var dz: float = float(t.z) - z

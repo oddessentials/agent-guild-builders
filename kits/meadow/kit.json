@@ -219,6 +219,1122 @@
    "source": "painted_wooden_bench",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 378988
+  },
+  "snag": {
+   "label": "Dead snag",
+   "group": "trees",
+   "spacing": 3,
+   "height": 3,
+   "radius": 0.23,
+   "triangles": 8988,
+   "source": "dead_quiver_trunk",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 550420
+  },
+  "gazania": {
+   "label": "Gazanias",
+   "group": "plants",
+   "spacing": 1.2,
+   "height": 0.35,
+   "radius": 0.37,
+   "triangles": 208,
+   "source": "flower_gazania",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 472744
+  },
+  "ursinia": {
+   "label": "Ursinias",
+   "group": "plants",
+   "spacing": 1.2,
+   "height": 0.3,
+   "radius": 0.39,
+   "triangles": 5767,
+   "source": "flower_ursinia",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 497564
+  },
+  "empodium": {
+   "label": "Empodium",
+   "group": "plants",
+   "spacing": 1.2,
+   "height": 0.25,
+   "radius": 0.12,
+   "triangles": 455,
+   "source": "flower_empodium",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 165352
+  },
+  "stinkkruid": {
+   "label": "Yellow daisies",
+   "group": "plants",
+   "spacing": 1.2,
+   "height": 0.3,
+   "radius": 0.3,
+   "triangles": 4705,
+   "source": "flower_stinkkruid",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 461296
+  },
+  "potted_plant": {
+   "label": "Potted plant",
+   "group": "plants",
+   "spacing": 1.5,
+   "height": 1.35,
+   "radius": 0.32,
+   "triangles": 96030,
+   "source": "potted_plant_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 3215164
+  },
+  "planter_low": {
+   "label": "Low planter",
+   "group": "plants",
+   "spacing": 1.5,
+   "height": 0.42,
+   "radius": 0.45,
+   "triangles": 8094,
+   "source": "planter_box_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 619816
+  },
+  "planter_tall": {
+   "label": "Tall planter",
+   "group": "plants",
+   "spacing": 1.5,
+   "height": 0.86,
+   "radius": 0.46,
+   "triangles": 13112,
+   "source": "planter_box_03",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 798304
+  },
+  "clay_pot": {
+   "label": "Clay pot",
+   "group": "plants",
+   "spacing": 1,
+   "height": 0.3,
+   "radius": 0.18,
+   "triangles": 3080,
+   "source": "planter_pot_clay",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 329776
+  },
+  "rock_face": {
+   "label": "Rock face",
+   "group": "rocks",
+   "spacing": 8,
+   "height": 5,
+   "radius": 3.57,
+   "triangles": 20174,
+   "source": "rock_face_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1054364
+  },
+  "rock_wall": {
+   "label": "Rock outcrop",
+   "group": "rocks",
+   "spacing": 6,
+   "height": 4.7,
+   "radius": 2.42,
+   "triangles": 29566,
+   "source": "rock_face_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1400352
+  },
+  "mossy_rocks": {
+   "label": "Mossy rocks",
+   "group": "rocks",
+   "spacing": 6,
+   "height": 1.8,
+   "radius": 4.07,
+   "triangles": 63127,
+   "source": "rock_moss_set_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1819076
+  },
+  "stump_old": {
+   "label": "Old stump",
+   "group": "rocks",
+   "spacing": 3,
+   "height": 0.55,
+   "radius": 0.8,
+   "triangles": 62345,
+   "source": "tree_stump_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 2235212
+  },
+  "trunk_old": {
+   "label": "Old log",
+   "group": "rocks",
+   "spacing": 6,
+   "height": 1.05,
+   "radius": 2.02,
+   "triangles": 41564,
+   "source": "dead_tree_trunk_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1737448
+  },
+  "street_lamp": {
+   "label": "Street lamp",
+   "group": "lights",
+   "spacing": 8,
+   "height": 3.9,
+   "radius": 0.35,
+   "triangles": 30610,
+   "source": "street_lamp_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1078632,
+   "light": {
+    "watts": 300.0,
+    "color": [
+     1.0,
+     0.72,
+     0.45
+    ],
+    "height": 3.6
+   }
+  },
+  "lantern_wood": {
+   "label": "Wooden lantern",
+   "group": "lights",
+   "spacing": 4,
+   "height": 0.55,
+   "radius": 0.15,
+   "triangles": 5619,
+   "source": "wooden_lantern_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1215944,
+   "light": {
+    "watts": 60.0,
+    "color": [
+     1.0,
+     0.6,
+     0.3
+    ],
+    "height": 0.3
+   }
+  },
+  "lantern_brass": {
+   "label": "Brass lantern",
+   "group": "lights",
+   "spacing": 3,
+   "height": 0.4,
+   "radius": 0.18,
+   "triangles": 7798,
+   "source": "brass_diya_lantern",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 700048,
+   "light": {
+    "watts": 30.0,
+    "color": [
+     1.0,
+     0.6,
+     0.3
+    ],
+    "height": 0.2
+   }
+  },
+  "oil_lamp": {
+   "label": "Oil lamp",
+   "group": "lights",
+   "spacing": 3,
+   "height": 0.8,
+   "radius": 0.19,
+   "triangles": 5856,
+   "source": "vintage_oil_lamp",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 390100,
+   "light": {
+    "watts": 40.0,
+    "color": [
+     1.0,
+     0.65,
+     0.35
+    ],
+    "height": 0.55
+   }
+  },
+  "candles": {
+   "label": "Candleholders",
+   "group": "lights",
+   "spacing": 3,
+   "height": 0.85,
+   "radius": 0.54,
+   "triangles": 41936,
+   "source": "brass_candleholders",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 3362820,
+   "light": {
+    "watts": 30.0,
+    "color": [
+     1.0,
+     0.6,
+     0.3
+    ],
+    "height": 0.85
+   }
+  },
+  "candlestick": {
+   "label": "Candlestick",
+   "group": "lights",
+   "spacing": 2,
+   "height": 0.3,
+   "radius": 0.07,
+   "triangles": 3328,
+   "source": "wooden_candlestick",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 447068,
+   "light": {
+    "watts": 12.0,
+    "color": [
+     1.0,
+     0.6,
+     0.3
+    ],
+    "height": 0.3
+   }
+  },
+  "fire_pit": {
+   "label": "Fire pit",
+   "group": "lights",
+   "spacing": 6,
+   "height": 0.4,
+   "radius": 0.75,
+   "triangles": 3887,
+   "source": "stone_fire_pit",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 672444,
+   "light": {
+    "watts": 220.0,
+    "color": [
+     1.0,
+     0.45,
+     0.15
+    ],
+    "height": 0.5
+   }
+  },
+  "barrel_stove": {
+   "label": "Barrel stove",
+   "group": "lights",
+   "spacing": 4,
+   "height": 0.9,
+   "radius": 0.31,
+   "triangles": 2188,
+   "source": "barrel_stove",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 516536,
+   "light": {
+    "watts": 80.0,
+    "color": [
+     1.0,
+     0.42,
+     0.12
+    ],
+    "height": 0.9
+   }
+  },
+  "barrel_dark": {
+   "label": "Dark barrel",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.9,
+   "radius": 0.25,
+   "triangles": 2688,
+   "source": "Barrel_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 247708
+  },
+  "barrel_rusty": {
+   "label": "Rusty barrel",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.93,
+   "radius": 0.32,
+   "triangles": 1473,
+   "source": "barrel_03",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 410336
+  },
+  "wine_barrel": {
+   "label": "Wine barrel",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.9,
+   "radius": 0.38,
+   "triangles": 10204,
+   "source": "wine_barrel_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 677680
+  },
+  "crate": {
+   "label": "Crate",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.45,
+   "radius": 0.58,
+   "triangles": 5508,
+   "source": "wooden_crate_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 516836
+  },
+  "crate_long": {
+   "label": "Long crate",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.5,
+   "radius": 0.63,
+   "triangles": 5176,
+   "source": "wooden_crate_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 526684
+  },
+  "crate_army": {
+   "label": "Army crate",
+   "group": "props",
+   "spacing": 3,
+   "height": 0.4,
+   "radius": 0.54,
+   "triangles": 10476,
+   "source": "old_military_crate",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 708336
+  },
+  "crate_ammo": {
+   "label": "Supply crate",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.5,
+   "radius": 0.74,
+   "triangles": 14548,
+   "source": "wooden_military_crate",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 946120
+  },
+  "treasure_chest": {
+   "label": "Treasure chest",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.65,
+   "radius": 0.5,
+   "triangles": 103330,
+   "source": "treasure_chest",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 3393680
+  },
+  "basket": {
+   "label": "Basket",
+   "group": "props",
+   "spacing": 1,
+   "height": 0.25,
+   "radius": 0.41,
+   "triangles": 22276,
+   "source": "wicker_basket_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 918836
+  },
+  "basket_tall": {
+   "label": "Tall basket",
+   "group": "props",
+   "spacing": 1,
+   "height": 0.3,
+   "radius": 0.26,
+   "triangles": 17850,
+   "source": "wicker_basket_02",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1084060
+  },
+  "bucket": {
+   "label": "Bucket",
+   "group": "props",
+   "spacing": 1,
+   "height": 0.55,
+   "radius": 0.27,
+   "triangles": 4484,
+   "source": "wooden_bucket_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 518480
+  },
+  "watering_can": {
+   "label": "Watering can",
+   "group": "props",
+   "spacing": 1,
+   "height": 0.3,
+   "radius": 0.34,
+   "triangles": 11837,
+   "source": "watering_can_metal_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 846556
+  },
+  "trash_can": {
+   "label": "Bins",
+   "group": "props",
+   "spacing": 3,
+   "height": 0.95,
+   "radius": 0.32,
+   "triangles": 4048,
+   "source": "metal_trash_can",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 523524
+  },
+  "cardboard_box": {
+   "label": "Cardboard box",
+   "group": "props",
+   "spacing": 1,
+   "height": 0.35,
+   "radius": 0.26,
+   "triangles": 16952,
+   "source": "cardboard_box_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 677324
+  },
+  "tool_cart": {
+   "label": "Tool cart",
+   "group": "props",
+   "spacing": 3,
+   "height": 0.95,
+   "radius": 0.63,
+   "triangles": 29394,
+   "source": "tool_cart",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1349320
+  },
+  "tool_chest": {
+   "label": "Tool chest",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.65,
+   "radius": 0.64,
+   "triangles": 5910,
+   "source": "metal_tool_chest",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 534700
+  },
+  "ladder": {
+   "label": "Ladder",
+   "group": "props",
+   "spacing": 2,
+   "height": 2.1,
+   "radius": 0.33,
+   "triangles": 29140,
+   "source": "ladder_sectioned_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1146512
+  },
+  "spinning_wheel": {
+   "label": "Spinning wheel",
+   "group": "props",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.53,
+   "triangles": 52023,
+   "source": "spinning_wheel_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1935116
+  },
+  "big_pot": {
+   "label": "Big pot",
+   "group": "props",
+   "spacing": 1.5,
+   "height": 0.55,
+   "radius": 0.49,
+   "triangles": 3592,
+   "source": "ceramic_pot",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 364016
+  },
+  "brass_pot": {
+   "label": "Brass pot",
+   "group": "props",
+   "spacing": 1,
+   "height": 0.35,
+   "radius": 0.26,
+   "triangles": 1824,
+   "source": "brass_pot_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 242840
+  },
+  "hydrant": {
+   "label": "Fire hydrant",
+   "group": "props",
+   "spacing": 2,
+   "height": 0.8,
+   "radius": 0.14,
+   "triangles": 22888,
+   "source": "fire_hydrant",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 856084
+  },
+  "gnome": {
+   "label": "Garden gnome",
+   "group": "props",
+   "spacing": 1,
+   "height": 0.6,
+   "radius": 0.13,
+   "triangles": 28858,
+   "source": "garden_gnome",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 954176
+  },
+  "road_barrier": {
+   "label": "Road barrier",
+   "group": "props",
+   "spacing": 3,
+   "height": 0.85,
+   "radius": 0.79,
+   "triangles": 10890,
+   "source": "concrete_road_barrier",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 795124
+  },
+  "patio_set": {
+   "label": "Patio set",
+   "group": "furniture",
+   "spacing": 4,
+   "height": 0.9,
+   "radius": 0.96,
+   "triangles": 9828,
+   "source": "outdoor_table_chair_set_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 801396
+  },
+  "chair": {
+   "label": "Painted chair",
+   "group": "furniture",
+   "spacing": 1.5,
+   "height": 0.95,
+   "radius": 0.27,
+   "triangles": 724,
+   "source": "painted_wooden_chair_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 262136
+  },
+  "stool": {
+   "label": "Painted stool",
+   "group": "furniture",
+   "spacing": 1,
+   "height": 0.6,
+   "radius": 0.21,
+   "triangles": 676,
+   "source": "painted_wooden_stool",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 323656
+  },
+  "rocking_chair": {
+   "label": "Rocking chair",
+   "group": "furniture",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.42,
+   "triangles": 11866,
+   "source": "Rockingchair_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 634388
+  },
+  "camp_stool": {
+   "label": "Camp stool",
+   "group": "furniture",
+   "spacing": 1,
+   "height": 0.45,
+   "radius": 0.28,
+   "triangles": 6324,
+   "source": "folding_wooden_stool",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 605216
+  },
+  "old_chair": {
+   "label": "Old chair",
+   "group": "furniture",
+   "spacing": 1.5,
+   "height": 1.05,
+   "radius": 0.31,
+   "triangles": 11560,
+   "source": "gallinera_chair",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 652316
+  },
+  "lounge_chair": {
+   "label": "Lounge chair",
+   "group": "furniture",
+   "spacing": 2,
+   "height": 1.15,
+   "radius": 0.59,
+   "triangles": 6148,
+   "source": "mid_century_lounge_chair",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 498756
+  },
+  "street_seat": {
+   "label": "Street seating",
+   "group": "furniture",
+   "spacing": 5,
+   "height": 0.95,
+   "radius": 2.17,
+   "triangles": 21396,
+   "source": "modular_street_seating",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1692432
+  },
+  "plastic_chair": {
+   "label": "Plastic chair",
+   "group": "furniture",
+   "spacing": 1.5,
+   "height": 0.88,
+   "radius": 0.32,
+   "triangles": 3356,
+   "source": "plastic_monobloc_chair_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 436636
+  },
+  "statue_gothic": {
+   "label": "Gothic statue",
+   "group": "statues",
+   "spacing": 4,
+   "height": 2.6,
+   "radius": 1.17,
+   "triangles": 27739,
+   "source": "gothic_statue",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1713900
+  },
+  "statue_horse": {
+   "label": "Horse statue",
+   "group": "statues",
+   "spacing": 4,
+   "height": 2.0,
+   "radius": 0.74,
+   "triangles": 22388,
+   "source": "horse_statue_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 964148
+  },
+  "statue_whale": {
+   "label": "Whale statue",
+   "group": "statues",
+   "spacing": 4,
+   "height": 1.6,
+   "radius": 1.02,
+   "triangles": 3816,
+   "source": "bronze_whale_statue",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 525612
+  },
+  "statue_shark": {
+   "label": "Shark statue",
+   "group": "statues",
+   "spacing": 3,
+   "height": 1.0,
+   "radius": 0.88,
+   "triangles": 7334,
+   "source": "bronze_shark_statue",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 524388
+  },
+  "statue_ray": {
+   "label": "Ray statue",
+   "group": "statues",
+   "spacing": 3,
+   "height": 1.0,
+   "radius": 0.6,
+   "triangles": 1844,
+   "source": "bronze_ray_statue",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 433872
+  },
+  "statue_cat": {
+   "label": "Cat statue",
+   "group": "statues",
+   "spacing": 2,
+   "height": 0.9,
+   "radius": 0.4,
+   "triangles": 11950,
+   "source": "concrete_cat_statue",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1076980
+  },
+  "statue_lion": {
+   "label": "Lion head",
+   "group": "statues",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.37,
+   "triangles": 47214,
+   "source": "lion_head",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1478452
+  },
+  "giant_vase": {
+   "label": "Giant vase",
+   "group": "statues",
+   "spacing": 2,
+   "height": 1.4,
+   "radius": 0.41,
+   "triangles": 9408,
+   "source": "antique_ceramic_vase_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 368816
+  },
+  "giant_chess": {
+   "label": "Giant chess set",
+   "group": "statues",
+   "spacing": 6,
+   "height": 0.6,
+   "radius": 1.48,
+   "triangles": 76920,
+   "source": "chess_set",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 2663364
+  },
+  "ship": {
+   "label": "Tall ship",
+   "group": "landmarks",
+   "spacing": 28,
+   "height": 24,
+   "radius": 11.71,
+   "triangles": 69162,
+   "source": "dutch_ship_medium",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 3840448
+  },
+  "pier": {
+   "label": "Wooden pier",
+   "group": "landmarks",
+   "spacing": 12,
+   "height": 7.5,
+   "radius": 9.49,
+   "triangles": 84780,
+   "source": "modular_wooden_pier",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 3608412
+  },
+  "castle_door": {
+   "label": "Castle door",
+   "group": "landmarks",
+   "spacing": 4,
+   "height": 3,
+   "radius": 1.02,
+   "triangles": 12640,
+   "source": "large_castle_door",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 1173868
+  },
+  "chain_fence": {
+   "label": "Chain fence",
+   "group": "landmarks",
+   "spacing": 6,
+   "height": 2.5,
+   "radius": 0.49,
+   "triangles": 3028,
+   "source": "modular_chainlink_fence",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 865492
+  },
+  "xmas_tree": {
+   "label": "Christmas tree",
+   "group": "holiday",
+   "spacing": 8,
+   "height": 5.5,
+   "radius": 1.9,
+   "triangles": 16968,
+   "source": "xmas_tree",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 322036,
+   "light": {
+    "watts": 200.0,
+    "color": [
+     1.0,
+     0.72,
+     0.4
+    ],
+    "height": 3.0
+   }
+  },
+  "gift_red": {
+   "label": "Red gift",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 1.1,
+   "radius": 0.57,
+   "triangles": 568,
+   "source": "gift_red",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13584
+  },
+  "gift_green": {
+   "label": "Green gift",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 0.9,
+   "radius": 0.74,
+   "triangles": 568,
+   "source": "gift_green",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13560
+  },
+  "gift_pile": {
+   "label": "Pile of gifts",
+   "group": "holiday",
+   "spacing": 4,
+   "height": 1.65,
+   "radius": 1.29,
+   "triangles": 2272,
+   "source": "gift_pile",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 50928
+  },
+  "snowman": {
+   "label": "Snowman",
+   "group": "holiday",
+   "spacing": 3,
+   "height": 2.25,
+   "radius": 0.94,
+   "triangles": 5272,
+   "source": "snowman",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 101604
+  },
+  "candy_cane": {
+   "label": "Candy cane",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 2.0,
+   "radius": 0.4,
+   "triangles": 6532,
+   "source": "candy_cane",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 121692
+  },
+  "sleigh": {
+   "label": "Sleigh",
+   "group": "holiday",
+   "spacing": 5,
+   "height": 1.7,
+   "radius": 1.55,
+   "triangles": 2992,
+   "source": "sleigh",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 63956
+  },
+  "wreath_arch": {
+   "label": "Wreath arch",
+   "group": "holiday",
+   "spacing": 6,
+   "height": 4.0,
+   "radius": 1.85,
+   "triangles": 27636,
+   "source": "wreath_arch",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 512012,
+   "light": {
+    "watts": 80.0,
+    "color": [
+     1.0,
+     0.72,
+     0.4
+    ],
+    "height": 3.3
+   }
+  },
+  "ornament_red": {
+   "label": "Giant red bauble",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 1.25,
+   "radius": 0.55,
+   "triangles": 2156,
+   "source": "ornament_red",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 41916
+  },
+  "ornament_gold": {
+   "label": "Giant gold bauble",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 1.25,
+   "radius": 0.55,
+   "triangles": 2156,
+   "source": "ornament_gold",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 41928
+  },
+  "gingerbread_hut": {
+   "label": "Gingerbread hut",
+   "group": "holiday",
+   "spacing": 7,
+   "height": 3.5,
+   "radius": 1.78,
+   "triangles": 4396,
+   "source": "gingerbread_hut",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 93056,
+   "light": {
+    "watts": 120.0,
+    "color": [
+     1.0,
+     0.65,
+     0.3
+    ],
+    "height": 1.2
+   }
+  },
+  "pumpkin": {
+   "label": "Pumpkin",
+   "group": "holiday",
+   "spacing": 1.5,
+   "height": 0.75,
+   "radius": 0.34,
+   "triangles": 4516,
+   "source": "pumpkin",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 83872
+  },
+  "jack_o_lantern": {
+   "label": "Jack-o'-lantern",
+   "group": "holiday",
+   "spacing": 1.5,
+   "height": 0.75,
+   "radius": 0.36,
+   "triangles": 4624,
+   "source": "jack_o_lantern",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 90824,
+   "light": {
+    "watts": 40.0,
+    "color": [
+     1.0,
+     0.5,
+     0.12
+    ],
+    "height": 0.45
+   }
+  },
+  "hay_bale": {
+   "label": "Hay bale",
+   "group": "holiday",
+   "spacing": 2.5,
+   "height": 1.0,
+   "radius": 0.81,
+   "triangles": 3156,
+   "source": "hay_bale",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 74072
+  },
+  "scarecrow": {
+   "label": "Scarecrow",
+   "group": "holiday",
+   "spacing": 3,
+   "height": 2.5,
+   "radius": 0.95,
+   "triangles": 868,
+   "source": "scarecrow",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 23512
+  },
+  "gravestone": {
+   "label": "Gravestone",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 1.25,
+   "radius": 0.47,
+   "triangles": 280,
+   "source": "gravestone",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 9516
+  },
+  "grave_cross": {
+   "label": "Stone cross",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 1.45,
+   "radius": 0.4,
+   "triangles": 36,
+   "source": "grave_cross",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 3092
+  },
+  "cauldron": {
+   "label": "Cauldron",
+   "group": "holiday",
+   "spacing": 2.5,
+   "height": 1.05,
+   "radius": 0.56,
+   "triangles": 2652,
+   "source": "cauldron",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 51728,
+   "light": {
+    "watts": 60.0,
+    "color": [
+     0.35,
+     1.0,
+     0.4
+    ],
+    "height": 1.15
+   }
+  },
+  "tree_spooky": {
+   "label": "Spooky tree",
+   "group": "holiday",
+   "spacing": 7,
+   "height": 7.0,
+   "radius": 2.35,
+   "triangles": 42488,
+   "source": "tree_spooky",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 792000
+  },
+  "paper_lanterns": {
+   "label": "Paper lanterns",
+   "group": "holiday",
+   "spacing": 5,
+   "height": 2.6,
+   "radius": 1.75,
+   "triangles": 4720,
+   "source": "paper_lanterns",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 94388,
+   "light": {
+    "watts": 70.0,
+    "color": [
+     1.0,
+     0.45,
+     0.2
+    ],
+    "height": 1.9
+   }
+  },
+  "bunting": {
+   "label": "Bunting",
+   "group": "holiday",
+   "spacing": 6,
+   "height": 3.0,
+   "radius": 2.46,
+   "triangles": 2648,
+   "source": "bunting",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 59100
+  },
+  "easter_egg_pink": {
+   "label": "Pink Easter egg",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 1.4,
+   "radius": 0.53,
+   "triangles": 3092,
+   "source": "easter_egg_pink",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 58972
+  },
+  "easter_egg_blue": {
+   "label": "Blue Easter egg",
+   "group": "holiday",
+   "spacing": 2,
+   "height": 1.4,
+   "radius": 0.53,
+   "triangles": 3092,
+   "source": "easter_egg_blue",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 58928
   }
  },
  "grounds": {
