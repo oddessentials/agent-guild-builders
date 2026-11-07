@@ -15,6 +15,7 @@ static var _kits := ""
 static var _textures: Dictionary = {}
 static var _skies: Dictionary = {}
 static var _halls: Dictionary = {}
+static var _mesh_lock := Mutex.new()
 
 static func kits_dir() -> String:
 	if _kits == "":
@@ -59,6 +60,18 @@ static func load_kit() -> Dictionary:
 ## The kit's mesh for a kind, loaded once. Cutout leaves are solid to shadows and
 ## two-sided, as a path tracer sees them.
 static func mesh_of(kind: String) -> Mesh:
+	_mesh_lock.lock()
+	var mesh := _load_mesh(kind)
+	_mesh_lock.unlock()
+	return mesh
+
+static func mesh_ready(kind: String) -> bool:
+	_mesh_lock.lock()
+	var ready := _meshes.has(kind)
+	_mesh_lock.unlock()
+	return ready
+
+static func _load_mesh(kind: String) -> Mesh:
 	if _meshes.has(kind):
 		return _meshes[kind]
 	var doc_gltf := GLTFDocument.new()

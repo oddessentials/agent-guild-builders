@@ -44,11 +44,22 @@ static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float) -> Stri
 		return why
 	return _too_close(models, _standing_on(doc, models, kind, x, z))
 
+## The same question for a placed item moving to (x, z).
+static func why_not_moved(doc: WorldDoc, thing: Dictionary, x: float, z: float) -> String:
+	var models: Dictionary = WorldScene.load_kit().get("models", {})
+	var why := _why_not_here(doc, models.get(thing.kind, {}), x, z, float(thing.scale))
+	if why != "":
+		return why
+	return _too_close(models, _standing_on(doc, models, thing.kind, x, z, int(thing.id)))
+
+## The largest size that keeps the Yard clear at this spot.
+static func largest_scale(doc: WorldDoc, kind: String, x: float, z: float) -> float:
+	var height := float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("height", 1.0))
+	return (maxf(1.0, Clearance.max_elevation(x, z)) - doc.height_at(x, z) - 0.001) / height
+
 ## `rolled`, capped to the largest size that keeps the Yard clear at this spot.
 static func fitted_scale(doc: WorldDoc, kind: String, x: float, z: float, rolled: float) -> float:
-	var height := float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("height", 1.0))
-	var room := maxf(1.0, Clearance.max_elevation(x, z)) - doc.height_at(x, z) - 0.001
-	return maxf(SMALLEST, minf(rolled, room / height))
+	return maxf(SMALLEST, minf(rolled, largest_scale(doc, kind, x, z)))
 
 ## What would mostly hide this item on screen, or "" if nothing would.
 static func hidden_behind(doc: WorldDoc, kind: String, x: float, z: float, scale: float) -> String:
@@ -83,9 +94,11 @@ static func _why_not_here(doc: WorldDoc, info: Dictionary, x: float, z: float, s
 		return "This would be under the water. Choose a spot on land, or lower the water."
 	return ""
 
-static func _standing_on(doc: WorldDoc, models: Dictionary, kind: String, x: float, z: float) -> String:
+static func _standing_on(doc: WorldDoc, models: Dictionary, kind: String, x: float, z: float, ignore_id := -1) -> String:
 	var own := float(models.get(kind, {}).get("radius", 0.5))
 	for t in doc.data.things:
+		if int(t.id) == ignore_id:
+			continue
 		var limit := minf(own, float(models.get(t.kind, {}).get("radius", 0.5)))
 		var dx: float = float(t.x) - x
 		var dz: float = float(t.z) - z

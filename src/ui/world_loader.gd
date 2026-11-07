@@ -49,11 +49,14 @@ func _work(make: Callable, path: String) -> Dictionary:
 		for suffix in ["_diff", "_nor_gl", "_rough"]:
 			if WorldScene._texture(name + suffix, false) == null:
 				return {"error": "A ground texture is missing or damaged: %s. Extract the complete app ZIP, including its kits folder." % name}
+	var used := {}
+	for thing in doc.data.things:
+		used[thing.kind] = true
 	var total := 0.0
-	for kind in models:
+	for kind in used:
 		total += maxf(float(models[kind].get("bytes", 1)), 1.0)
 	var loaded := 0.0
-	for kind in models:
+	for kind in used:
 		_say("Loading %s…" % str(models[kind].get("label", kind)).to_lower(), 0.25 + 0.6 * loaded / total)
 		if WorldScene.mesh_of(kind).get_surface_count() == 0:
 			return {"error": "An item is missing or damaged: %s. Extract the complete app ZIP, including its kits folder." % str(models[kind].get("label", kind))}

@@ -2,7 +2,7 @@ extends Control
 
 signal closed
 
-enum Tool { LOOK, LAND, GROUND, SCATTER, ERASE, WATER, MOOD }
+enum Tool { LOOK, LAND, GROUND, SCATTER, ERASE, WATER, MOOD, ARRANGE }
 const AUTOSAVE_SECONDS := 2.0
 const SAVE_RETRY_SECONDS := 10.0
 const BRUSH_FLOW := 0.35
@@ -16,7 +16,13 @@ const WIDE_ZOOM := 0.45
 const PLACED_RING_SECONDS := 1.4
 const PLACED_QUIET_PIXELS := 6.0
 const NO_POINTER := Vector2(-1, -1)
-const TOOL_KEYS := {KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
+const DRAG_PIXELS := 6.0
+const PICK_PIXELS := 10.0
+const TURN_STEP := PI / 12.0
+const SMALLEST_SIZE := 0.5
+const LARGEST_SIZE := 2.0
+const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["holiday", "Holiday"]]
+const TOOL_KEYS := {KEY_M: Tool.ARRANGE, KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
 var doc: WorldDoc
 var path := ""
@@ -40,6 +46,13 @@ var _ghost: MeshInstance3D
 var _wide_ring: TorusMesh
 var _spot_ring: TorusMesh
 var _placed_ring: MeshInstance3D
+var _selected_ring: MeshInstance3D
+var _selected_id := -1
+var _drag := {}
+var _mesh_tasks := {}
+var _place_group := ""
+var _place_search := ""
+var _place_items: VBoxContainer
 var _placed_ring_until := 0.0
 var _placed_pointer := NO_POINTER
 var _click_pointer := NO_POINTER
@@ -135,6 +148,7 @@ func open(document: WorldDoc, at: String) -> void:
 	_update_raised_land()
 	_roll_next()
 	_select_tool(tool)
+	_preload_chosen()
 	_update_undo_buttons()
 	if path == "" or doc.water_adjusted:
 		_mark_dirty()
@@ -236,7 +250,7 @@ func _build_ui() -> void:
 	tools.add_theme_constant_override("separation", 4)
 	left.add_child(tools)
 	tools.add_child(ProTheme.heading("Tools"))
-	for entry in [[Tool.SCATTER, "Place things", "P"], [Tool.ERASE, "Clear things", "C"], [Tool.LAND, "Shape land", "L"], [Tool.GROUND, "Paint ground", "G"], [Tool.WATER, "Water", "W"], [Tool.MOOD, "Sky and light", "S"], [Tool.LOOK, "Just look", "V"]]:
+	for entry in [[Tool.SCATTER, "Place things", "P"], [Tool.ARRANGE, "Move things", "M"], [Tool.ERASE, "Clear things", "C"], [Tool.LAND, "Shape land", "L"], [Tool.GROUND, "Paint ground", "G"], [Tool.WATER, "Water", "W"], [Tool.MOOD, "Sky and light", "S"], [Tool.LOOK, "Just look", "V"]]:
 		var b := Button.new()
 		b.text = entry[1]
 		b.tooltip_text = "%s (%s)" % [entry[1], entry[2]]
@@ -425,6 +439,12 @@ func _build_world() -> void:
 	_placed_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_placed_ring.visible = false
 	_viewport.add_child(_placed_ring)
+	_selected_ring = MeshInstance3D.new()
+	_selected_ring.mesh = _spot_ring
+	_selected_ring.material_override = _brush_material.duplicate()
+	_selected_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_selected_ring.visible = false
+	_viewport.add_child(_selected_ring)
 	_zones = Decal.new()
 	_zones.size = Vector3(WorldDoc.TERRAIN_SIZE, 400.0, WorldDoc.TERRAIN_SIZE)
 	_zones.modulate = Color(ProTheme.color("danger"), 0.28)
@@ -542,9 +562,11 @@ func _select_tool(id: int) -> void:
 	_finish_edits()
 	_dismiss_preview()
 	tool = id
+	_selected_id = -1
+	_show_selection()
 	for k in _tools:
 		_tools[k].button_pressed = k == id
-	_stage.mouse_default_cursor_shape = Control.CURSOR_DRAG if id in [Tool.LOOK, Tool.WATER, Tool.MOOD] else Control.CURSOR_CROSS
+	_stage.mouse_default_cursor_shape = Control.CURSOR_DRAG if id in [Tool.LOOK, Tool.WATER, Tool.MOOD] else (Control.CURSOR_ARROW if id == Tool.ARRANGE else Control.CURSOR_CROSS)
 	_build_options()
 	_on_stage_left()
 	_update_zones()
@@ -572,6 +594,8 @@ func _build_options() -> void:
 	match tool:
 		Tool.SCATTER:
 			_build_place_options()
+		Tool.ARRANGE:
+			_build_arrange_options()
 		Tool.ERASE:
 			_options.add_child(ProTheme.heading("Clear things"))
 			_options.add_child(ProTheme.note("Drag over anything you've placed to remove it."))
@@ -696,14 +720,65 @@ func _build_place_options() -> void:
 		_place_camera())
 	_options.add_child(wider)
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
-	for group in ["trees", "plants", "rocks", "lights", "props"]:
-		_options.add_child(ProTheme.heading(group.capitalize(), 13))
-		var grid := _item_grid()
-		for key in models:
-			if models[key].group == group:
-				grid.add_child(_choice_button(key, models[key].label, key))
+	if models.has(_chosen()):
+		_place_group = models[_chosen()].group
+	var search := LineEdit.new()
+	search.name = "Search"
+	search.placeholder_text = "Search items"
+	search.clear_button_enabled = true
+	search.text = _place_search
+	search.text_changed.connect(func(text):
+		_place_search = text
+		_fill_place_items())
+	_options.add_child(search)
+	var groups := GridContainer.new()
+	groups.name = "Groups"
+	groups.columns = 3
+	groups.add_theme_constant_override("h_separation", 4)
+	groups.add_theme_constant_override("v_separation", 4)
+	_options.add_child(groups)
+	for entry in PLACE_GROUPS:
+		var group: String = entry[0]
+		if not models.values().any(func(m): return m.group == group):
+			continue
+		var b := Button.new()
+		b.text = entry[1]
+		ProTheme.tool_button(b)
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_font_size_override("font_size", 13)
+		b.button_pressed = _place_group == group
+		b.pressed.connect(func():
+			_place_group = group
+			for other in groups.get_children():
+				other.button_pressed = other == b
+			if _place_search != "":
+				_place_search = ""
+				search.text = ""
+			_fill_place_items())
+		groups.add_child(b)
+	_place_items = VBoxContainer.new()
+	_options.add_child(_place_items)
+	_fill_place_items()
 	_refresh_tall_note()
 	_schedule_reveal_choice.call_deferred()
+
+func _fill_place_items() -> void:
+	for key in _item_buttons.keys():
+		if not key.begins_with("mix:"):
+			_item_buttons.erase(key)
+	for c in _place_items.get_children():
+		_place_items.remove_child(c)
+		c.queue_free()
+	var models: Dictionary = WorldScene.load_kit().get("models", {})
+	var wanted := _place_search.strip_edges().to_lower()
+	var grid := _item_grid(_place_items)
+	for key in models:
+		var fits: bool = str(models[key].label).to_lower().contains(wanted) if wanted != "" else models[key].group == _place_group
+		if fits:
+			grid.add_child(_choice_button(key, models[key].label, key))
+	if grid.get_child_count() == 0:
+		_place_items.add_child(ProTheme.note("Nothing matches that."))
 
 func _schedule_reveal_choice() -> void:
 	if not get_tree().process_frame.is_connected(_reveal_choice):
@@ -713,12 +788,12 @@ func _reveal_choice() -> void:
 	if _item_buttons.has(_chosen()):
 		_options_scroll.ensure_control_visible(_item_buttons[_chosen()])
 
-func _item_grid() -> GridContainer:
+func _item_grid(parent: Control = null) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
-	_options.add_child(grid)
+	(parent if parent else _options).add_child(grid)
 	return grid
 
 func _item_button(label: String, thumb: String, selected: bool, on_press: Callable) -> Button:
@@ -763,6 +838,7 @@ func _choose(key: String) -> void:
 	_refresh_tall_note()
 	_update_zones()
 	_roll_next()
+	_preload_chosen()
 
 func _refresh_tall_note() -> void:
 	var tall := _chosen_is_tall()
@@ -851,13 +927,14 @@ func _finish_edits() -> void:
 	_painting = false
 	_panning = false
 	_finish_stroke()
+	_finish_drag()
 	for finish in _slider_finishes.duplicate():
 		finish.call()
 	_finishing_edits = false
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and not event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT and _painting:
+		if event.button_index == MOUSE_BUTTON_LEFT and (_painting or not _drag.is_empty()):
 			_finish_edits()
 		if event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
 			_panning = false
@@ -932,16 +1009,20 @@ func _on_stage_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_MIDDLE or event.button_index == MOUSE_BUTTON_RIGHT or (event.button_index == MOUSE_BUTTON_LEFT and tool in [Tool.LOOK, Tool.WATER, Tool.MOOD]):
 			_panning = event.pressed
 		elif event.button_index == MOUSE_BUTTON_LEFT:
-			if event.pressed:
-				_begin_stroke(event.position)
-			else:
+			if not event.pressed:
 				_finish_edits()
+			elif tool == Tool.ARRANGE:
+				_press_thing(event.position)
+			else:
+				_begin_stroke(event.position)
 	elif event is InputEventMouseMotion:
 		if _panning:
 			_pan_by(event.relative, _camera.size / float(_viewport.size.y))
 			_place_camera()
 		if _painting:
 			_continue_stroke(event.position)
+		if not _drag.is_empty():
+			_drag_thing(event.position)
 		_update_cursor(event.position)
 
 func _on_stage_left() -> void:
@@ -971,6 +1052,9 @@ func _show_hint(text: String, at: Vector2) -> void:
 ## What the pointer would do here: where it lands, what it would look like, and
 ## why it would be refused.
 func _update_cursor(pos: Vector2) -> void:
+	if tool == Tool.ARRANGE:
+		_arrange_cursor(pos)
+		return
 	var hit = _ground_at(pos)
 	var shows_brush := tool in [Tool.LAND, Tool.GROUND, Tool.SCATTER, Tool.ERASE]
 	if hit == null or not shows_brush:
@@ -993,9 +1077,10 @@ func _update_cursor(pos: Vector2) -> void:
 				text = _why_not_place(hit)
 				var fitted := Placing.fitted_scale(doc, place_kind, hit.x, hit.z, _next_scale)
 				_brush.scale = Vector3.ONE * _footprint(place_kind, fitted)
-				_ghost.visible = text == ""
+				_ghost.visible = text == "" and WorldScene.mesh_ready(place_kind)
 				if text == "":
-					_ghost.mesh = WorldScene.mesh_of(place_kind)
+					if _ghost.visible:
+						_ghost.mesh = WorldScene.mesh_of(place_kind)
 					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": _next_turn, "scale": fitted})
 					var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
 					if behind != "":
@@ -1021,9 +1106,204 @@ func _update_cursor(pos: Vector2) -> void:
 
 func _why_not_place(hit: Vector3) -> String:
 	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z)
-	if why == "" and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
+	if why == "" and not _mesh_tasks.has(place_kind) and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
 		return "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(place_kind)
 	return why
+
+func _preload_chosen() -> void:
+	for kind in _chosen_kinds():
+		if not _mesh_tasks.has(kind) and not WorldScene.mesh_ready(kind):
+			_mesh_tasks[kind] = WorkerThreadPool.add_task(WorldScene.mesh_of.bind(kind))
+
+func _check_mesh_tasks() -> void:
+	for kind in _mesh_tasks.keys():
+		if WorkerThreadPool.is_task_completed(_mesh_tasks[kind]):
+			WorkerThreadPool.wait_for_task_completion(_mesh_tasks[kind])
+			_mesh_tasks.erase(kind)
+
+func _build_arrange_options() -> void:
+	_options.add_child(ProTheme.heading("Move things"))
+	_options.add_child(ProTheme.note("Click something to choose it, then drag it somewhere new. Q and E turn it. Delete removes it."))
+	var thing := _selected()
+	if thing.is_empty():
+		return
+	_options.add_child(ProTheme.heading(_thing_name(thing.kind), 13))
+	_slider("Turn", 0.0, 360.0, 1.0, rad_to_deg(wrapf(float(thing.turn), 0.0, TAU)), "%.0f°",
+		func(v): _preview_selected("turn", deg_to_rad(v)),
+		func(v, was): _commit_selected("Turn", "turn", deg_to_rad(v), deg_to_rad(was)))
+	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
+	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
+		func(v): _preview_selected("scale", v),
+		func(v, was): _commit_selected("Resize", "scale", v, was))
+	var remove := Button.new()
+	remove.text = "Remove"
+	remove.pressed.connect(_remove_selected)
+	_options.add_child(remove)
+
+func _selected() -> Dictionary:
+	if _selected_id >= 0:
+		for t in doc.data.things:
+			if int(t.id) == _selected_id:
+				return t
+	return {}
+
+func _select_thing(id: int) -> void:
+	_finish_edits()
+	_selected_id = id
+	_show_selection()
+	_build_options()
+
+func _show_selection() -> void:
+	if _selected_ring == null:
+		return
+	var thing := _selected()
+	_selected_ring.visible = not thing.is_empty()
+	if _selected_ring.visible:
+		_selected_ring.position = Vector3(thing.x, doc.height_at(thing.x, thing.z) + 0.1, thing.z)
+		_selected_ring.scale = Vector3.ONE * _footprint(thing.kind, float(thing.scale))
+	_redraw()
+
+func _preview_selected(field: String, value: Variant) -> void:
+	var thing := _selected()
+	if thing.is_empty():
+		return
+	var changed: Dictionary = thing.duplicate()
+	changed[field] = value
+	doc.data.things[doc.data.things.find(thing)] = changed
+	_scene.update_things([changed], [thing])
+	_show_selection()
+
+func _commit_selected(label: String, field: String, value: Variant, was: Variant) -> void:
+	var thing := _selected()
+	if thing.is_empty():
+		return
+	var before: Dictionary = thing.duplicate()
+	before[field] = was
+	history.things_edit("%s %s" % [label, _thing_name(thing.kind)], [thing], [before], true)
+
+func _turn_selected(by: float) -> void:
+	_finish_edits()
+	var thing := _selected()
+	if thing.is_empty():
+		return
+	var changed: Dictionary = thing.duplicate()
+	changed.turn = wrapf(float(thing.turn) + by, 0.0, TAU)
+	history.things_edit("Turn " + _thing_name(thing.kind), [changed], [thing])
+
+func _remove_selected() -> void:
+	_finish_edits()
+	var thing := _selected()
+	if thing.is_empty():
+		return
+	_set_status("Removed %s." % _thing_name(thing.kind))
+	history.things_edit("Remove " + _thing_name(thing.kind), [], [thing])
+
+## What's under the pointer. Things are judged by their whole upright shape on
+## screen, and the closest fit wins, so a fern can be chosen under a tree.
+func _thing_at(pos: Vector2) -> Dictionary:
+	var models: Dictionary = WorldScene.load_kit().get("models", {})
+	var a := Yard.axes()
+	var right: Vector3 = a.right
+	var up: Vector3 = a.up
+	var per_pixel: float = _camera.size / float(_viewport.size.y)
+	var origin := _camera.unproject_position(Vector3.ZERO)
+	var best := {}
+	var best_fit := 1.0
+	for t in doc.data.things:
+		var info: Dictionary = models.get(t.kind, {})
+		var s := float(t.scale)
+		var radius := maxf(float(info.get("radius", 0.5)) * s * 0.7 / per_pixel, PICK_PIXELS)
+		var base_x: float = origin.x + (float(t.x) * right.x + float(t.z) * right.z) / per_pixel
+		if absf(base_x - pos.x) >= radius:
+			continue
+		var base := Vector3(t.x, doc.height_at(t.x, t.z), t.z)
+		var from := origin + Vector2(base.dot(right), -base.dot(up)) / per_pixel
+		var to := from + Vector2(0.0, -float(info.get("height", 1.0)) * s * up.y / per_pixel)
+		var fit := Geometry2D.get_closest_point_to_segment(pos, from, to).distance_to(pos) / radius
+		if fit < best_fit:
+			best_fit = fit
+			best = t
+	return best
+
+func _press_thing(pos: Vector2) -> void:
+	_dismiss_preview()
+	var over := _thing_at(pos)
+	_select_thing(int(over.id) if not over.is_empty() else -1)
+	if not over.is_empty():
+		_drag = {"from": pos, "moving": false, "why": "", "hit": null}
+
+func _drag_thing(pos: Vector2) -> void:
+	var thing := _selected()
+	if thing.is_empty():
+		_drag = {}
+		return
+	if not _drag.moving:
+		if pos.distance_to(_drag.from) < DRAG_PIXELS:
+			return
+		_drag.moving = true
+		_scene.update_things([], [thing])
+		_selected_ring.visible = false
+	var hit = _ground_at(pos)
+	if hit != null:
+		_drag.hit = hit
+		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z)
+
+func _arrange_cursor(pos: Vector2) -> void:
+	var colour := ProTheme.color("accent")
+	var text := ""
+	if not _drag.is_empty() and _drag.moving:
+		var thing := _selected()
+		if _drag.hit == null or thing.is_empty():
+			return
+		var moved: Dictionary = thing.duplicate()
+		moved.x = _drag.hit.x
+		moved.z = _drag.hit.z
+		_ghost.mesh = WorldScene.mesh_of(thing.kind)
+		_ghost.transform = _scene.transform_of(moved)
+		_ghost.visible = true
+		_brush.position = _drag.hit + Vector3.UP * 0.1
+		_brush.scale = Vector3.ONE * _footprint(thing.kind, float(thing.scale))
+		text = _drag.why
+		if text != "":
+			colour = ProTheme.color("danger")
+	else:
+		var over := _thing_at(pos)
+		if over.is_empty():
+			_on_stage_left()
+			return
+		_ghost.visible = false
+		_brush.position = Vector3(over.x, doc.height_at(over.x, over.z) + 0.1, over.z)
+		_brush.scale = Vector3.ONE * _footprint(over.kind, float(over.scale))
+		text = _thing_name(over.kind)
+	_brush.mesh = _spot_ring
+	_brush.visible = true
+	_brush_material.albedo_color = colour
+	_show_hint(text, pos)
+	_redraw()
+
+func _finish_drag() -> void:
+	if _drag.is_empty():
+		return
+	var moving: bool = _drag.moving
+	var hit = _drag.hit
+	var why: String = _drag.why
+	_drag = {}
+	var thing := _selected()
+	if not moving or thing.is_empty():
+		return
+	_ghost.visible = false
+	if hit == null or why != "":
+		_scene.update_things([thing], [])
+		_show_selection()
+		if why != "":
+			_set_status(why)
+		return
+	var moved: Dictionary = thing.duplicate()
+	moved.x = hit.x
+	moved.z = hit.z
+	history.things_edit("Move " + _thing_name(thing.kind), [moved], [thing])
+	_set_status("Moved %s." % _thing_name(thing.kind))
+	_show_selection()
 
 func _footprint(kind: String, scale: float) -> float:
 	return maxf(float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("radius", 0.5)) * scale, 0.8)
@@ -1262,6 +1542,12 @@ func _on_changed(part: int, detail: Variant) -> void:
 	match part:
 		History.Part.THINGS:
 			_scene.update_things(detail.added, detail.removed)
+			if tool == Tool.ARRANGE:
+				_show_selection()
+				if not _finishing_edits:
+					if _selected().is_empty():
+						_selected_id = -1
+					_build_options()
 		History.Part.LAND:
 			_scene.mark_land(detail)
 			_invalidate_zones()
@@ -1387,6 +1673,19 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if TOOL_KEYS.has(event.keycode):
 		_select_tool(TOOL_KEYS[event.keycode])
+	elif event.keycode == KEY_Q or event.keycode == KEY_E:
+		var by := TURN_STEP if event.keycode == KEY_E else -TURN_STEP
+		if tool == Tool.ARRANGE:
+			_turn_selected(by)
+		elif tool == Tool.SCATTER and place_mode == "one":
+			_next_turn = wrapf(_next_turn + by, 0.0, TAU)
+			_update_cursor(_stage.get_local_mouse_position())
+		else:
+			return
+	elif tool == Tool.ARRANGE and (event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE):
+		_remove_selected()
+	elif tool == Tool.ARRANGE and event.keycode == KEY_ESCAPE:
+		_select_thing(-1)
 	elif event.keycode == KEY_BRACKETLEFT or event.keycode == KEY_BRACKETRIGHT:
 		brush_radius = clampf(brush_radius * (0.8 if event.keycode == KEY_BRACKETLEFT else 1.25), 1.0, 40.0)
 		_set_brush_ring(brush_radius)
@@ -1464,12 +1763,16 @@ func _exit_tree() -> void:
 	if _zone_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_zone_task)
 		_zone_task = -1
+	for kind in _mesh_tasks:
+		WorkerThreadPool.wait_for_task_completion(_mesh_tasks[kind])
+	_mesh_tasks.clear()
 
 func _process(_delta: float) -> void:
 	if _scene == null:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
 	_check_zone_task()
+	_check_mesh_tasks()
 	if _placed_ring.visible and now >= _placed_ring_until:
 		_placed_ring.visible = false
 		_redraw()

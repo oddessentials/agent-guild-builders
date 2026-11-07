@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -659,4 +659,108 @@ func _loader() -> bool:
 		await process_frame
 	check(bad.doc == null, "loader: reports a world that can't be opened")
 	made.free()
+	return true
+
+func _arrange_view(doc: WorldDoc) -> Control:
+	var script: GDScript = load("res://src/ui/editor_view.gd")
+	var view: Control = script.new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(doc, "")
+	await process_frame
+	view._select_tool(view.Tool.ARRANGE)
+	return view
+
+func _screen_of(view: Control, t: Dictionary) -> Vector2:
+	return view._camera.unproject_position(Vector3(t.x, view.doc.height_at(t.x, t.z), t.z))
+
+func _arrange() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var stone := doc.add_thing("stone", 24.0, 8.0, 0.5, 1.0)
+	var fir := doc.add_thing("tree_fir", 40.0, -40.0, 0.0, 1.0)
+	var view: Control = await _arrange_view(doc)
+	var at := _screen_of(view, stone)
+	check(view._thing_at(at).get("id") == stone.id, "arrange: finds the thing under the pointer")
+	check(view._thing_at(Vector2(2, 2)).is_empty(), "arrange: empty ground finds nothing")
+	_click(view, at, true)
+	_click(view, at, false)
+	check(view._selected_id == stone.id and view._selected_ring.visible, "arrange: a click chooses it")
+	check(doc.data.things.size() == 2 and not view.history.can_undo(), "arrange: choosing changes nothing")
+	var to := at + Vector2(60, 30)
+	var hit_to: Vector3 = view._ground_at(to)
+	_click(view, at, true)
+	_drag(view, to)
+	_click(view, to, false)
+	var moved: Dictionary = view._selected()
+	check(Vector2(moved.x, moved.z).distance_to(Vector2(hit_to.x, hit_to.z)) < 0.01 and moved.id == stone.id, "arrange: a drag moves it")
+	check(view.history.undo_label().begins_with("Move"), "arrange: a move is one undo step")
+	view.history.undo()
+	var back: Dictionary = view._selected()
+	check(is_equal_approx(back.x, 24.0) and is_equal_approx(back.z, 8.0), "arrange: undo puts it back")
+	view.history.redo()
+	check(view._selected().x == moved.x, "arrange: redo moves it again")
+	var from_here := _screen_of(view, view._selected())
+	var plaza: Vector2 = view._camera.unproject_position(Vector3.ZERO)
+	var kept: Dictionary = view._selected()
+	_click(view, from_here, true)
+	_drag(view, plaza)
+	check(view._drag.why != "", "arrange: says why while over a refused spot")
+	_click(view, plaza, false)
+	check(view._selected().x == kept.x and view._selected().z == kept.z, "arrange: a refused move leaves it where it was")
+	check(view._status.text != "", "arrange: says why it was refused")
+	check(view._scene._by_cell.has(view._scene._key_of(kept)) and view._scene._by_cell[view._scene._key_of(kept)].things.size() == 1, "arrange: a refused move still draws it")
+	view._turn_selected(view.TURN_STEP)
+	check(is_equal_approx(view._selected().turn, wrapf(kept.turn + view.TURN_STEP, 0.0, TAU)), "arrange: Q and E turn it")
+	view.history.undo()
+	check(is_equal_approx(view._selected().turn, kept.turn), "arrange: undo turns it back")
+	var before_scale: float = view._selected().scale
+	view._preview_selected("scale", 1.5)
+	view._commit_selected("Resize", "scale", 1.5, before_scale)
+	check(view._selected().scale == 1.5, "arrange: resizes it")
+	view.history.undo()
+	check(view._selected().scale == before_scale, "arrange: undo restores the size")
+	view._select_thing(fir.id)
+	check(Placing.largest_scale(doc, "tree_fir", fir.x, fir.z) * 16.0 + doc.height_at(fir.x, fir.z) <= maxf(1.0, Clearance.max_elevation(fir.x, fir.z)), "arrange: the largest size keeps the Yard clear")
+	view._remove_selected()
+	check(doc.data.things.size() == 1 and view._selected_id == -1, "arrange: remove takes it away and clears the choice")
+	view.history.undo()
+	check(doc.data.things.size() == 2, "arrange: undo brings it back")
+	check(Placing.why_not_moved(doc, view._selected() if not view._selected().is_empty() else fir, fir.x, fir.z) == "", "arrange: a thing never blocks itself")
+	view.free()
+	return true
+
+func _place_panel() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var script: GDScript = load("res://src/ui/editor_view.gd")
+	var view: Control = script.new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(doc, "")
+	await process_frame
+	check(view._place_group == "plants", "panel: shows the chosen item's group")
+	check(view._item_buttons.has("fern") and not view._item_buttons.has("tree_oak"), "panel: shows one group at a time")
+	view._place_search = "tree"
+	view._fill_place_items()
+	check(view._item_buttons.has("tree_oak") and view._item_buttons.has("stump") and not view._item_buttons.has("fern"), "panel: search looks through every group")
+	view._place_search = "no such thing"
+	view._fill_place_items()
+	check(view._item_buttons.is_empty(), "panel: search can find nothing")
+	view._place_search = ""
+	view.free()
+	var opened := WorldDoc.create("guild", "T", 3)
+	opened.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
+	var used := {}
+	for t in opened.data.things:
+		used[t.kind] = true
+	var made := WorldLoader.new()
+	root.add_child(made)
+	var result := {}
+	made.done.connect(func(d): result.doc = d)
+	made.start(func(): return opened)
+	while not result.has("doc"):
+		await process_frame
+	made.free()
+	check(result.doc != null and WorldScene.mesh_ready("stone"), "panel: opening a world loads what it uses")
 	return true
