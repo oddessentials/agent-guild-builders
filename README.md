@@ -7,3 +7,12 @@
     </picture>
   </a>
 </p>
+<p align="center">
+  <a href="https://github.com/oddessentials/agent-guild-builders/releases/latest">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="data/brand/hero-dark.webp" />
+      <source media="(prefers-color-scheme: light)" srcset="data/brand/hero-light.webp" />
+      <img src="data/brand/hero-light.webp" width="560" alt="The Agent Guild: Builders crew" />
+    </picture>
+  </a>
+</p>
