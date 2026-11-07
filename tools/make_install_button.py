@@ -16,6 +16,8 @@ PX, PY, PW, PH = 46, 42, 668, 128
 CUT = 24
 CY = PY + PH / 2
 EMBLEM_X = PX + 86
+STAMP_X, STAMP_Y = PX + PW - 64, PY + 8
+STAMP_RED = "#ff4a3d"
 
 
 def font(name, weight):
@@ -58,6 +60,11 @@ def svg(theme):
     title_x = text_l + (text_r - text_l - title_w) / 2
     sub_x = text_l + (text_r - text_l - sub_w) / 2
     divider_x = PX + 160
+    stamp_text, stamp_w = outline(font("exo2.woff2", 900), "BETA", 28, 0.12)
+    stamp_outer_w = stamp_w + 34
+    stamp_outer_h = 46
+    stamp_l = STAMP_X - stamp_outer_w / 2
+    stamp_t = STAMP_Y - stamp_outer_h / 2
 
     frame = chamfer(PX, PY, PW, PH, CUT)
     plate = chamfer(PX + 3, PY + 3, PW - 6, PH - 6, CUT - 1.2)
@@ -76,7 +83,7 @@ def svg(theme):
     )
 
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t">
-<title id="t">Install Agent Guild: Builders for Windows</title>
+<title id="t">Install Agent Guild: Builders beta for Windows</title>
 <defs>
   <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="#fff3cf"/><stop offset=".28" stop-color="#f6dc9c"/>
@@ -119,6 +126,11 @@ def svg(theme):
   <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
   <filter id="engrave" x="-5%" y="-30%" width="110%" height="160%">
     <feDropShadow dx="0" dy="2" stdDeviation="1.4" flood-color="#000" flood-opacity=".85"/>
+  </filter>
+  <filter id="ink" x="-10%" y="-20%" width="120%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency=".5" numOctaves="2" seed="7" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3.5 3.1" result="wear"/>
+    <feComposite in="SourceGraphic" in2="wear" operator="in"/>
   </filter>
   <clipPath id="inside"><path d="{plate}"/></clipPath>
 </defs>
@@ -164,6 +176,11 @@ def svg(theme):
 </g>
 <path transform="translate({sub_x:.2f} {CY + 40})" d="{sub}" fill="#a9b0c4"/>
 {chevrons}
+<g transform="rotate(-8 {STAMP_X} {STAMP_Y})" filter="url(#ink)" opacity=".95">
+  <rect x="{stamp_l:.2f}" y="{stamp_t:.2f}" width="{stamp_outer_w:.2f}" height="{stamp_outer_h}" rx="5" fill="none" stroke="{STAMP_RED}" stroke-width="3.5"/>
+  <rect x="{stamp_l + 5:.2f}" y="{stamp_t + 5:.2f}" width="{stamp_outer_w - 10:.2f}" height="{stamp_outer_h - 10}" rx="3" fill="none" stroke="{STAMP_RED}" stroke-width="1.2"/>
+  <path transform="translate({STAMP_X - stamp_w / 2:.2f} {STAMP_Y + 10})" d="{stamp_text}" fill="{STAMP_RED}" stroke="{STAMP_RED}" stroke-width=".9"/>
+</g>
 </svg>
 """
 
