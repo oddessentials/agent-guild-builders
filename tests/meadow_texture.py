@@ -48,7 +48,7 @@ class MeadowTextureTests(unittest.TestCase):
             (grounds / f'leafy_grass_{suffix}_2k.jpg').write_bytes(original)
         kit = self.folder / 'kit'
         with patch.multiple(build_kit, SOURCE=self.folder, MEADOW=self.source, KIT=kit,
-                            MODELS={}, SKIES={}, GROUNDS={'grass': ('leafy_grass', 'Meadow grass')}, create=True):
+                            MODELS={}, MADE_HERE={}, MORE_SOURCES=[], SKIES={}, GROUNDS={'grass': ('leafy_grass', 'Meadow grass')}, create=True):
             build_kit.main()
             output = kit / 'textures/grass_diff.jpg'
             first = output.read_bytes()
@@ -68,7 +68,10 @@ class MeadowTextureTests(unittest.TestCase):
         prepared.write_bytes(b'prepared tile')
         with self.assertRaisesRegex(SystemExit, 'original Meadow source JPG'):
             build_kit.inputs([str(self.folder), str(prepared)])
-        self.assertEqual(build_kit.inputs([str(self.folder), str(self.source)]), (self.folder, self.source))
+        self.assertEqual(build_kit.inputs([str(self.folder), str(self.source)]), (self.folder, self.source, []))
+        self.assertEqual(build_kit.inputs([str(self.folder), str(self.source), str(self.folder)]), (self.folder, self.source, [self.folder]))
+        with self.assertRaisesRegex(SystemExit, 'does not exist'):
+            build_kit.inputs([str(self.folder), str(self.source), str(self.folder / 'missing')])
 
     def test_unreadable_source_fails_before_creating_kit(self):
         self.source.write_bytes(b'not an image')

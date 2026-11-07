@@ -77,6 +77,11 @@ static func load_kit() -> Dictionary:
 static func mesh_ready(kind: String) -> bool:
 	return _meshes.has(kind)
 
+## Whether a kind has gone for the season: still in the world, but not drawn, and
+## nothing can touch it or be stopped by it until it returns.
+static func gone_in(kind: String, season: String) -> bool:
+	return season == "winter" and kind in WINTER_GONE
+
 ## A kind as it looks in a season. Summer is the model itself.
 static func season_mesh(kind: String, season: String) -> Mesh:
 	if season == "summer":
@@ -88,7 +93,7 @@ static func season_mesh(kind: String, season: String) -> Mesh:
 
 static func _dress_for(kind: String, season: String, plain: Mesh) -> ArrayMesh:
 	var dressed := ArrayMesh.new()
-	if season == "winter" and kind in WINTER_GONE:
+	if gone_in(kind, season):
 		return dressed
 	var group: String = load_kit().get("models", {}).get(kind, {}).get("group", "")
 	var snow := load("res://src/scene/snow.gdshader") as Shader

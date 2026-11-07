@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -733,7 +733,7 @@ func _arrange() -> bool:
 	check(is_equal_approx(view._selected().turn, kept.turn), "arrange: undo turns it back")
 	var before_scale: float = view._selected().scale
 	view._preview_selected("scale", 1.5)
-	view._commit_selected("Resize", "scale")
+	view._commit_selected("Resize", "scale", before_scale)
 	check(view._selected().scale == 1.5, "arrange: resizes it")
 	view.history.undo()
 	check(view._selected().scale == before_scale, "arrange: undo restores the size")
@@ -959,4 +959,95 @@ func _review() -> bool:
 	for key in ["canyon", "island"]:
 		for seed_value in [1, 2, 3, 1941, 99999]:
 			check(_land_is_protected(Templates.create(key, "guild", "T", seed_value)), "review: %s seed %d keeps the Yard's ground" % [key, seed_value])
+	return true
+
+func _review_slider_edits() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var stone := doc.add_thing("stone", 40.0, 40.0, 0.5, 1.0)
+	var view: Control = await _arrange_view(doc)
+	view._zoom = 0.3
+	view._place_camera()
+	view._select_thing(stone.id)
+	_sliders(view)[0].value = _sliders(view)[0].value + 15.0
+	var turned: float = view._selected().turn
+	_sliders(view)[1].value = 1.01
+	view._finish_edits()
+	check(view.history.undo_label().begins_with("Resize"), "slider edits: the last slider is the last undo step")
+	view.history.undo()
+	check(view._selected().scale == 1.0 and view._selected().turn == turned, "slider edits: the first undo restores only the size")
+	view.history.undo()
+	check(view._selected().scale == 1.0 and view._selected().turn == 0.5, "slider edits: the second restores only the turn")
+	view.history.redo()
+	view.history.redo()
+	check(view._selected().scale == 1.01 and view._selected().turn == turned, "slider edits: redo brings both back")
+	view.history.undo()
+	view.history.undo()
+	view._select_thing(stone.id)
+	var start: float = _sliders(view)[0].value
+	_sliders(view)[0].value = start + 40.0
+	_sliders(view)[0].value = start
+	view._finish_edits()
+	check(view._selected().turn == 0.5, "slider edits: moving away and back restores the exact turn")
+	view._turn_selected(view.TURN_STEP)
+	var after_key: float = view._selected().turn
+	_sliders(view)[0].value = _sliders(view)[0].value + 20.0
+	view._finish_edits()
+	view.history.undo()
+	check(view._selected().turn == after_key, "slider edits: undo returns to the keyed turn, %f against %f" % [view._selected().turn, after_key])
+	view.history.undo()
+	check(view._selected().turn == 0.5, "slider edits: and then to the one before it")
+	_sliders(view)[0].value = 90.0
+	view._finish_edits()
+	var ninety: float = view._selected().turn
+	_sliders(view)[0].value = 120.0
+	view._finish_edits()
+	view.history.undo()
+	check(view._selected().turn == ninety, "slider edits: a second edit on one slider undoes to the first")
+	view.free()
+	var mood_doc := WorldDoc.create("guild", "T", 3)
+	mood_doc.data.mood.light.sun_energy = 3.37
+	mood_doc.data.mood.light.strength = 0.93
+	var mood_view: Control = await _arrange_view(mood_doc)
+	mood_view._select_tool(mood_view.Tool.MOOD)
+	_sliders(mood_view)[0].value = 4.0
+	_sliders(mood_view)[1].value = 1.2
+	mood_view._finish_edits()
+	mood_view.history.undo()
+	mood_view.history.undo()
+	check(float(mood_doc.data.mood.light.sun_energy) == 3.37 and float(mood_doc.data.mood.light.strength) == 0.93, "slider edits: other panels follow the same rule")
+	mood_view.free()
+	return true
+
+func _review_hidden() -> bool:
+	var doc := WorldDoc.create("guild", "T", 3)
+	var stone := doc.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
+	var up := Clearance._ground_up()
+	var ahead := Vector2(40.0, 40.0) - up * 0.6
+	var fern := doc.add_thing("fern", ahead.x, ahead.y, 0.0, 1.0)
+	var view: Control = await _arrange_view(doc)
+	view._target = Vector3(40.0, 1.0, 40.0)
+	view._place_camera()
+	var near_fern: Vector2 = _screen_of(view, stone).lerp(_screen_of(view, fern), 0.75)
+	check(view._thing_at(near_fern).get("id") == fern.id, "hidden: a visible fern can be chosen in summer")
+	view._select_thing(fern.id)
+	view.history.set_value("Season", doc.data, "season", "winter", "summer")
+	check(view._selected_id == -1 and not view._selected_ring.visible, "hidden: a chosen fern is let go when winter hides it")
+	check(view._thing_at(near_fern).get("id") == stone.id, "hidden: clicking in winter chooses the visible stone")
+	check(view._thing_at(_screen_of(view, fern)).get("id", -1) != fern.id, "hidden: a hidden plant can't be chosen")
+	check(Placing.why_not_moved(doc, stone, fern.x, fern.z) == "", "hidden: a hidden plant doesn't block a move")
+	check(Placing.why_not_one(doc, "stone", fern.x, fern.z) == "", "hidden: or a placement")
+	check(Placing.why_not(doc, "stone", fern.x, fern.z, 1.0).contains("stone"), "hidden: visible things still crowd")
+	var far := doc.add_thing("grass", 70.0, 70.0, 0.0, 1.0)
+	check(Placing.crowded_by(doc, 70.0, 70.0, 3.0) == "", "hidden: or crowd painting")
+	view._select_tool(view.Tool.ERASE)
+	view.brush_radius = 4.0
+	view._erase_at(Vector3(70.0, 0.0, 70.0))
+	view._finish_edits()
+	check(doc.data.things.any(func(t): return t.id == far.id), "hidden: clearing leaves what can't be seen")
+	view._erase_at(Vector3(40.0, 0.0, 40.0))
+	view._finish_edits()
+	check(not doc.data.things.any(func(t): return t.id == stone.id) and doc.data.things.any(func(t): return t.id == fern.id), "hidden: clearing still takes what can")
+	view.history.set_value("Season", doc.data, "season", "summer", "winter")
+	check(Placing.why_not_one(doc, "fern", fern.x, fern.z) != "", "hidden: back in summer the plant counts again")
+	view.free()
 	return true

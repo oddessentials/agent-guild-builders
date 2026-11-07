@@ -50,7 +50,6 @@ var _placed_ring: MeshInstance3D
 var _selected_ring: MeshInstance3D
 var _selected_id := -1
 var _drag := {}
-var _arrange_was := {}
 var _panel_stale := false
 var _place_group := ""
 var _place_search := ""
@@ -564,7 +563,6 @@ func _select_tool(id: int) -> void:
 	_dismiss_preview()
 	tool = id
 	_selected_id = -1
-	_arrange_was.clear()
 	_show_selection()
 	for k in _tools:
 		_tools[k].button_pressed = k == id
@@ -945,6 +943,9 @@ func _slider(label: String, lo: float, hi: float, step: float, value: float, for
 		finish.call())
 	s.value_changed.connect(func(v):
 		_dismiss_preview()
+		for i in _slider_states.size():
+			if not is_same(_slider_states[i], state) and _slider_states[i].touched:
+				_slider_finishes[i].call()
 		state.touched = true
 		state.pending = v != state.start
 		readout.text = format % v
@@ -1175,11 +1176,11 @@ func _build_arrange_options() -> void:
 	var shown_turn := rad_to_deg(wrapf(exact_turn, 0.0, TAU))
 	_slider("Turn", 0.0, 360.0, 1.0, shown_turn, "%.0f°",
 		func(v): _preview_selected("turn", exact_turn if v == shown_turn else deg_to_rad(v)),
-		func(_v, _was): _commit_selected("Turn", "turn"))
+		func(_v, was): _commit_selected("Turn", "turn", exact_turn if was == shown_turn else deg_to_rad(was)))
 	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
 	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
 		func(v): _preview_selected("scale", v),
-		func(_v, _was): _commit_selected("Resize", "scale"))
+		func(_v, was): _commit_selected("Resize", "scale", was))
 	var remove := Button.new()
 	remove.text = "Remove"
 	remove.pressed.connect(_remove_selected)
@@ -1195,7 +1196,8 @@ func _selected() -> Dictionary:
 ## Everything shown about the chosen thing depends on where it stands, so any
 ## change to the world redraws it, once the edit in progress has finished.
 func _refresh_selection() -> void:
-	if _selected().is_empty():
+	var thing := _selected()
+	if thing.is_empty() or WorldScene.gone_in(thing.kind, doc.season()):
 		_selected_id = -1
 	_show_selection()
 	if _finishing_edits:
@@ -1206,7 +1208,6 @@ func _refresh_selection() -> void:
 func _select_thing(id: int) -> void:
 	_finish_edits()
 	_selected_id = id
-	_arrange_was.clear()
 	_show_selection()
 	_build_options()
 
@@ -1224,21 +1225,18 @@ func _preview_selected(field: String, value: Variant) -> void:
 	var thing := _selected()
 	if thing.is_empty():
 		return
-	if not _arrange_was.has(field):
-		_arrange_was[field] = thing[field]
 	var changed: Dictionary = thing.duplicate()
 	changed[field] = value
 	doc.data.things[doc.data.things.find(thing)] = changed
 	_scene.update_things([changed], [thing])
 	_show_selection()
 
-func _commit_selected(label: String, field: String) -> void:
+func _commit_selected(label: String, field: String, was: Variant) -> void:
 	var thing := _selected()
-	if thing.is_empty() or not _arrange_was.has(field):
+	if thing.is_empty():
 		return
 	var before: Dictionary = thing.duplicate()
-	before[field] = _arrange_was[field]
-	_arrange_was.erase(field)
+	before[field] = was
 	history.things_edit("%s %s" % [label, _thing_name(thing.kind)], [thing], [before], true)
 
 func _turn_selected(by: float) -> void:
@@ -1270,6 +1268,8 @@ func _thing_at(pos: Vector2) -> Dictionary:
 	var best := {}
 	var best_fit := 1.0
 	for t in doc.data.things:
+		if WorldScene.gone_in(t.kind, doc.season()):
+			continue
 		var info: Dictionary = models.get(t.kind, {})
 		var s := float(t.scale)
 		var radius := maxf(float(info.get("radius", 0.5)) * s * 0.7 / per_pixel, PICK_PIXELS)
@@ -1473,7 +1473,7 @@ func _add_stroke_thing(kind: String, x: float, z: float, turn: float, s: float) 
 	_redraw()
 
 func _erase_at(hit: Vector3) -> void:
-	var near: Array = doc.data.things.filter(func(t): return Vector2(float(t.x) - hit.x, float(t.z) - hit.z).length() < brush_radius)
+	var near: Array = doc.data.things.filter(func(t): return not WorldScene.gone_in(t.kind, doc.season()) and Vector2(float(t.x) - hit.x, float(t.z) - hit.z).length() < brush_radius)
 	if near.is_empty():
 		return
 	doc.remove_things(near)

@@ -22,6 +22,8 @@ static func kinds_of(choice: String) -> Array:
 static func crowded_by(doc: WorldDoc, x: float, z: float, spacing: float) -> String:
 	var limit := spacing * 0.6
 	for t in doc.data.things:
+		if WorldScene.gone_in(t.kind, doc.season()):
+			continue
 		var dx: float = float(t.x) - x
 		var dz: float = float(t.z) - z
 		if dx * dx + dz * dz < limit * limit:
@@ -69,6 +71,8 @@ static func hidden_behind(doc: WorldDoc, kind: String, x: float, z: float, scale
 	var up := Clearance._ground_up()
 	var top := doc.height_at(x, z) + float(models.get(kind, {}).get("height", 1.0)) * scale
 	for t in doc.data.things:
+		if WorldScene.gone_in(t.kind, doc.season()):
+			continue
 		var info: Dictionary = models.get(t.kind, {})
 		var s := float(t.scale)
 		if _covers(Vector2(x, z), top, Vector2(t.x, t.z), doc.height_at(t.x, t.z) + float(info.get("height", 1.0)) * s, float(info.get("radius", 0.5)) * s, up):
@@ -99,7 +103,7 @@ static func _why_not_here(doc: WorldDoc, info: Dictionary, x: float, z: float, s
 static func _standing_on(doc: WorldDoc, models: Dictionary, kind: String, x: float, z: float, ignore_id := -1) -> String:
 	var own := float(models.get(kind, {}).get("radius", 0.5))
 	for t in doc.data.things:
-		if int(t.id) == ignore_id:
+		if int(t.id) == ignore_id or WorldScene.gone_in(t.kind, doc.season()):
 			continue
 		var limit := minf(own, float(models.get(t.kind, {}).get("radius", 0.5)))
 		var dx: float = float(t.x) - x
