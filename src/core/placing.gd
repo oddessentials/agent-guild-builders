@@ -78,7 +78,8 @@ static func _why_not_here(doc: WorldDoc, info: Dictionary, x: float, z: float, s
 	var why := Clearance.refuse(x, z, top)
 	if why != "":
 		return why
-	if top < float(doc.data.water_level):
+	var water := float(doc.data.water_level)
+	if water > WorldDoc.NO_WATER_BELOW and top < water:
 		return "This would be under the water. Choose a spot on land, or lower the water."
 	return ""
 

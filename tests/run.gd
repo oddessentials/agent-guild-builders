@@ -609,6 +609,10 @@ func _placing() -> bool:
 	wet.heights[wet_i * WorldDoc.TERRAIN_RES + wet_i] = -3.0
 	check(Placing.why_not_one(wet, "fern", wet_at.x, wet_at.y).contains("under the water"), "placing: refuses a spot under the water")
 	check(Placing.why_not(wet, "fern", wet_at.x, wet_at.y, 1.0).contains("under the water"), "placing: painting refuses it too")
+	var dry := WorldDoc.create("guild", "T", 1)
+	dry.heights[wet_i * WorldDoc.TERRAIN_RES + wet_i] = -102.0
+	check(Placing.why_not_one(dry, "fern", wet_at.x, wet_at.y) == "", "placing: deep land is dry when there is no water")
+	check(Placing.why_not(dry, "fern", wet_at.x, wet_at.y, 1.0) == "", "placing: painting agrees when there is no water")
 	var shade := WorldDoc.create("guild", "T", 1)
 	var shade_up := Clearance._ground_up()
 	shade.add_thing("tree_fir", 120, -120, 0, 1.0)

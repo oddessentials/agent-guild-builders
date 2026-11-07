@@ -9,6 +9,7 @@ const BASES := ["guild", "orbital", "grove", "professional", "goblinville", "gno
 const TERRAIN_RES := 257
 const TERRAIN_SIZE := 520.0
 const MAX_WATER_LEVEL := -0.1
+const NO_WATER_BELOW := -50.0
 ## Each entry takes a document of format N to N+1. Append only.
 const MIGRATIONS: Array[Callable] = []
 const THUMB := "thumb.webp"
