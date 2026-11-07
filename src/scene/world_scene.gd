@@ -384,7 +384,7 @@ func _build_water() -> void:
 
 func refresh_water() -> void:
 	var level := doc.safe_water_level()
-	_water.visible = level > -50.0
+	_water.visible = level > WorldDoc.NO_WATER_BELOW
 	_water.position.y = level
 	(_water.material_override as ShaderMaterial).set_shader_parameter("level", level)
 	if _water.visible and _heights_dirty:
