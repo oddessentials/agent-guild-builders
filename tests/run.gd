@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -156,13 +156,30 @@ func _templates() -> bool:
 				if Clearance.live_distance(p.x, p.y) < 0.5 and absf(a.heights[j * WorldDoc.TERRAIN_RES + i]) > 0.001:
 					flat = false
 		check(flat, key + ": the ground crews stand on is flat")
-		if float(a.data.water_level) > -50.0:
+		check(Clearance.check_world(a).get("valid", false), key + ": a new world is ready to export")
+		if float(a.data.water_level) > -50.0 and key != "island":
 			var wet := 0
 			for h in a.heights:
 				if h < float(a.data.water_level):
 					wet += 1
 			check(float(wet) / a.heights.size() < 0.12, key + ": water stays in its lake")
 			check(a.ground[(WorldDoc.TERRAIN_RES * WorldDoc.TERRAIN_RES) / 2] != 3, key + ": the plaza isn't shore")
+	var blank := Templates.create("blank", "guild", "T", 42)
+	check(blank.data.things.size() <= 12, "blank: nearly empty")
+	var island := Templates.create("island", "guild", "T", 42)
+	var at_edge := true
+	for t in [[-200.0, 0.0], [200.0, 0.0], [0.0, -200.0], [0.0, 200.0]]:
+		at_edge = at_edge and island.height_at(t[0], t[1]) < float(island.data.water_level)
+	check(at_edge, "island: water on every side")
+	check(island.height_at(0.0, 0.0) > float(island.data.water_level), "island: the Yard is dry")
+	check(island.data.things.size() < 500, "island: stays sparse")
+	var canyon := Templates.create("canyon", "guild", "T", 42)
+	var up := Clearance._ground_up()
+	var behind := up * 70.0
+	var front := up * -62.0
+	check(canyon.height_at(behind.x, behind.y) > 20.0, "canyon: cliffs rise behind the Yard")
+	check(canyon.height_at(front.x, front.y) < float(canyon.data.water_level), "canyon: a gorge runs in front of it")
+	check(canyon.data.things.any(func(t): return t.kind == "rock_face"), "canyon: rock faces dress the walls")
 	return true
 
 func _pack(path: String, changes: Dictionary = {}, drop: Array = [], meta_changes: Dictionary = {}, relist := true) -> void:
@@ -763,4 +780,61 @@ func _place_panel() -> bool:
 		await process_frame
 	made.free()
 	check(result.doc != null and WorldScene.mesh_ready("stone"), "panel: opening a world loads what it uses")
+	return true
+
+func _alpha_surfaces(mesh: Mesh) -> int:
+	var count := 0
+	for s in mesh.get_surface_count():
+		var m := mesh.surface_get_material(s) as StandardMaterial3D
+		if m and m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			count += 1
+	return count
+
+func _seasons() -> bool:
+	check(not Templates.create("meadow", "guild", "T", 1).data.has("season"), "seasons: a new world says nothing until one is chosen")
+	check(WorldDoc.create("guild", "T", 1).season() == "summer", "seasons: worlds start in summer")
+	check(WorldScene.season_mesh("tree_oak", "summer") == WorldScene.mesh_of("tree_oak"), "seasons: summer draws the very same model")
+	var bare := WorldScene.season_mesh("tree_oak", "winter")
+	var plain := WorldScene.mesh_of("tree_oak")
+	check(_alpha_surfaces(plain) > 0 and _alpha_surfaces(bare) == 0 and bare.get_surface_count() > 0, "seasons: broadleaf trees are bare in winter")
+	check(_alpha_surfaces(WorldScene.season_mesh("tree_fir", "winter")) == _alpha_surfaces(WorldScene.mesh_of("tree_fir")), "seasons: firs stay green")
+	check(WorldScene.season_mesh("grass", "winter").get_surface_count() == 0, "seasons: long grass is gone in winter")
+	var turned := WorldScene.season_mesh("tree_oak", "autumn")
+	var changed := false
+	for s in turned.get_surface_count():
+		var m := turned.surface_get_material(s) as StandardMaterial3D
+		if m and m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			changed = m.albedo_color == WorldScene.AUTUMN_LEAVES.tree_oak
+	check(changed, "seasons: leaves turn in autumn")
+	for s in plain.get_surface_count():
+		var m := plain.surface_get_material(s) as StandardMaterial3D
+		check(m == null or m.next_pass == null, "seasons: dressing a model leaves the original alone")
+	var folder := OS.get_user_data_dir().path_join("season-test")
+	WorldDoc.remove_folder(folder)
+	var doc := WorldDoc.create("guild", "T", 1)
+	doc.data.season = "winter"
+	check(doc.save(folder) == OK and WorldDoc.open(folder).season() == "winter", "seasons: saved and opened again")
+	WorldDoc.remove_folder(folder)
+	var odd := doc.data.duplicate(true)
+	odd.season = "monsoon"
+	check(not WorldDoc._valid_data(odd), "seasons: an unknown season is refused")
+	var script: GDScript = load("res://src/ui/editor_view.gd")
+	var view: Control = script.new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	var live := WorldDoc.create("guild", "T", 1)
+	live.add_thing("tree_oak", 60.0, -60.0, 0.0, 1.0)
+	view.open(live, "")
+	await process_frame
+	view._set_season("winter")
+	check(live.season() == "winter" and view._scene._drawn_season == "winter", "seasons: one click dresses the world")
+	check(view._scene._nodes.values()[0].multimesh.mesh == WorldScene.season_mesh("tree_oak", "winter"), "seasons: things redraw for it")
+	check(view.history.undo_label() == "Season", "seasons: one undo step")
+	var moved_before: Dictionary = live.data.things[0].duplicate()
+	view.history.undo()
+	check(live.season() == "summer" and view._scene._drawn_season == "summer", "seasons: undo goes back")
+	check(view._scene._nodes.values()[0].multimesh.mesh == WorldScene.mesh_of("tree_oak"), "seasons: and redraws the summer tree")
+	check(JSON.stringify(live.data.things[0]) == JSON.stringify(moved_before), "seasons: nothing moved")
+	view.free()
 	return true

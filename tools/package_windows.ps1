@@ -13,7 +13,7 @@ foreach ($name in @('day', 'dusk', 'overcast', 'moon')) {
     if (-not $kit.skies.$name) { throw "The Meadow kit is missing sky: $name" }
 }
 $files = @('kits/meadow/kit.json', 'LICENSE', 'data/agx_mhc.lut', 'data/yard_layout.json')
-$thumbs = @('template_meadow', 'template_lakeside', 'template_highland', 'mix_wildflowers', 'mix_undergrowth', 'mix_woodland', 'mix_rocks')
+$thumbs = @('template_blank', 'template_island', 'template_canyon', 'template_meadow', 'template_lakeside', 'template_highland', 'mix_wildflowers', 'mix_undergrowth', 'mix_woodland', 'mix_rocks', 'mix_garden', 'mix_camp')
 foreach ($model in $kit.models.PSObject.Properties) {
     if (-not $model.Value.licence -or -not $model.Value.source) { throw "Missing attribution for $($model.Name)" }
     $files += "kits/meadow/models/$($model.Name).glb"

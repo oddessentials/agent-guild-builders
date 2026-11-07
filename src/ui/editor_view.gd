@@ -49,7 +49,6 @@ var _placed_ring: MeshInstance3D
 var _selected_ring: MeshInstance3D
 var _selected_id := -1
 var _drag := {}
-var _mesh_tasks := {}
 var _place_group := ""
 var _place_search := ""
 var _place_items: VBoxContainer
@@ -148,7 +147,6 @@ func open(document: WorldDoc, at: String) -> void:
 	_update_raised_land()
 	_roll_next()
 	_select_tool(tool)
-	_preload_chosen()
 	_update_undo_buttons()
 	if path == "" or doc.water_adjusted:
 		_mark_dirty()
@@ -658,6 +656,23 @@ func _build_mood_options() -> void:
 	var time_name := "Day" if theme_name == "light" else "Dusk"
 	_options.add_child(ProTheme.heading("Sky and light: " + time_name))
 	_options.add_child(ProTheme.note("You're editing %s. Use the Day and Dusk buttons above to switch. The sun's direction is fixed, because the Yard's live shadows must match it." % time_name.to_lower()))
+	_options.add_child(ProTheme.heading("Season", 13))
+	var seasons := HBoxContainer.new()
+	seasons.name = "Seasons"
+	seasons.add_theme_constant_override("separation", 4)
+	_options.add_child(seasons)
+	for season in WorldDoc.SEASONS:
+		var b := Button.new()
+		b.text = season.capitalize()
+		b.tooltip_text = "Dress the whole world for %s, by day and at dusk. Your things stay where they are." % season
+		ProTheme.tool_button(b)
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_font_size_override("font_size", 13)
+		b.button_pressed = doc.season() == season
+		b.pressed.connect(func(): _set_season(season))
+		seasons.add_child(b)
+	_options.add_child(ProTheme.heading("Sky and sun", 13))
 	var skies: Dictionary = WorldScene.load_kit().get("skies", {})
 	var pick := OptionButton.new()
 	var keys := skies.keys()
@@ -679,6 +694,15 @@ func _build_mood_options() -> void:
 			m.strength = v
 			_apply_mood(),
 		func(v, was): _commit_value("Sky strength", m, "strength", v, was))
+
+func _set_season(season: String) -> void:
+	_finish_edits()
+	_dismiss_preview()
+	if doc.season() == season:
+		_build_options()
+		return
+	history.set_value("Season", doc.data, "season", season, doc.season())
+	_set_status("%s. Preview shows how it renders." % season.capitalize())
 
 func _build_place_options() -> void:
 	_options_header.visible = true
@@ -838,7 +862,7 @@ func _choose(key: String) -> void:
 	_refresh_tall_note()
 	_update_zones()
 	_roll_next()
-	_preload_chosen()
+	_load_chosen()
 
 func _refresh_tall_note() -> void:
 	var tall := _chosen_is_tall()
@@ -1080,7 +1104,7 @@ func _update_cursor(pos: Vector2) -> void:
 				_ghost.visible = text == "" and WorldScene.mesh_ready(place_kind)
 				if text == "":
 					if _ghost.visible:
-						_ghost.mesh = WorldScene.mesh_of(place_kind)
+						_ghost.mesh = _scene.mesh_for(place_kind)
 					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": _next_turn, "scale": fitted})
 					var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
 					if behind != "":
@@ -1106,20 +1130,24 @@ func _update_cursor(pos: Vector2) -> void:
 
 func _why_not_place(hit: Vector3) -> String:
 	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z)
-	if why == "" and not _mesh_tasks.has(place_kind) and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
+	if why == "" and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
 		return "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(place_kind)
 	return why
 
-func _preload_chosen() -> void:
-	for kind in _chosen_kinds():
-		if not _mesh_tasks.has(kind) and not WorldScene.mesh_ready(kind):
-			_mesh_tasks[kind] = WorkerThreadPool.add_task(WorldScene.mesh_of.bind(kind))
-
-func _check_mesh_tasks() -> void:
-	for kind in _mesh_tasks.keys():
-		if WorkerThreadPool.is_task_completed(_mesh_tasks[kind]):
-			WorkerThreadPool.wait_for_task_completion(_mesh_tasks[kind])
-			_mesh_tasks.erase(kind)
+## Shows that a model is loading before the pause it takes, the first time it's chosen.
+func _load_chosen() -> void:
+	var waiting: Array = _chosen_kinds().filter(func(kind): return not WorldScene.mesh_ready(kind))
+	if waiting.is_empty():
+		return
+	var said := _status.text
+	_set_status("Loading %s…" % _thing_name(waiting[0]))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	for kind in waiting:
+		WorldScene.mesh_of(kind)
+	_set_status(said)
 
 func _build_arrange_options() -> void:
 	_options.add_child(ProTheme.heading("Move things"))
@@ -1258,7 +1286,7 @@ func _arrange_cursor(pos: Vector2) -> void:
 		var moved: Dictionary = thing.duplicate()
 		moved.x = _drag.hit.x
 		moved.z = _drag.hit.z
-		_ghost.mesh = WorldScene.mesh_of(thing.kind)
+		_ghost.mesh = _scene.mesh_for(thing.kind)
 		_ghost.transform = _scene.transform_of(moved)
 		_ghost.visible = true
 		_brush.position = _drag.hit + Vector3.UP * 0.1
@@ -1553,6 +1581,7 @@ func _on_changed(part: int, detail: Variant) -> void:
 			_invalidate_zones()
 		History.Part.VALUE:
 			_scene.refresh_water()
+			_scene.refresh_season()
 			_apply_mood()
 			if detail.has("title"):
 				_title_box.text = str(doc.data.title)
@@ -1763,16 +1792,12 @@ func _exit_tree() -> void:
 	if _zone_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_zone_task)
 		_zone_task = -1
-	for kind in _mesh_tasks:
-		WorkerThreadPool.wait_for_task_completion(_mesh_tasks[kind])
-	_mesh_tasks.clear()
 
 func _process(_delta: float) -> void:
 	if _scene == null:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
 	_check_zone_task()
-	_check_mesh_tasks()
 	if _placed_ring.visible and now >= _placed_ring_until:
 		_placed_ring.visible = false
 		_redraw()

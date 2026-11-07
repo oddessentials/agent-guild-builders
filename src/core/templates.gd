@@ -5,6 +5,9 @@ extends RefCounted
 ## so an engine update can't quietly change what a seed means.
 
 const LIST := {
+	"blank": {"label": "Blank", "note": "Open ground and the Yard, ready for anything"},
+	"island": {"label": "Island", "note": "A small island with water on every side"},
+	"canyon": {"label": "Canyon", "note": "Layered cliffs behind the Yard, and a gorge before it"},
 	"meadow": {"label": "Meadow", "note": "Open grass with a forest edge and hills beyond"},
 	"lakeside": {"label": "Lakeside", "note": "A still lake behind the Yard, ringed by firs"},
 	"highland": {"label": "Highland", "note": "Bare rock and tall hills, with little cover"},
@@ -55,6 +58,15 @@ static func create(template: String, base: String, title: String, seed_value: in
 	var rng := Rng.new(seed_value)
 	var noise := ValueNoise.new(rng)
 	match template:
+		"blank":
+			_blank(doc, rng, noise)
+			return doc
+		"island":
+			_island(doc, rng, noise)
+			return doc
+		"canyon":
+			_canyon(doc, rng, noise)
+			return doc
 		"lakeside":
 			_shape(doc, noise, 7.0, 34.0)
 			_lake(doc, LAKE_CENTRE, LAKE_RADII, 4.0)
@@ -82,6 +94,72 @@ static func create(template: String, base: String, title: String, seed_value: in
 	_scatter(doc, rng, noise, ["grass", "fern", "dandelion", "celandine"], 2600, 15.0, 90.0, 0.18, 1.0)
 	_scatter(doc, rng, noise, ["stone", "boulder"], 80, 18.0, 140.0, 0.0, 1.0)
 	return doc
+
+static func _blank(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
+	_shape(doc, noise, 2.5, 6.0)
+	_paint(doc, noise, 1000.0, 0.62)
+	_scatter(doc, rng, noise, ["stone"], 12, 18.0, 110.0, 0.0, 1.0)
+
+static func _island(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
+	doc.data.water_level = -0.6
+	var res := WorldDoc.TERRAIN_RES
+	var limits := Clearance.terrain_limits()
+	var centre := Vector2(0.0, 10.0)
+	for j in res:
+		for i in res:
+			var p := WorldDoc.cell_to_world(i, j)
+			var off := p - centre
+			var a := off.angle()
+			var coast := 66.0 + (noise.fbm(cos(a) * 1.7 + 4.0, sin(a) * 1.7 + 6.0) - 0.5) * 54.0
+			var d := off.length()
+			var bump := (noise.fbm(p.x * 0.03, p.y * 0.03) - 0.35) * 5.0 * smoothstep(2.0, 22.0, Clearance.live_distance(p.x, p.y))
+			var land := maxf(bump, float(doc.data.water_level) + 0.5)
+			doc.heights[j * res + i] = minf(lerpf(land, -7.0, smoothstep(coast - 12.0, coast + 14.0, d)), limits[j * res + i])
+	_paint(doc, noise, 30.0, 0.62, 1.2)
+	_scatter(doc, rng, noise, ["tree_young", "tree_oak"], 18, 24.0, 62.0, 0.36, 1.0)
+	_scatter(doc, rng, noise, ["shrub_low", "shrub_wild", "shrub_round"], 60, 16.0, 70.0, 0.3, 1.0)
+	_scatter(doc, rng, noise, ["grass", "fern", "dandelion"], 300, 15.0, 70.0, 0.2, 1.0)
+	_scatter(doc, rng, noise, ["stone", "boulder"], 28, 18.0, 90.0, 0.0, 1.0)
+
+## How far past the canyon floor a point is: behind the Yard, or out to either side.
+static func _canyon_reach(p: Vector2, noise: ValueNoise) -> float:
+	var up := Clearance._ground_up()
+	var wobble := (noise.fbm(p.x * 0.02 + 5.0, p.y * 0.02 + 2.0) - 0.5) * 18.0
+	return maxf(p.dot(up) - 20.0, absf(p.dot(Vector2(-up.y, up.x))) - 27.0) + wobble
+
+static func _canyon(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
+	doc.data.water_level = -11.0
+	var res := WorldDoc.TERRAIN_RES
+	var limits := Clearance.terrain_limits()
+	var up := Clearance._ground_up()
+	const LEDGE := 7.0
+	for j in res:
+		for i in res:
+			var p := WorldDoc.cell_to_world(i, j)
+			var near := smoothstep(2.0, 24.0, Clearance.live_distance(p.x, p.y))
+			var reach := _canyon_reach(p, noise)
+			var cliff := 20.0 * smoothstep(0.0, 12.0, reach) + 34.0 * smoothstep(12.0, 52.0, reach)
+			var layer := floorf(cliff / LEDGE)
+			var h := (layer + smoothstep(0.0, 0.3, cliff / LEDGE - layer)) * LEDGE
+			var broken := (noise.fbm(p.x * 0.06 + 3.0, p.y * 0.06) - 0.5) * 2.0
+			h = (h + broken * lerpf(3.0, 12.0, smoothstep(0.0, 18.0, reach))) * near
+			var gorge := absf(p.dot(up) + 62.0 + (noise.fbm(p.x * 0.015 + 9.0, p.y * 0.015) - 0.5) * 16.0)
+			doc.heights[j * res + i] = minf(lerpf(h, -14.0, 1.0 - smoothstep(9.0, 22.0, gorge)), limits[j * res + i])
+	_paint(doc, noise, 14.0, 0.5, 0.3, 1, 3)
+	var placed := 0
+	for attempt in 800:
+		if placed >= 80:
+			break
+		var a := rng.range_f(0.0, TAU)
+		var r := rng.range_f(22.0, 130.0)
+		var x := cos(a) * r
+		var z := sin(a) * r
+		if absf(_canyon_reach(Vector2(x, z), noise) - 6.0) < 12.0 and _try(doc, rng, "rock_face" if rng.next() < 0.6 else "rock_wall", x, z, rng.range_f(1.1, 2.0)):
+			placed += 1
+	_scatter(doc, rng, noise, ["boulder"], 90, 20.0, 170.0, 0.0, 1.2)
+	_scatter(doc, rng, noise, ["stone"], 70, 16.0, 110.0, 0.0, 1.0)
+	_scatter(doc, rng, noise, ["tree_fir", "snag"], 110, 30.0, 190.0, 0.4, 1.0)
+	_scatter(doc, rng, noise, ["shrub_wild", "shrub_low", "fern"], 160, 16.0, 150.0, 0.3, 1.0)
 
 ## Gentle ground near the Yard, rising to hills, and flat wherever crews stand.
 static func _shape(doc: WorldDoc, noise: ValueNoise, swell: float, hills: float) -> void:
@@ -117,7 +195,7 @@ static func _above_water(doc: WorldDoc, centre: Vector2, radii: Vector2) -> void
 				doc.heights[o] = maxf(doc.heights[o], float(doc.data.water_level) + 0.5)
 
 ## Grass, with forest floor under the wooded parts and rock on steep or high land.
-static func _paint(doc: WorldDoc, noise: ValueNoise, rock_above: float, wood_cut: float) -> void:
+static func _paint(doc: WorldDoc, noise: ValueNoise, rock_above: float, wood_cut: float, shore := 0.3, base_kind := 0, patch_kind := 1) -> void:
 	var res := WorldDoc.TERRAIN_RES
 	var step := WorldDoc.TERRAIN_SIZE / (res - 1)
 	for j in range(1, res - 1):
@@ -125,12 +203,12 @@ static func _paint(doc: WorldDoc, noise: ValueNoise, rock_above: float, wood_cut
 			var o := j * res + i
 			var p := WorldDoc.cell_to_world(i, j)
 			var slope := Vector2(doc.heights[o + 1] - doc.heights[o - 1], doc.heights[o + res] - doc.heights[o - res]).length() / (2.0 * step)
-			var kind := 0
+			var kind := base_kind
 			if noise.fbm(p.x * 0.012 + 3.0, p.y * 0.012 + 8.0) > wood_cut and Clearance.live_distance(p.x, p.y) > 20.0:
-				kind = 1
+				kind = patch_kind
 			if doc.heights[o] > rock_above or slope > 0.55:
 				kind = 2
-			if doc.heights[o] < doc.data.water_level + 0.3 and doc.data.water_level > -50.0:
+			if doc.heights[o] < doc.data.water_level + shore and doc.data.water_level > -50.0:
 				kind = 3
 			doc.ground[o] = kind
 

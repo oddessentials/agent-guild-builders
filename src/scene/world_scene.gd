@@ -8,6 +8,17 @@ const PLAZA_RADIUS := 13.7
 const CELL := 32.0
 const LAMP_FACTOR := 1.0 / (4.0 * PI * PI * PI) # Blender watts to Godot's energy
 const CHUNK_CELLS := 32
+const GRASS_TINT := Vector3(0.72, 0.74, 0.5)
+const AUTUMN_GRASS_TINT := Vector3(0.8, 0.66, 0.36)
+const AUTUMN_LEAVES := {
+	"tree_oak": Color(2.8, 0.75, 0.25), "tree_elm": Color(2.5, 1.25, 0.3), "tree_young": Color(3.0, 0.6, 0.25),
+	"shrub_round": Color(2.0, 0.85, 0.3), "shrub_low": Color(2.4, 0.75, 0.3), "shrub_wild": Color(1.9, 1.05, 0.35), "fern": Color(1.9, 0.9, 0.3), "grass": Color(1.6, 1.15, 0.5),
+}
+const WINTER_SHRUB := Color(0.75, 0.6, 0.45)
+const EVERGREEN := ["tree_fir"]
+const WINTER_GONE := ["grass", "fern", "dandelion", "celandine", "gazania", "ursinia", "empodium", "stinkkruid"]
+const ICE_COLOR := Vector3(0.62, 0.7, 0.75)
+const ICE_DEEP_COLOR := Vector3(0.5, 0.6, 0.68)
 
 static var kit: Dictionary = {}
 static var _meshes: Dictionary = {}
@@ -15,7 +26,7 @@ static var _kits := ""
 static var _textures: Dictionary = {}
 static var _skies: Dictionary = {}
 static var _halls: Dictionary = {}
-static var _mesh_lock := Mutex.new()
+static var _season_meshes: Dictionary = {}
 
 static func kits_dir() -> String:
 	if _kits == "":
@@ -48,6 +59,10 @@ var _key_lamps := {}
 var _theme := "light"
 var _water: MeshInstance3D
 var _plaza: Node3D
+var _plaza_stone: ShaderMaterial
+var _kerb_stone: StandardMaterial3D
+var _pool: StandardMaterial3D
+var _drawn_season := ""
 
 static func load_kit() -> Dictionary:
 	if kit.is_empty():
@@ -59,19 +74,49 @@ static func load_kit() -> Dictionary:
 
 ## The kit's mesh for a kind, loaded once. Cutout leaves are solid to shadows and
 ## two-sided, as a path tracer sees them.
-static func mesh_of(kind: String) -> Mesh:
-	_mesh_lock.lock()
-	var mesh := _load_mesh(kind)
-	_mesh_lock.unlock()
-	return mesh
-
 static func mesh_ready(kind: String) -> bool:
-	_mesh_lock.lock()
-	var ready := _meshes.has(kind)
-	_mesh_lock.unlock()
-	return ready
+	return _meshes.has(kind)
 
-static func _load_mesh(kind: String) -> Mesh:
+## A kind as it looks in a season. Summer is the model itself.
+static func season_mesh(kind: String, season: String) -> Mesh:
+	if season == "summer":
+		return mesh_of(kind)
+	var key := "%s@%s" % [kind, season]
+	if not _season_meshes.has(key):
+		_season_meshes[key] = _dress_for(kind, season, mesh_of(kind))
+	return _season_meshes[key]
+
+static func _dress_for(kind: String, season: String, plain: Mesh) -> ArrayMesh:
+	var dressed := ArrayMesh.new()
+	if season == "winter" and kind in WINTER_GONE:
+		return dressed
+	var group: String = load_kit().get("models", {}).get(kind, {}).get("group", "")
+	var snow := load("res://src/scene/snow.gdshader") as Shader
+	for s in plain.get_surface_count():
+		var material := plain.surface_get_material(s) as StandardMaterial3D
+		var foliage := material != null and material.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
+		if season == "winter" and foliage and group == "trees" and kind not in EVERGREEN:
+			continue
+		var worn: Material = plain.surface_get_material(s)
+		if material:
+			var copy: StandardMaterial3D = material.duplicate()
+			if season == "autumn" and foliage and AUTUMN_LEAVES.has(kind):
+				copy.albedo_color = AUTUMN_LEAVES[kind]
+			if season == "winter":
+				if foliage and group == "plants":
+					copy.albedo_color = WINTER_SHRUB
+				var cover := ShaderMaterial.new()
+				cover.shader = snow
+				if foliage:
+					cover.set_shader_parameter("cutout", material.albedo_texture)
+					cover.set_shader_parameter("cutout_below", material.alpha_scissor_threshold)
+				copy.next_pass = cover
+			worn = copy
+		dressed.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, plain.surface_get_arrays(s))
+		dressed.surface_set_material(dressed.get_surface_count() - 1, worn)
+	return dressed
+
+static func mesh_of(kind: String) -> Mesh:
 	if _meshes.has(kind):
 		return _meshes[kind]
 	var doc_gltf := GLTFDocument.new()
@@ -177,7 +222,37 @@ func build(document: WorldDoc) -> void:
 	_build_water()
 	_things = Node3D.new()
 	add_child(_things)
+	_drawn_season = doc.season()
+	_apply_season_surfaces()
 	refresh_things()
+
+## Dresses the world for its season, and redraws things only if it changed.
+func refresh_season() -> void:
+	if _drawn_season == doc.season():
+		return
+	_drawn_season = doc.season()
+	_apply_season_surfaces()
+	refresh_things(_theme)
+
+func _apply_season_surfaces() -> void:
+	var autumn := doc.season() == "autumn"
+	var winter := doc.season() == "winter"
+	_land_material.set_shader_parameter("grass_tint", AUTUMN_GRASS_TINT if autumn else GRASS_TINT)
+	_land_material.set_shader_parameter("fallen_leaves", 0.7 if autumn else 0.0)
+	_land_material.set_shader_parameter("snow", 1.0 if winter else 0.0)
+	_plaza_stone.set_shader_parameter("fallen_leaves", 0.5 if autumn else 0.0)
+	_plaza_stone.set_shader_parameter("snow", 1.0 if winter else 0.0)
+	_kerb_stone.albedo_color = Color(0.72, 0.75, 0.79) if winter else Color(0.2, 0.19, 0.17)
+	_pool.albedo_color = Color(0.56, 0.68, 0.74) if winter else Color(0.06, 0.19, 0.21)
+	_pool.roughness = 0.45 if winter else 0.3
+	var water := _water.material_override as ShaderMaterial
+	water.set_shader_parameter("shallow_color", ICE_COLOR if winter else Vector3(0.07, 0.09, 0.06))
+	water.set_shader_parameter("deep_color", ICE_DEEP_COLOR if winter else Vector3(0.008, 0.022, 0.026))
+	water.set_shader_parameter("clear", 0.0 if winter else 0.7)
+	water.set_shader_parameter("roughness", 0.4 if winter else 0.02)
+
+func mesh_for(kind: String) -> Mesh:
+	return season_mesh(kind, doc.season())
 
 ## The land's height map, for the land and water shaders.
 func _height_image() -> Image:
@@ -319,6 +394,7 @@ func _build_plaza() -> void:
 	disc.mesh = shape
 	disc.position.y = -0.03
 	var stone := ShaderMaterial.new()
+	_plaza_stone = stone
 	stone.shader = load("res://src/scene/plaza.gdshader")
 	stone.set_shader_parameter("color_map", _texture("cobble_diff", true))
 	stone.set_shader_parameter("normal_map_tex", _texture("cobble_nor_gl", false))
@@ -326,6 +402,7 @@ func _build_plaza() -> void:
 	disc.material_override = stone
 	_plaza.add_child(disc)
 	var kerb_stone := StandardMaterial3D.new()
+	_kerb_stone = kerb_stone
 	kerb_stone.albedo_color = Color(0.2, 0.19, 0.17)
 	kerb_stone.roughness = 0.9
 	var kerb_disc := MeshInstance3D.new()
@@ -375,6 +452,7 @@ func _build_plaza() -> void:
 	pool.mesh = surface
 	pool.position.y = 0.71
 	var dark := StandardMaterial3D.new()
+	_pool = dark
 	dark.albedo_color = Color(0.06, 0.19, 0.21)
 	dark.roughness = 0.3
 	pool.material_override = dark
@@ -530,7 +608,7 @@ func _draw_cell(key: String) -> void:
 		_by_cell.erase(key)
 		return
 	var kind: String = _by_cell[key].kind
-	var mesh := mesh_of(kind)
+	var mesh := mesh_for(kind)
 	if mesh.get_surface_count() == 0:
 		return
 	var mm := MultiMesh.new()

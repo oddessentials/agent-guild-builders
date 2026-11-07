@@ -19,18 +19,24 @@ func _run() -> void:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	var stage := _stage()
 	for kind in models:
-		await _shoot(stage, [kind], kind)
+		if not _made(kind):
+			await _shoot(stage, [kind], kind)
 	for key in Placing.MIXES:
-		await _shoot(stage, Placing.MIXES[key].kinds, "mix_" + key)
+		if not _made("mix_" + key):
+			await _shoot(stage, Placing.MIXES[key].kinds, "mix_" + key)
 	stage.free()
 	for key in WorldScene.GROUND_ORDER:
 		var img := Image.load_from_file(WorldScene.kit_file("textures/%s_diff.jpg" % key))
 		img.resize(ITEM.x, ITEM.y, Image.INTERPOLATE_LANCZOS)
 		_save(img, "ground_" + key)
 	for key in Templates.LIST:
-		await _template(key)
+		if not _made("template_" + key):
+			await _template(key)
 	print("THUMBS DONE")
 	quit(0)
+
+func _made(name: String) -> bool:
+	return FileAccess.file_exists("%s/%s.webp" % [OUT, name])
 
 func _stage() -> SubViewport:
 	var v := SubViewport.new()
@@ -104,6 +110,9 @@ func _template(key: String) -> void:
 	view.set_process(false)
 	view._select_tool(view.Tool.LOOK)
 	var framing := {
+		"blank": [0.5, Vector3(0, 1, -6)],
+		"island": [0.2, Vector3(0, 1, 6)],
+		"canyon": [0.26, Vector3(-6, 1, -22)],
 		"meadow": [0.3, Vector3(0, 1, -25)],
 		"lakeside": [0.42, Vector3(-20, 1, -24)],
 		"highland": [0.26, Vector3(10, 1, -25)],

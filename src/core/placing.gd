@@ -9,6 +9,8 @@ const MIXES := {
 	"undergrowth": {"label": "Undergrowth", "kinds": ["shrub_low", "shrub_wild", "shrub_round", "fern"]},
 	"woodland": {"label": "Mixed woodland", "kinds": ["tree_oak", "tree_elm", "tree_young", "tree_fir"]},
 	"rocks": {"label": "Scattered rocks", "kinds": ["stone", "stone", "boulder"]},
+	"garden": {"label": "Flower garden", "kinds": ["gazania", "ursinia", "empodium", "stinkkruid"]},
+	"camp": {"label": "Camp clutter", "kinds": ["crate", "crate_long", "barrel_rusty", "bucket", "basket"]},
 }
 
 static func kinds_of(choice: String) -> Array:
