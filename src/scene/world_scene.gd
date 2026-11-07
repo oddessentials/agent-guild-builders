@@ -242,7 +242,7 @@ func _apply_season_surfaces() -> void:
 	_land_material.set_shader_parameter("snow", 1.0 if winter else 0.0)
 	_plaza_stone.set_shader_parameter("fallen_leaves", 0.5 if autumn else 0.0)
 	_plaza_stone.set_shader_parameter("snow", 1.0 if winter else 0.0)
-	_kerb_stone.albedo_color = Color(0.72, 0.75, 0.79) if winter else Color(0.2, 0.19, 0.17)
+	_kerb_stone.albedo_color = Color(0.42, 0.44, 0.47) if winter else Color(0.2, 0.19, 0.17)
 	_pool.albedo_color = Color(0.56, 0.68, 0.74) if winter else Color(0.06, 0.19, 0.21)
 	_pool.roughness = 0.45 if winter else 0.3
 	var water := _water.material_override as ShaderMaterial

@@ -13,7 +13,7 @@ void fragment() {
 	if (texture(cutout, UV).a < cutout_below) {
 		discard;
 	}
-	ALBEDO = vec3(0.8, 0.83, 0.87);
+	ALBEDO = vec3(0.47, 0.49, 0.52);
 	ROUGHNESS = 0.8;
 	SPECULAR = 0.3;
 	ALPHA = smoothstep(0.25, 0.7, facing_up);

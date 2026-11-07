@@ -58,7 +58,7 @@ void fragment() {
 	}
 	if (snow > 0.0) {
 		float cover = smoothstep(0.62, 0.86, facing_up + wobble * 0.12) * snow;
-		ALBEDO = mix(ALBEDO, vec3(0.8, 0.83, 0.87) * mix(0.9, 1.0, drift), cover);
+		ALBEDO = mix(ALBEDO, vec3(0.47, 0.49, 0.52) * mix(0.96, 1.0, drift), cover);
 		ROUGHNESS = mix(ROUGHNESS, 0.8, cover);
 		NORMAL_MAP = mix(NORMAL_MAP, vec3(0.5, 0.5, 1.0), cover);
 	}
