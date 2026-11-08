@@ -131,7 +131,7 @@ GUILD = {
     'city_bus': ('professional-yard/models/city_bus.glb', None, 'City bus', 'city', 12),
     'delivery_van': ('professional-yard/models/delivery_van.glb', None, 'Delivery van', 'city', 7),
     'gnome_cottage': ('gnomeland-yard/models/town_cottage_a.glb', None, 'Gnome cottage', 'gnomes', 9),
-    'gnome_cottage_small': ('gnomeland-yard/models/town_cottage_b.glb', None, 'Small gnome cottage', 'gnomes', 7),
+    'gnome_cottage_small': ('gnomeland-yard/models/town_cottage_b.glb', None, 'Gnome cabin', 'gnomes', 7),
     'gnome_tower': ('gnomeland-yard/models/town_tower.glb', None, 'Gnome tower', 'gnomes', 7),
     'gnome_workshop': ('gnomeland-yard/models/town_workshop.glb', None, 'Gnome workshop', 'gnomes', 7),
     'gnome_mill': ('gnomeland-yard/models/town_mill.glb', None, 'Gnome mill', 'gnomes', 8),
