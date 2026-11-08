@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -765,6 +765,32 @@ func _place_panel() -> bool:
 	view._fill_place_items()
 	check(view._item_buttons.is_empty(), "panel: search can find nothing")
 	view._place_search = ""
+	var listed: Array = view.PLACE_GROUPS.map(func(entry): return entry[0])
+	check(WorldScene.load_kit().models.values().all(func(m): return listed.has(m.group)), "panel: every kit item has a group button")
+	view._place_group = "goblins"
+	view._fill_place_items()
+	check(view._item_buttons.has("goblin_factory") and view._item_buttons.has("hall_goblinville_docker") and not view._item_buttons.has("gnome_mill"), "panel: a theme's buildings and halls share its group")
+	view.place_mode = "one"
+	view._choose("fort_thick_straight")
+	check(view._next_scale == 1.0 and (is_equal_approx(fposmod(view._next_turn, PI / 2.0), 0.0) or is_equal_approx(fposmod(view._next_turn, PI / 2.0), PI / 2.0)), "panel: a castle piece starts at full size and square")
+	check(view._turn_step("fort_thick_straight") == PI / 2.0 and view._turn_step("barrel") == view.TURN_STEP, "panel: castle pieces turn a quarter at a time")
+	view._build_options()
+	var turns: Node = view._options.find_child("Turns", true, false)
+	var before: float = view._next_turn
+	turns.get_child(1).pressed.emit()
+	var after_e: float = view._next_turn
+	turns.get_child(0).pressed.emit()
+	check(turns.get_child_count() == 2 and is_equal_approx(wrapf(after_e - before, 0.0, TAU), PI / 2.0) and is_equal_approx(view._next_turn, before), "panel: the turn buttons turn the next piece both ways")
+	var spot := Placing.on_grid(doc, "fort_thick_straight", Vector3(-60.13, 0.0, -80.38))
+	check(spot.x == -60.0 and spot.z == -80.5 and Placing.on_grid(doc, "barrel", Vector3(1.13, 0.0, 2.38)) == Vector3(1.13, 0.0, 2.38), "panel: castle pieces snap to the grid and other things don't")
+	check(Placing.fitted_scale(doc, "fort_tower_round", spot.x, spot.z, 0.9) == 1.0, "panel: castle pieces keep their size")
+	doc.add_thing("fort_thick_straight", spot.x, spot.z, 0.0, 1.0)
+	check(Placing.why_not_one(doc, "fort_walkway_straight", spot.x + 0.2, spot.z) == "" and Placing.why_not_one(doc, "barrel", spot.x + 0.2, spot.z) != "", "panel: castle pieces may meet, other things keep clear")
+	view.tool = view.Tool.SCATTER
+	view._choose("fort_tower_round")
+	view._update_zones()
+	check(view._zone_wanted >= float(WorldScene.load_kit().models.fort_tower_round.height), "panel: the red zone for a castle piece uses its full size")
+	_joining()
 	view.free()
 	var opened := WorldDoc.create("guild", "T", 3)
 	opened.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
@@ -780,6 +806,108 @@ func _place_panel() -> bool:
 		await process_frame
 	made.free()
 	check(result.doc != null and WorldScene.mesh_ready("stone"), "panel: opening a world loads what it uses")
+	return true
+
+func _joined_end(doc: WorldDoc, thing: Dictionary, kind: String, spot: Dictionary) -> bool:
+	var models: Dictionary = WorldScene.load_kit().models
+	for j in models[thing.kind].joints:
+		var a: Vector2 = Vector2(thing.x, thing.z) + Placing._turned(Vector2(j[0], j[1]), thing.turn)
+		for k in models[kind].joints:
+			var b: Vector2 = Vector2(spot.at.x, spot.at.z) + Placing._turned(Vector2(k[0], k[1]), spot.turn)
+			var fa := Placing._turned(Vector2(j[2], j[3]), thing.turn)
+			var fb := Placing._turned(Vector2(k[2], k[3]), spot.turn)
+			if a.distance_to(b) < 0.001 and fa.dot(fb) < -0.999:
+				return true
+	return false
+
+func _joining() -> void:
+	var doc := WorldDoc.create("guild", "Castle", 3)
+	var wall := doc.add_thing("fort_thick_straight", -60.0, -80.0, 0.0, 1.0)
+	var end := Vector2(-60.0, -80.0) + Placing._turned(Vector2(7.2813, 2.0861), 0.0)
+	var next := Placing.placement(doc, "fort_thick_straight", Vector3(end.x + 1.0, 0.0, end.y + 0.5), 1.0)
+	check(next.joins == "fort_thick_straight" and absf(next.at.x - (-60.0 + 14.5626)) < 0.002 and is_equal_approx(next.at.z, -80.0) and is_zero_approx(wrapf(next.turn, -PI, PI)), "joining: a wall continues the wall it's dropped beside")
+	var turned := doc.add_thing("fort_thin_straight", 60.0, -80.0, PI / 2.0, 1.0)
+	var t_end := Vector2(60.0, -80.0) + Placing._turned(Vector2(7.41, 1.275), PI / 2.0)
+	var after := Placing.placement(doc, "fort_thin_straight", Vector3(t_end.x, 0.0, t_end.y), 0.0)
+	check(_joined_end(doc, turned, "fort_thin_straight", after) and Vector2(after.at.x, after.at.z).distance_to(Vector2(60.0, -80.0)) > 14.0, "joining: a turned wall is continued, not doubled back")
+	var corner := Placing.placement(doc, "fort_thick_corner", Vector3(end.x, 0.0, end.y), 0.0)
+	check(corner.joins == "fort_thick_straight" and _joined_end(doc, wall, "fort_thick_corner", corner), "joining: a corner meets a wall end exactly")
+	var ledge := Vector2(-60.0, -80.0) + Placing._turned(Vector2(-7.281, -2.086), 0.0)
+	var walk := Placing.placement(doc, "fort_walkway_straight", Vector3(ledge.x, 0.0, ledge.y), 0.0)
+	check(walk.joins == "fort_thick_straight" and _joined_end(doc, wall, "fort_walkway_straight", walk) and is_zero_approx(wrapf(walk.turn, -PI, PI)), "joining: a walkway stands behind a wall")
+	var free := Placing.placement(doc, "fort_thick_straight", Vector3(-20.13, 0.0, -90.38), PI / 2.0)
+	check(free.joins == "" and free.at.x == -20.0 and free.at.z == -90.5 and free.turn == PI / 2.0, "joining: away from other pieces, pieces sit on the grid")
+	var dragged := Placing.placement(doc, "fort_thick_straight", Vector3(end.x, 0.0, end.y), 0.0, int(wall.id))
+	check(dragged.joins == "", "joining: a piece being moved doesn't join itself")
+
+func _castle() -> bool:
+	var models: Dictionary = WorldScene.load_kit().models
+	check(models.values().all(func(m): return not m.get("joins", false) or not m.get("joints", []).is_empty()), "castle: every joining piece has joints")
+	var doc := WorldDoc.create("guild", "Castle", 3)
+	for kind in ["fort_thin_straight", "fort_thick_straight"]:
+		var first := doc.add_thing(kind, -60.0, -120.0 if kind == "fort_thin_straight" else -140.0, 0.0, 1.0)
+		var box := WorldScene.mesh_of(kind).get_aabb()
+		var end := Vector2(first.x + box.end.x, first.z)
+		var second := Placing.placement(doc, kind, Vector3(end.x + 0.5, 0.0, end.y), 0.0)
+		check(absf(float(first.x) + box.end.x - (second.at.x + box.position.x)) < 0.001 and is_zero_approx(wrapf(second.turn, -PI, PI)), "castle: joined %s meet within a millimetre as drawn" % kind)
+	var view: Control = load("res://src/ui/editor_view.gd").new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	doc = WorldDoc.create("guild", "Castle", 3)
+	view.open(doc, "")
+	await process_frame
+	view._select_tool(view.Tool.SCATTER)
+	view.place_mode = "one"
+	view._choose("fort_thick_straight")
+	view._scatter_at(Vector3(-60.13, 0.0, -80.2), true)
+	view._finish_stroke()
+	var a: Dictionary = doc.data.things[-1]
+	check(a.kind == "fort_thick_straight" and a.x == -60.0 and a.z == -80.0, "castle: the first piece sits on the grid")
+	var a_end := Vector2(a.x, a.z) + Placing._turned(Vector2(7.281, 2.086), a.turn)
+	view._scatter_at(Vector3(a_end.x + 0.8, 0.0, a_end.y), true)
+	view._finish_stroke()
+	var b: Dictionary = doc.data.things[-1]
+	var b_expected := Vector2(a.x, a.z) + Placing._turned(Vector2(14.5626, 0.0), a.turn)
+	check(doc.data.things.size() == 2 and Vector2(b.x, b.z).distance_to(b_expected) < 0.002, "castle: clicking beside its end extends the wall")
+	var again := Placing.placement(doc, "fort_thick_straight", Vector3(a_end.x, 0.0, a_end.y), 0.0)
+	check(again.joins == "", "castle: a taken end offers no join")
+	check(Placing.why_not_one(doc, "fort_thick_straight", b.x, b.z, b.turn) == Placing.DUPLICATE, "castle: an exact duplicate is refused")
+	var ledge := Vector2(a.x, a.z) + Placing._turned(Vector2(-7.281, -2.086), a.turn)
+	var walk := Placing.placement(doc, "fort_walkway_straight", Vector3(ledge.x, 0.0, ledge.y), 0.0)
+	check(walk.joins == "fort_thick_straight" and Placing.why_not_one(doc, "fort_walkway_straight", walk.at.x, walk.at.z, walk.turn) == "", "castle: a walkway may still overlap its wall")
+	var free := Placing.placement(doc, "fort_thick_corner_b", Vector3(-20.13, 0.0, -90.38), 0.3)
+	check(free.joins == "" and is_equal_approx(free.at.x, -20.13) and is_equal_approx(free.at.z, -90.38) and free.turn == 0.3 and view._turn_step("fort_thick_corner_b") == view.TURN_STEP, "castle: pieces without joins go exactly where they're put")
+	view._choose("fort_thick_corner_b")
+	view._next_turn = deg_to_rad(15.0)
+	view._roll_next()
+	var kept_turn: float = view._next_turn
+	view._choose("fort_thick_straight")
+	check(is_equal_approx(kept_turn, deg_to_rad(15.0)) and is_zero_approx(fposmod(view._next_turn, PI / 2.0)), "castle: a free piece keeps its turn, a joining piece squares up")
+	var c := doc.add_thing("fort_thick_straight", -100.0, -120.0, 0.0, 1.0)
+	view._scene.update_things([c], [])
+	view._select_tool(view.Tool.ARRANGE)
+	var a_start := Vector2(a.x, a.z) + Placing._turned(Vector2(-7.281, 2.086), a.turn)
+	var grab := _screen_of(view, c)
+	var target: Vector2 = view._camera.unproject_position(Vector3(a_start.x, 0.0, a_start.y))
+	_click(view, grab, true)
+	_click(view, grab, false)
+	_click(view, grab, true)
+	_drag(view, target)
+	_click(view, target, false)
+	var dragged: Dictionary = view._selected()
+	var c_expected := Vector2(a.x, a.z) + Placing._turned(Vector2(-14.5626, 0.0), a.turn)
+	check(dragged.id == c.id and Vector2(dragged.x, dragged.z).distance_to(c_expected) < 0.002, "castle: dragging a piece onto a free end joins it")
+	var before := Vector2(dragged.x, dragged.z)
+	var key := InputEventKey.new()
+	key.pressed = true
+	key.keycode = KEY_RIGHT
+	view._unhandled_key_input(key)
+	var nudged: Dictionary = view._selected()
+	check(is_equal_approx(Vector2(nudged.x, nudged.z).distance_to(before), view.NUDGE) and view.history.undo_label().begins_with("Nudge"), "castle: an arrow key nudges the chosen thing")
+	view.history.undo()
+	check(Vector2(view._selected().x, view._selected().z) == before, "castle: undo takes the nudge back")
+	view.free()
 	return true
 
 func _alpha_surfaces(mesh: Mesh) -> int:

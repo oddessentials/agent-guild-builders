@@ -19,10 +19,12 @@ const NO_POINTER := Vector2(-1, -1)
 const DRAG_PIXELS := 6.0
 const PICK_PIXELS := 10.0
 const TURN_STEP := PI / 12.0
+const NUDGE := 0.05
+const NUDGES := {KEY_RIGHT: Vector2(1, 0), KEY_LEFT: Vector2(-1, 0), KEY_UP: Vector2(0, 1), KEY_DOWN: Vector2(0, -1)}
 const SMALLEST_SIZE := 0.5
 const LARGEST_SIZE := 2.0
 const WATER_LOWEST := -20.0
-const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["holiday", "Holiday"]]
+const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks & logs"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["city", "City"], ["medieval", "Medieval"], ["gnomes", "Gnomes"], ["goblins", "Goblins"], ["forest", "Forest folk"], ["space", "Space"], ["holiday", "Holiday"]]
 const TOOL_KEYS := {KEY_M: Tool.ARRANGE, KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
 var doc: WorldDoc
@@ -726,7 +728,20 @@ func _build_place_options() -> void:
 			_update_zones())
 		modes.add_child(b)
 	if place_mode == "one":
-		_options.add_child(ProTheme.note("Choose something, then click where it goes."))
+		_options.add_child(ProTheme.note("Choose something, then click where it goes. Q and E turn it first."))
+		var turns := HBoxContainer.new()
+		turns.name = "Turns"
+		turns.add_theme_constant_override("separation", 4)
+		_options.add_child(turns)
+		for entry in [["Turn (Q)", -1.0, "Turns it clockwise"], ["Turn (E)", 1.0, "Turns it anticlockwise"]]:
+			var b := Button.new()
+			b.text = entry[0]
+			b.tooltip_text = entry[2]
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.add_theme_font_size_override("font_size", 13)
+			var direction: float = entry[1]
+			b.pressed.connect(func(): _turn_next(direction))
+			turns.add_child(b)
 	else:
 		_options.add_child(ProTheme.note("Drag to paint. A mix paints several things together."))
 		_brush_slider()
@@ -882,13 +897,12 @@ func _tallest_chosen() -> float:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	var top := 0.0
 	for kind in _chosen_kinds():
-		top = maxf(top, float(models.get(kind, {}).get("height", 1.0)))
+		var allowed := Placing.sizes(kind)
+		top = maxf(top, float(models.get(kind, {}).get("height", 1.0)) * (allowed.x if place_mode == "one" else allowed.y))
 	return top
 
-## Whether anything chosen could stand tall enough to be refused for its height,
-## at the largest size it may be placed.
 func _chosen_is_tall() -> bool:
-	return _tallest_chosen() * (Placing.SMALLEST if place_mode == "one" else Placing.LARGEST) > 1.0
+	return _tallest_chosen() > 1.0
 
 func _brush_slider() -> void:
 	_slider("Brush size", 1.0, 40.0, 0.5, brush_radius, "%.1f m", func(v):
@@ -1100,6 +1114,13 @@ func _update_cursor(pos: Vector2) -> void:
 	if hit == null or not shows_brush:
 		_on_stage_left()
 		return
+	var turn := _next_turn
+	var joins := ""
+	if tool == Tool.SCATTER and place_mode == "one":
+		var spot := Placing.placement(doc, place_kind, hit, _next_turn)
+		hit = spot.at
+		turn = spot.turn
+		joins = spot.joins
 	_brush.visible = true
 	_brush.mesh = _spot_ring if tool == Tool.SCATTER and place_mode == "one" else _wide_ring
 	_brush.position = hit + Vector3.UP * 0.1
@@ -1114,17 +1135,19 @@ func _update_cursor(pos: Vector2) -> void:
 						_on_stage_left()
 						return
 					_placed_pointer = NO_POINTER
-				text = _why_not_place(hit)
+				text = _why_not_place(hit, turn)
 				var fitted := Placing.fitted_scale(doc, place_kind, hit.x, hit.z, _next_scale)
 				_brush.scale = Vector3.ONE * _footprint(place_kind, fitted)
 				_ghost.visible = text == "" and WorldScene.mesh_ready(place_kind)
 				if text == "":
 					if _ghost.visible:
 						_ghost.mesh = _scene.mesh_for(place_kind)
-					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": _next_turn, "scale": fitted})
+					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": turn, "scale": fitted})
 					var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
 					if behind != "":
 						text = "Behind the %s: this may be hidden from view." % behind
+					elif joins != "":
+						text = "Joins the %s." % _thing_name(joins).to_lower()
 				else:
 					colour = ProTheme.color("danger")
 			else:
@@ -1144,8 +1167,8 @@ func _update_cursor(pos: Vector2) -> void:
 	_brush_material.albedo_color = colour
 	_show_hint(text, pos)
 
-func _why_not_place(hit: Vector3) -> String:
-	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z)
+func _why_not_place(hit: Vector3, turn: float) -> String:
+	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z, turn)
 	if why == "" and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
 		return "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(place_kind)
 	return why
@@ -1167,24 +1190,30 @@ func _load_chosen() -> void:
 
 func _build_arrange_options() -> void:
 	_options.add_child(ProTheme.heading("Move things"))
-	_options.add_child(ProTheme.note("Click something to choose it, then drag it somewhere new. Q and E turn it. Delete removes it."))
+	_options.add_child(ProTheme.note("Click something to choose it, then drag it somewhere new. Q and E turn it, arrow keys nudge it. Delete removes it."))
 	var thing := _selected()
 	if thing.is_empty():
 		return
 	_options.add_child(ProTheme.heading(_thing_name(thing.kind), 13))
 	var exact_turn: float = thing.turn
 	var shown_turn := rad_to_deg(wrapf(exact_turn, 0.0, TAU))
-	_slider("Turn", 0.0, 360.0, 1.0, shown_turn, "%.0f°",
+	var modular := Placing.modular(thing.kind)
+	var quarters := Placing.joins(thing.kind)
+	_slider("Turn", 0.0, 270.0 if quarters else 360.0, 90.0 if quarters else 1.0, shown_turn, "%.0f°",
 		func(v): _preview_selected("turn", exact_turn if v == shown_turn else deg_to_rad(v)),
 		func(_v, was): _commit_selected("Turn", "turn", exact_turn if was == shown_turn else deg_to_rad(was)))
-	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
-	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
-		func(v): _preview_selected("scale", v),
-		func(_v, was): _commit_selected("Resize", "scale", was))
+	if not modular:
+		_size_slider(thing)
 	var remove := Button.new()
 	remove.text = "Remove"
 	remove.pressed.connect(_remove_selected)
 	_options.add_child(remove)
+
+func _size_slider(thing: Dictionary) -> void:
+	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
+	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
+		func(v): _preview_selected("scale", v),
+		func(_v, was): _commit_selected("Resize", "scale", was))
 
 func _selected() -> Dictionary:
 	if _selected_id >= 0:
@@ -1238,6 +1267,34 @@ func _commit_selected(label: String, field: String, was: Variant) -> void:
 	var before: Dictionary = thing.duplicate()
 	before[field] = was
 	history.things_edit("%s %s" % [label, _thing_name(thing.kind)], [thing], [before], true)
+
+func _turn_next(direction: float) -> void:
+	_next_turn = wrapf(_next_turn + direction * _turn_step(place_kind), 0.0, TAU)
+	_update_cursor(_stage.get_local_mouse_position())
+
+func _nudge_selected(on_screen: Vector2) -> void:
+	_finish_edits()
+	var thing := _selected()
+	if thing.is_empty():
+		return
+	var basis := _camera.global_transform.basis
+	var right := Vector2(basis.x.x, basis.x.z).normalized()
+	var up := Vector2(-basis.z.x, -basis.z.z).normalized()
+	var step := (right * on_screen.x + up * on_screen.y) * NUDGE
+	var x := float(thing.x) + step.x
+	var z := float(thing.z) + step.y
+	var why := Placing.why_not_moved(doc, thing, x, z)
+	if why != "":
+		_set_status(why)
+		return
+	var moved: Dictionary = thing.duplicate()
+	moved.x = x
+	moved.z = z
+	history.things_edit("Nudge " + _thing_name(thing.kind), [moved], [thing])
+	_set_status("Nudged %s." % _thing_name(thing.kind))
+
+func _turn_step(kind: String) -> float:
+	return PI / 2.0 if Placing.joins(kind) else TURN_STEP
 
 func _turn_selected(by: float) -> void:
 	_finish_edits()
@@ -1306,8 +1363,11 @@ func _drag_thing(pos: Vector2) -> void:
 		_selected_ring.visible = false
 	var hit = _ground_at(pos + _drag.grip * float(_viewport.size.y) / _camera.size)
 	if hit != null:
+		var spot := Placing.placement(doc, thing.kind, hit, float(thing.turn), int(thing.id))
+		hit = spot.at
+		_drag.turn = spot.turn
 		_drag.hit = hit
-		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z)
+		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z, spot.turn)
 
 func _arrange_cursor(pos: Vector2) -> void:
 	var colour := ProTheme.color("accent")
@@ -1319,6 +1379,7 @@ func _arrange_cursor(pos: Vector2) -> void:
 		var moved: Dictionary = thing.duplicate()
 		moved.x = _drag.hit.x
 		moved.z = _drag.hit.z
+		moved.turn = _drag.get("turn", thing.turn)
 		_ghost.mesh = _scene.mesh_for(thing.kind)
 		_ghost.transform = _scene.transform_of(moved)
 		_ghost.visible = true
@@ -1348,6 +1409,7 @@ func _finish_drag() -> void:
 	var moving: bool = _drag.moving
 	var hit = _drag.hit
 	var why: String = _drag.why
+	var turn = _drag.get("turn")
 	_drag = {}
 	var thing := _selected()
 	if not moving or thing.is_empty():
@@ -1362,6 +1424,8 @@ func _finish_drag() -> void:
 	var moved: Dictionary = thing.duplicate()
 	moved.x = hit.x
 	moved.z = hit.z
+	if turn != null:
+		moved.turn = turn
 	history.things_edit("Move " + _thing_name(thing.kind), [moved], [thing])
 	_set_status("Moved %s." % _thing_name(thing.kind))
 	_show_selection()
@@ -1370,8 +1434,14 @@ func _footprint(kind: String, scale: float) -> float:
 	return maxf(float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("radius", 0.5)) * scale, 0.8)
 
 func _roll_next() -> void:
-	_next_scale = _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
-	_next_turn = _rng.range_f(0.0, TAU)
+	var allowed := Placing.sizes(place_kind)
+	if Placing.modular(place_kind):
+		_next_scale = allowed.x
+		if Placing.joins(place_kind):
+			_next_turn = wrapf(snappedf(_next_turn, PI / 2.0), 0.0, TAU)
+	else:
+		_next_scale = _rng.range_f(allowed.x, allowed.y)
+		_next_turn = _rng.range_f(0.0, TAU)
 	_update_zones()
 
 func _begin_stroke(pos: Vector2) -> void:
@@ -1431,7 +1501,10 @@ func _apply_brush(hit: Vector3, first: bool) -> void:
 
 func _scatter_at(hit: Vector3, first: bool) -> void:
 	if place_mode == "one":
-		var why := _why_not_place(hit)
+		var spot := Placing.placement(doc, place_kind, hit, _next_turn)
+		hit = spot.at
+		_next_turn = spot.turn
+		var why := _why_not_place(hit, _next_turn)
 		if why != "":
 			_set_status(why)
 			_update_cursor(_click_pointer)
@@ -1448,15 +1521,16 @@ func _scatter_at(hit: Vector3, first: bool) -> void:
 	var kinds := _chosen_kinds()
 	for attempt in (1 if first else 2):
 		var kind: String = kinds[int(_rng.next() * kinds.size()) % kinds.size()]
-		var s := _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
+		var allowed := Placing.sizes(kind)
+		var s := _rng.range_f(allowed.x, allowed.y)
 		var a := _rng.range_f(0.0, TAU)
 		var r: float = sqrt(_rng.next()) * brush_radius
-		var x := hit.x + cos(a) * r
-		var z := hit.z + sin(a) * r
-		if Placing.why_not(doc, kind, x, z, s) != "":
+		var spot := Placing.on_grid(doc, kind, Vector3(hit.x + cos(a) * r, 0.0, hit.z + sin(a) * r))
+		if Placing.why_not(doc, kind, spot.x, spot.z, s) != "":
 			_stroke_skipped += 1
 			continue
-		_add_stroke_thing(kind, x, z, _rng.range_f(0.0, TAU), s)
+		var turn := _rng.range_f(0.0, TAU)
+		_add_stroke_thing(kind, spot.x, spot.z, snappedf(turn, PI / 2.0) if Placing.modular(kind) else turn, s)
 
 func _show_placed_ring(hit: Vector3, scale: float) -> void:
 	_placed_ring.position = hit + Vector3.UP * 0.1
@@ -1732,14 +1806,16 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if TOOL_KEYS.has(event.keycode):
 		_select_tool(TOOL_KEYS[event.keycode])
 	elif event.keycode == KEY_Q or event.keycode == KEY_E:
-		var by := TURN_STEP if event.keycode == KEY_E else -TURN_STEP
+		var step := _turn_step(_selected().get("kind", "") if tool == Tool.ARRANGE else place_kind)
+		var by := step if event.keycode == KEY_E else -step
 		if tool == Tool.ARRANGE:
 			_turn_selected(by)
 		elif tool == Tool.SCATTER and place_mode == "one":
-			_next_turn = wrapf(_next_turn + by, 0.0, TAU)
-			_update_cursor(_stage.get_local_mouse_position())
+			_turn_next(signf(by))
 		else:
 			return
+	elif tool == Tool.ARRANGE and _selected_id >= 0 and NUDGES.has(event.keycode):
+		_nudge_selected(NUDGES[event.keycode])
 	elif tool == Tool.ARRANGE and (event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE):
 		_remove_selected()
 	elif tool == Tool.ARRANGE and event.keycode == KEY_ESCAPE:
@@ -1762,7 +1838,7 @@ func _update_zones() -> void:
 	if tool == Tool.LAND:
 		wanted = 0.0
 	elif tool == Tool.SCATTER and (_chosen_is_tall() or _raised_land):
-		wanted = ceilf(_tallest_chosen() * (Placing.SMALLEST if place_mode == "one" else Placing.LARGEST) * 10.0) / 10.0
+		wanted = ceilf(_tallest_chosen() * 10.0) / 10.0
 	_zone_wanted = wanted
 	_show_zone()
 

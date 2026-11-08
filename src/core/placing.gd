@@ -13,6 +13,88 @@ const MIXES := {
 	"camp": {"label": "Camp clutter", "kinds": ["crate", "crate_long", "barrel_rusty", "bucket", "basket"]},
 }
 
+const GRID := 0.5
+const JOIN_REACH := 3.0
+const DUPLICATE := "There's already one here. Move it a little, or turn it."
+
+static func modular(kind: String) -> bool:
+	return bool(WorldScene.load_kit().get("models", {}).get(kind, {}).get("modular", false))
+
+static func joins(kind: String) -> bool:
+	return bool(WorldScene.load_kit().get("models", {}).get(kind, {}).get("joins", false))
+
+static func sizes(kind: String) -> Vector2:
+	return Vector2.ONE if modular(kind) else Vector2(SMALLEST, LARGEST)
+
+static func placement(doc: WorldDoc, kind: String, at: Vector3, turn: float, ignore_id := -1) -> Dictionary:
+	if not joins(kind):
+		return {"at": at, "turn": turn, "joins": ""}
+	var joined := _joined(doc, kind, Vector2(at.x, at.z), ignore_id)
+	if joined.is_empty():
+		return {"at": on_grid(doc, kind, at), "turn": turn, "joins": ""}
+	return {"at": Vector3(joined.x, doc.height_at(joined.x, joined.z), joined.z), "turn": joined.turn, "joins": joined.joins}
+
+static func _joined(doc: WorldDoc, kind: String, pointer: Vector2, ignore_id: int) -> Dictionary:
+	var models: Dictionary = WorldScene.load_kit().get("models", {})
+	var own: Array = models.get(kind, {}).get("joints", [])
+	var placed := []
+	for t in doc.data.things:
+		if int(t.id) == ignore_id or not joins(t.kind):
+			continue
+		for j in models.get(t.kind, {}).get("joints", []):
+			placed.append({"thing": t, "joint": j, "at": Vector2(float(t.x), float(t.z)) + _turned(Vector2(j[0], j[1]), float(t.turn)), "facing": _turned(Vector2(j[2], j[3]), float(t.turn))})
+	var best := {}
+	var best_score := INF
+	for open in placed:
+		var t: Dictionary = open.thing
+		var j: Array = open.joint
+		var at: Vector2 = open.at
+		var reach := at.distance_to(pointer)
+		if reach > JOIN_REACH or _taken(open, placed):
+			continue
+		var facing: Vector2 = open.facing
+		var hand := _hand(Vector2(j[0], j[1]), Vector2(j[2], j[3]))
+		for k in own:
+			var k_at := Vector2(k[0], k[1])
+			var k_facing := Vector2(k[2], k[3])
+			var k_hand := _hand(k_at, k_facing)
+			if int(k[4]) != int(j[4]) or (hand != 0.0 and k_hand != 0.0 and hand == k_hand):
+				continue
+			var turn := wrapf(k_facing.angle() - (-facing).angle(), 0.0, TAU)
+			var spot := at - _turned(k_at, turn)
+			var score := reach + 0.01 * spot.distance_to(pointer)
+			if score < best_score:
+				best_score = score
+				best = {"x": spot.x, "z": spot.y, "turn": turn, "joins": t.kind}
+	return best
+
+static func _taken(open: Dictionary, placed: Array) -> bool:
+	for other in placed:
+		if other.thing.id != open.thing.id and int(other.joint[4]) == int(open.joint[4]) and other.at.distance_to(open.at) < 0.01 and other.facing.dot(open.facing) < -0.99:
+			return true
+	return false
+
+static func duplicate_of(doc: WorldDoc, kind: String, x: float, z: float, turn: float, ignore_id := -1) -> bool:
+	for t in doc.data.things:
+		if int(t.id) != ignore_id and t.kind == kind and Vector2(float(t.x) - x, float(t.z) - z).length() < 0.01 and absf(wrapf(float(t.turn) - turn, -PI, PI)) < 0.001:
+			return true
+	return false
+
+static func _turned(v: Vector2, turn: float) -> Vector2:
+	var r := Vector3(v.x, 0.0, v.y).rotated(Vector3.UP, turn)
+	return Vector2(r.x, r.z)
+
+static func _hand(at: Vector2, facing: Vector2) -> float:
+	var side := facing.cross(-at)
+	return 0.0 if absf(side) < 0.01 else signf(side)
+
+static func on_grid(doc: WorldDoc, kind: String, at: Vector3) -> Vector3:
+	if not modular(kind):
+		return at
+	var x := snappedf(at.x, GRID)
+	var z := snappedf(at.z, GRID)
+	return Vector3(x, doc.height_at(x, z), z)
+
 static func kinds_of(choice: String) -> Array:
 	if choice.begins_with("mix:"):
 		return MIXES[choice.trim_prefix("mix:")].kinds
@@ -39,21 +121,23 @@ static func why_not(doc: WorldDoc, kind: String, x: float, z: float, scale: floa
 		return why
 	return _too_close(models, crowded_by(doc, x, z, float(info.get("spacing", 2.0)) * scale))
 
-## The same question for one chosen item: the answer depends only on the spot, and
-## only an item standing on the same spot gets in the way.
-static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float) -> String:
+static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float, turn := NAN) -> String:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
-	var why := _why_not_here(doc, models.get(kind, {}), x, z, SMALLEST)
+	var why := _why_not_here(doc, models.get(kind, {}), x, z, sizes(kind).x)
 	if why != "":
 		return why
+	if not is_nan(turn) and duplicate_of(doc, kind, x, z, turn):
+		return DUPLICATE
 	return _too_close(models, _standing_on(doc, models, kind, x, z))
 
 ## The same question for a placed item moving to (x, z).
-static func why_not_moved(doc: WorldDoc, thing: Dictionary, x: float, z: float) -> String:
+static func why_not_moved(doc: WorldDoc, thing: Dictionary, x: float, z: float, turn := NAN) -> String:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	var why := _why_not_here(doc, models.get(thing.kind, {}), x, z, float(thing.scale))
 	if why != "":
 		return why
+	if duplicate_of(doc, thing.kind, x, z, float(thing.turn) if is_nan(turn) else turn, int(thing.id)):
+		return DUPLICATE
 	return _too_close(models, _standing_on(doc, models, thing.kind, x, z, int(thing.id)))
 
 ## The largest size that keeps the Yard clear at this spot.
@@ -63,7 +147,8 @@ static func largest_scale(doc: WorldDoc, kind: String, x: float, z: float) -> fl
 
 ## `rolled`, capped to the largest size that keeps the Yard clear at this spot.
 static func fitted_scale(doc: WorldDoc, kind: String, x: float, z: float, rolled: float) -> float:
-	return maxf(SMALLEST, minf(rolled, largest_scale(doc, kind, x, z)))
+	var allowed := sizes(kind)
+	return clampf(minf(rolled, largest_scale(doc, kind, x, z)), allowed.x, allowed.y)
 
 ## What would mostly hide this item on screen, or "" if nothing would.
 static func hidden_behind(doc: WorldDoc, kind: String, x: float, z: float, scale: float) -> String:
@@ -103,7 +188,7 @@ static func _why_not_here(doc: WorldDoc, info: Dictionary, x: float, z: float, s
 static func _standing_on(doc: WorldDoc, models: Dictionary, kind: String, x: float, z: float, ignore_id := -1) -> String:
 	var own := float(models.get(kind, {}).get("radius", 0.5))
 	for t in doc.data.things:
-		if int(t.id) == ignore_id or WorldScene.gone_in(t.kind, doc.season()):
+		if int(t.id) == ignore_id or WorldScene.gone_in(t.kind, doc.season()) or (modular(kind) and modular(t.kind)):
 			continue
 		var limit := minf(own, float(models.get(t.kind, {}).get("radius", 0.5)))
 		var dx: float = float(t.x) - x
