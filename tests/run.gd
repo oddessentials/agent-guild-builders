@@ -878,6 +878,12 @@ func _castle() -> bool:
 	check(walk.joins == "fort_thick_straight" and Placing.why_not_one(doc, "fort_walkway_straight", walk.at.x, walk.at.z, walk.turn) == "", "castle: a walkway may still overlap its wall")
 	var free := Placing.placement(doc, "fort_thick_corner_b", Vector3(-20.13, 0.0, -90.38), 0.3)
 	check(free.joins == "" and is_equal_approx(free.at.x, -20.13) and is_equal_approx(free.at.z, -90.38) and free.turn == 0.3 and view._turn_step("fort_thick_corner_b") == view.TURN_STEP, "castle: pieces without joins go exactly where they're put")
+	view._choose("fort_thick_corner_b")
+	view._next_turn = deg_to_rad(15.0)
+	view._roll_next()
+	var kept_turn: float = view._next_turn
+	view._choose("fort_thick_straight")
+	check(is_equal_approx(kept_turn, deg_to_rad(15.0)) and is_zero_approx(fposmod(view._next_turn, PI / 2.0)), "castle: a free piece keeps its turn, a joining piece squares up")
 	var c := doc.add_thing("fort_thick_straight", -100.0, -120.0, 0.0, 1.0)
 	view._scene.update_things([c], [])
 	view._select_tool(view.Tool.ARRANGE)

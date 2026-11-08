@@ -1437,7 +1437,8 @@ func _roll_next() -> void:
 	var allowed := Placing.sizes(place_kind)
 	if Placing.modular(place_kind):
 		_next_scale = allowed.x
-		_next_turn = wrapf(snappedf(_next_turn, PI / 2.0), 0.0, TAU)
+		if Placing.joins(place_kind):
+			_next_turn = wrapf(snappedf(_next_turn, PI / 2.0), 0.0, TAU)
 	else:
 		_next_scale = _rng.range_f(allowed.x, allowed.y)
 		_next_turn = _rng.range_f(0.0, TAU)
