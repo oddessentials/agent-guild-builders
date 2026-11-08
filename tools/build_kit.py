@@ -122,6 +122,38 @@ MADE_HERE = {
     'paper_lanterns': ('Paper lanterns', 5), 'bunting': ('Bunting', 6), 'easter_egg_pink': ('Pink Easter egg', 2), 'easter_egg_blue': ('Blue Easter egg', 2),
 }
 MADE_LICENCE = 'AGPL-3.0-only (Agent Guild: Builders)'
+# id: (GLB under a source folder or kits/, mesh object to keep or None for all, label, group, scatter spacing in metres)
+GUILD = {
+    'car_sedan': ('professional-yard/models/car_sedan.glb', None, 'Sedan', 'city', 5),
+    'car_hatch': ('professional-yard/models/car_hatch.glb', None, 'Hatchback', 'city', 5),
+    'car_suv': ('professional-yard/models/car_suv.glb', None, 'SUV', 'city', 5),
+    'car_taxi': ('professional-yard/models/car_taxi.glb', None, 'Taxi', 'city', 5),
+    'city_bus': ('professional-yard/models/city_bus.glb', None, 'City bus', 'city', 12),
+    'delivery_van': ('professional-yard/models/delivery_van.glb', None, 'Delivery van', 'city', 7),
+    'gnome_cottage': ('gnomeland-yard/models/town_cottage_a.glb', None, 'Gnome cottage', 'gnomes', 9),
+    'gnome_cottage_small': ('gnomeland-yard/models/town_cottage_b.glb', None, 'Small gnome cottage', 'gnomes', 7),
+    'gnome_tower': ('gnomeland-yard/models/town_tower.glb', None, 'Gnome tower', 'gnomes', 7),
+    'gnome_workshop': ('gnomeland-yard/models/town_workshop.glb', None, 'Gnome workshop', 'gnomes', 7),
+    'gnome_mill': ('gnomeland-yard/models/town_mill.glb', None, 'Gnome mill', 'gnomes', 8),
+    'goblin_house': ('goblinville-yard/models/town_house_a.glb', None, 'Goblin house', 'goblins', 9),
+    'goblin_shack': ('goblinville-yard/models/town_house_b.glb', None, 'Goblin shack', 'goblins', 8),
+    'goblin_hut': ('goblinville-yard/models/town_house_c.glb', None, 'Goblin hut', 'goblins', 7),
+    'goblin_factory': ('goblinville-yard/models/factory.glb', None, 'Goblin factory', 'goblins', 17),
+    'goblin_water_tower': ('goblinville-yard/models/water_tower.glb', None, 'Water tower', 'goblins', 11),
+    'goblin_crane': ('goblinville-yard/models/crane.glb', None, 'Goblin crane', 'goblins', 14),
+    'treehouse': ('grove-yard/models/town_treehouse.glb', None, 'Treehouse', 'forest', 9),
+    'stump_house': ('grove-yard/models/town_stump.glb', None, 'Stump house', 'forest', 6),
+    'mushroom_house': ('grove-yard/models/town_mushroom.glb', None, 'Mushroom house', 'forest', 7),
+    'stone_lantern': ('grove-yard/models/town_lantern.glb', None, 'Stone lantern', 'forest', 3),
+    'space_dish': ('orbital-yard/models/town_dish.glb', None, 'Satellite dish', 'space', 8),
+    'space_crane': ('orbital-yard/models/town_crane.glb', None, 'Gantry crane', 'space', 7),
+    'space_shuttle': ('orbital-yard/models/town_shuttle.glb', None, 'Shuttle', 'space', 11),
+}
+HALL_AGENTS = {'anthropic': 'Claude', 'openai': 'Codex', 'google': 'Antigravity', 'xai': 'Grok', 'docker': 'Docker', 'shell': 'Shell'}
+HALL_GROUPS = {'guild': 'guild', 'professional': 'city', 'gnomeland': 'gnomes', 'goblinville': 'goblins', 'grove': 'forest', 'orbital': 'space'}
+GUILD.update({f'hall_{base}_{agent}': (f'halls/{base}.glb', f'hall_{agent}_mesh', f'{name} hall', group, 9 if agent == 'docker' else 7)
+              for base, group in HALL_GROUPS.items() for agent, name in HALL_AGENTS.items()})
+GUILD_LICENCE = 'AGPL-3.0-only (Agent Guild)'
 LEGACY = {'tree_oak', 'tree_elm', 'tree_fir', 'tree_young', 'shrub_round', 'shrub_low', 'shrub_wild', 'fern', 'grass', 'dandelion',
           'celandine', 'boulder', 'stone', 'stump', 'trunk', 'lantern', 'barrel', 'table', 'bench'}
 # Real-world heights in metres; a model is scaled to its height wherever it's used.
@@ -142,7 +174,12 @@ TARGET = {'tree_oak': 9, 'tree_elm': 8, 'tree_fir': 16, 'tree_young': 6, 'shrub_
           'xmas_tree': 5.5, 'gift_red': 1.1, 'gift_green': 0.9, 'gift_pile': 1.65, 'snowman': 2.25, 'candy_cane': 2.0, 'sleigh': 1.7,
           'wreath_arch': 4.0, 'ornament_red': 1.25, 'ornament_gold': 1.25, 'gingerbread_hut': 3.5, 'pumpkin': 0.75, 'jack_o_lantern': 0.75,
           'hay_bale': 1.0, 'scarecrow': 2.5, 'gravestone': 1.25, 'grave_cross': 1.45, 'cauldron': 1.05, 'tree_spooky': 7.0,
-          'paper_lanterns': 2.6, 'bunting': 3.0, 'easter_egg_pink': 1.4, 'easter_egg_blue': 1.4}
+          'paper_lanterns': 2.6, 'bunting': 3.0, 'easter_egg_pink': 1.4, 'easter_egg_blue': 1.4,
+          'car_sedan': 1.5, 'car_hatch': 1.55, 'car_suv': 1.75, 'car_taxi': 1.6, 'city_bus': 3.3, 'delivery_van': 2.6,
+          'gnome_cottage': 8.5, 'gnome_cottage_small': 6.5, 'gnome_tower': 12.5, 'gnome_workshop': 6, 'gnome_mill': 8,
+          'goblin_house': 9, 'goblin_shack': 7, 'goblin_hut': 5, 'goblin_factory': 13, 'goblin_water_tower': 10, 'goblin_crane': 11,
+          'treehouse': 10, 'stump_house': 4.5, 'mushroom_house': 6.5, 'stone_lantern': 2.2,
+          'space_dish': 7, 'space_crane': 5, 'space_shuttle': 5.5}
 # Lit at dusk only: watts, colour and height above the model's base, in Blender's units.
 LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'street_lamp': {'watts': 300.0, 'color': [1.0, 0.72, 0.45], 'height': 3.6},
@@ -158,7 +195,8 @@ LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'jack_o_lantern': {'watts': 40.0, 'color': [1.0, 0.5, 0.12], 'height': 0.45},
           'cauldron': {'watts': 60.0, 'color': [0.35, 1.0, 0.4], 'height': 1.15},
           'wreath_arch': {'watts': 80.0, 'color': [1.0, 0.72, 0.4], 'height': 3.3},
-          'paper_lanterns': {'watts': 70.0, 'color': [1.0, 0.45, 0.2], 'height': 1.9}}
+          'paper_lanterns': {'watts': 70.0, 'color': [1.0, 0.45, 0.2], 'height': 1.9},
+          'stone_lantern': {'watts': 160.0, 'color': [1.0, 0.6, 0.3], 'height': 1.28}}
 GROUNDS = {
     'grass': ('leafy_grass', 'Meadow grass'), 'dirt': ('forest_ground_04', 'Forest floor'),
     'rock': ('rocky_trail', 'Rocky ground'), 'gravel': ('gravel_floor', 'Gravel'),
@@ -242,23 +280,46 @@ def stand_at_origin(parts):
     bpy.context.view_layer.update()
 
 
-def export_model(kit_id, spec):
-    name, lod, label, group, spacing = spec
+def glb_of(name):
+    for folder in (SOURCE, *MORE_SOURCES, ROOT / 'kits'):
+        if folder.joinpath(name).is_file():
+            return folder / name
+    return None
+
+
+def guild_parts(name, keep):
+    path = glb_of(name)
+    if path is None:
+        return None
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=str(path))
+    bpy.ops.object.select_all(action='DESELECT')
+    return [o for o in bpy.context.scene.objects if o.type == 'MESH' and (keep is None or o.name == keep)] or None
+
+
+def blend_parts(kit_id, name, lod):
     path = blend_of(name)
     if path is None:
-        print('KIT missing', name)
         return None
     bpy.ops.wm.read_factory_settings(use_empty=True)
     with bpy.data.libraries.load(str(path), link=False) as (src, dst):
         dst.objects = list(src.objects)
     parts = parts_at(dst.objects, lod, name)
-    scene = bpy.context.scene
     if kit_id in LEGACY:
         for o in parts:
             o.location = (0, 0, 0)
     for o in parts:
-        scene.collection.objects.link(o)
+        bpy.context.scene.collection.objects.link(o)
     bpy.context.view_layer.update()
+    return parts
+
+
+def export_model(kit_id, spec):
+    name, lod, label, group, spacing = spec
+    parts = guild_parts(name, lod) if kit_id in GUILD else blend_parts(kit_id, name, lod)
+    if not parts:
+        print('KIT missing', name)
+        return None
     if kit_id not in LEGACY:
         stand_at_origin(parts)
     low, high = Vector((1e9, 1e9, 1e9)), Vector((-1e9, -1e9, -1e9))
@@ -277,11 +338,12 @@ def export_model(kit_id, spec):
     out = KIT / 'models' / f'{kit_id}.glb'
     bpy.ops.export_scene.gltf(filepath=str(out), use_selection=True, export_format='GLB', export_image_format='WEBP',
                               export_image_quality=85, export_animations=False, export_cameras=False, export_lights=False)
-    target = TARGET[kit_id]
     size = max(high.z - min(low.z, 0), .001)
+    target = TARGET.get(kit_id, round(size, 2))
+    licence = MADE_LICENCE if kit_id in MADE_HERE else GUILD_LICENCE if kit_id in GUILD else LICENCE
     entry = {'label': label, 'group': group, 'spacing': spacing, 'height': target,
              'radius': round(max(high.x - low.x, high.y - low.y) / 2 * target / size, 2), 'triangles': tris,
-             'source': name, 'licence': MADE_LICENCE if kit_id in MADE_HERE else LICENCE, 'bytes': out.stat().st_size}
+             'source': f'{name} {lod}' if kit_id in GUILD and lod else name, 'licence': licence, 'bytes': out.stat().st_size}
     if kit_id in LIGHTS:
         entry['light'] = LIGHTS[kit_id]
     print('KIT', kit_id, tris, 'tris', entry['height'], 'm', entry['bytes'] // 1024, 'KiB', flush=True)
@@ -326,7 +388,7 @@ def main():
     built = json.loads((KIT / 'kit.json').read_text(encoding='utf-8')) if (KIT / 'kit.json').exists() else {}
     kit = {'id': 'meadow', 'title': 'Meadow', 'models': {}, 'grounds': {}, 'skies': {}}
     made = {key: (key, None, label, 'holiday', spacing) for key, (label, spacing) in MADE_HERE.items()}
-    for key, spec in {**MODELS, **made}.items():
+    for key, spec in {**MODELS, **made, **GUILD}.items():
         if key in built.get('models', {}) and (KIT / 'models' / f'{key}.glb').exists():
             kit['models'][key] = built['models'][key]
             continue

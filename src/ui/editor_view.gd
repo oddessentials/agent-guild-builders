@@ -22,7 +22,7 @@ const TURN_STEP := PI / 12.0
 const SMALLEST_SIZE := 0.5
 const LARGEST_SIZE := 2.0
 const WATER_LOWEST := -20.0
-const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["holiday", "Holiday"]]
+const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["holiday", "Holiday"], ["city", "City"], ["gnomes", "Gnomes"], ["goblins", "Goblins"], ["forest", "Forest folk"], ["space", "Space"], ["guild", "Guild"]]
 const TOOL_KEYS := {KEY_M: Tool.ARRANGE, KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
 var doc: WorldDoc

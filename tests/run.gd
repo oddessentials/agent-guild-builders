@@ -765,6 +765,11 @@ func _place_panel() -> bool:
 	view._fill_place_items()
 	check(view._item_buttons.is_empty(), "panel: search can find nothing")
 	view._place_search = ""
+	var listed: Array = view.PLACE_GROUPS.map(func(entry): return entry[0])
+	check(WorldScene.load_kit().models.values().all(func(m): return listed.has(m.group)), "panel: every kit item has a group button")
+	view._place_group = "goblins"
+	view._fill_place_items()
+	check(view._item_buttons.has("goblin_factory") and view._item_buttons.has("hall_goblinville_docker") and not view._item_buttons.has("gnome_mill"), "panel: a theme's buildings and halls share its group")
 	view.free()
 	var opened := WorldDoc.create("guild", "T", 3)
 	opened.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
