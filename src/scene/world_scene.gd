@@ -169,7 +169,10 @@ static func _combined(doc_gltf: GLTFDocument, state: GLTFState, tree: bool, uplo
 	if root == null:
 		return combined
 	var fitted := {}
-	for mi in root.find_children("*", "MeshInstance3D", true, false):
+	var found: Array = root.find_children("*", "MeshInstance3D", true, false)
+	if root is MeshInstance3D:
+		found.push_front(root)
+	for mi in found:
 		var xf: Transform3D = _to_root(mi, root)
 		var mesh: Mesh = mi.mesh
 		if mesh == null:

@@ -1495,6 +1495,7 @@ func _custom() -> bool:
 	dialog.use_file(_file(files, "flag.png", picture.save_png_to_buffer()))
 	check(dialog._message.text == "Checked: 400 × 200 px." and dialog._shown != null and is_equal_approx(dialog._height.value, CustomItems.DISPLAY_HEIGHT.sign), "dialog: a picture previews on its sign: " + dialog._message.text)
 	dialog.free()
+	await _custom_hardening(files)
 	for dir in [CustomItems.root_override, WorldLibrary.root_override, files]:
 		_remove_tree(dir)
 	CustomItems.root_override = keep_custom
@@ -1549,3 +1550,104 @@ func _custom_size(kind: String, height: float) -> void:
 	view._choose(kind)
 	check(view._next_scale == 1.0, "custom size: resizing one copy doesn't change the next")
 	view.free()
+
+func _indexed_glb(position: Dictionary, extra_views := []) -> PackedByteArray:
+	var idx := PackedByteArray()
+	idx.resize(72)
+	for i in 36:
+		idx.encode_u16(i * 2, i % 8)
+	var bin := idx.duplicate()
+	var views := [{"buffer": 0, "byteLength": 72}]
+	for v in extra_views:
+		views.append({"buffer": 0, "byteOffset": bin.size(), "byteLength": v.size()})
+		bin.append_array(v)
+	var json := {"asset": {"version": "2.0"}, "buffers": [{"byteLength": bin.size()}], "bufferViews": views,
+		"accessors": [{"bufferView": 0, "componentType": 5123, "count": 36, "type": "SCALAR"}, position],
+		"meshes": [{"primitives": [{"attributes": {"POSITION": 1}, "indices": 0}]}],
+		"nodes": [{"mesh": 0}], "scenes": [{"nodes": [0]}], "scene": 0}
+	return _glb(json, bin)
+
+func _custom_hardening(files: String) -> void:
+	var bomb := _indexed_glb({"componentType": 5126, "count": 6000000, "type": "VEC3", "min": [0, 0, 0], "max": [1, 1, 1]})
+	_refuses_glb(bomb, ["18,000,036", "2,000,036 over the 16,000,000 limit"], "a tiny file that unpacks to far too much")
+	var sparse_index := PackedByteArray()
+	sparse_index.resize(4)
+	var sparse_value := PackedByteArray()
+	sparse_value.resize(12)
+	var sparse_bomb := _indexed_glb({"componentType": 5126, "count": 6000000, "type": "VEC3", "min": [0, 0, 0], "max": [1, 1, 1],
+		"sparse": {"count": 1, "indices": {"bufferView": 1, "componentType": 5125}, "values": {"bufferView": 2}}}, [sparse_index, sparse_value])
+	_refuses_glb(sparse_bomb, ["16,000,000 limit"], "a sparse accessor that unpacks to far too much")
+	var huge_count := _indexed_glb({"componentType": 5126, "count": 4503599627370496, "type": "MAT4"})
+	_refuses_glb(huge_count, ["16,000,000 limit"], "a count big enough to overflow")
+	var many := {"asset": {"version": "2.0"}, "accessors": [], "meshes": [], "nodes": [], "scenes": []}
+	for i in 600:
+		many.accessors.append({"componentType": 5126, "count": 4503599627370496, "type": "MAT4"})
+	_refuses_glb(_glb(many, PackedByteArray()), ["16,000,000 limit"], "many huge counts that would overflow a sum")
+	_refuses_glb(_indexed_glb({"componentType": 5126, "count": -5, "type": "VEC3"}), ["impossible count"], "a negative count")
+	_refuses_glb(_indexed_glb({"componentType": 5126, "count": 2.5, "type": "VEC3"}), ["impossible count"], "a fractional count")
+	var empty_sparse := _indexed_glb({"componentType": 5126, "count": 8, "type": "VEC3", "min": [0, 0, 0], "max": [1, 1, 1],
+		"sparse": {"count": 1, "indices": {"bufferView": 1, "componentType": 5125}, "values": {"bufferView": 2}}}, [sparse_index, sparse_value])
+	check(CustomItems.check_glb(empty_sparse).error == "" and CustomItems.check_glb(_indexed_glb({"componentType": 5126, "count": 8, "type": "VEC3", "min": [0, 0, 0], "max": [1, 1, 1]})).error == "", "custom: small empty and sparse accessors still pass")
+	var kit_dir := WorldScene.kit_file("models")
+	var kit_clear := true
+	for name in DirAccess.get_files_at(kit_dir):
+		if name.ends_with(".glb"):
+			var said: String = CustomItems.check_glb(FileAccess.get_file_as_bytes(kit_dir.path_join(name))).error
+			if said.contains("mesh data"):
+				kit_clear = false
+				print("  kit model over the data limit: ", name, " ", said)
+	check(kit_clear, "custom: no kit model reaches the data limit")
+	var picture := Image.create(40, 20, false, Image.FORMAT_RGB8)
+	var outward := true
+	for display in CustomItems.DISPLAYS:
+		var mesh := CustomItems.display_mesh(picture, display, 2.0)
+		for s in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(s)
+			var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var n: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			var order: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(v.size()))
+			for t in range(0, order.size(), 3):
+				var a := v[order[t]]
+				outward = outward and (v[order[t + 1]] - a).cross(v[order[t + 2]] - a).dot(n[order[t]]) < 0.0
+	check(outward, "custom: every face of a sign or banner faces the way it's lit, as Godot draws it")
+	var lone := MeshInstance3D.new()
+	lone.mesh = BoxMesh.new()
+	var g := GLTFDocument.new()
+	g.root_node_mode = GLTFDocument.ROOT_NODE_MODE_SINGLE_ROOT
+	var state := GLTFState.new()
+	g.append_from_scene(lone, state)
+	var single_path := _file(files, "single_root.glb", g.generate_buffer(state))
+	lone.free()
+	var single := CustomItems.add(single_path, {"type": "model", "label": "Single root", "height": 1.0, "rights": true, "upright": "", "seated": false})
+	WorldScene.refresh_custom()
+	check(single.error == "" and WorldScene.load_kit().models.has(single.get("kind", "")) and WorldScene.mesh_of(single.kind).get_surface_count() > 0, "custom: a file whose root is the mesh itself is read: " + single.error)
+	var pole_box := BoxMesh.new()
+	pole_box.size = Vector3(0.01, 2.0, 0.01)
+	var pole_path := _file(files, "pole.glb", _scene_glb(pole_box))
+	var pole := CustomItems.add(pole_path, {"type": "model", "label": "Pole", "height": 1.0, "rights": true, "upright": "", "seated": false})
+	WorldScene.refresh_custom()
+	check(pole.error == "" and WorldScene.load_kit().models.has(pole.get("kind", "")) and float(WorldScene.load_kit().models[pole.kind].radius) >= 0.01, "custom: a very thin model stays listed after it's added")
+	var crate := _file(files, "crate.glb", FileAccess.get_file_as_bytes(WorldScene.kit_file("models/crate.glb")))
+	var crate_settings := {"type": "model", "label": "Crate", "height": 1.0, "rights": true, "upright": "", "seated": false}
+	var crate_kind: String = CustomItems.add(crate, crate_settings).get("kind", "")
+	var crate_dir := CustomItems.folder(CustomItems.id_of(crate_kind))
+	var whole := FileAccess.get_file_as_bytes(crate_dir.path_join("model.glb"))
+	_store(crate_dir.path_join("model.glb"), whole.slice(0, whole.size() / 2))
+	WorldScene.refresh_custom()
+	var doc := WorldDoc.create("guild", "Damaged", 3)
+	doc.add_thing(crate_kind, 120.0, -120.0, 0.0, 1.0)
+	check(not WorldScene.load_kit().models.has(crate_kind) and CustomItems.missing_in(doc).size() == 1 and not Clearance.check_world(doc).valid and Placing.why_not_one(doc, "fern", 120.0, -120.0) == "", "custom: a damaged upload is treated as missing")
+	check(CustomItems.add(crate, {"type": "model", "label": "Crate", "height": 1.0, "rights": false}).error != "" and FileAccess.get_file_as_bytes(crate_dir.path_join("model.glb")).size() == whole.size() / 2, "custom: a refused re-upload leaves the damaged copy alone")
+	_store(crate_dir + ".saving", "in the way".to_utf8_buffer())
+	var blocked := CustomItems.add(crate, crate_settings)
+	check(blocked.error != "" and FileAccess.get_file_as_bytes(crate_dir.path_join("model.glb")).size() == whole.size() / 2 and FileAccess.file_exists(crate_dir.path_join(CustomItems.ITEM_FILE)), "custom: a re-upload that can't be saved leaves the damaged copy alone: " + blocked.error)
+	DirAccess.remove_absolute(crate_dir + ".saving")
+	var replaced := CustomItems.add(crate, crate_settings)
+	WorldScene.refresh_custom()
+	check(replaced.error == "" and replaced.get("kind", "") == crate_kind and WorldScene.load_kit().models.has(crate_kind) and FileAccess.get_file_as_bytes(crate_dir.path_join("model.glb")) == whole and Clearance.check_world(doc).valid, "custom: re-uploading the same file replaces a damaged copy: " + replaced.error)
+	check(not DirAccess.dir_exists_absolute(crate_dir + ".saving") and not DirAccess.dir_exists_absolute(crate_dir + ".old"), "custom: replacing leaves nothing behind")
+	var info = JSON.parse_string(FileAccess.get_file_as_string(crate_dir.path_join(CustomItems.ITEM_FILE)))
+	info.erase("sha256")
+	_store(crate_dir.path_join(CustomItems.ITEM_FILE), JSON.stringify(info).to_utf8_buffer())
+	WorldScene.refresh_custom()
+	check(WorldScene.load_kit().models.has(crate_kind), "custom: an upload saved before fingerprints still shows")

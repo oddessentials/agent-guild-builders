@@ -16,6 +16,7 @@ const LARGEST_PICTURE := 8192
 const TEXTURE_SIDE := 2048
 const WIDEST_SHAPE := 4.0
 const MOST_ENTRIES := 65536
+const MOST_VALUES := 16000000
 const NAME_FITS := "Giant gold bauble"
 const NAME_FONT_SIZE := 13
 const LONGEST_NAME := 40
@@ -53,6 +54,7 @@ const CHUNK_JSON := 0x4E4F534A
 const CHUNK_BIN := 0x004E4942
 
 static var root_override := ""
+static var _fingerprints := {}
 
 static func root() -> String:
 	return root_override if root_override != "" else OS.get_user_data_dir().path_join("custom")
@@ -73,15 +75,42 @@ static func valid_id(id: String) -> bool:
 	return id.is_valid_identifier()
 
 static func item(kind: String) -> Dictionary:
-	var file := folder(id_of(kind)).path_join(ITEM_FILE)
-	if not is_custom(kind) or not valid_id(id_of(kind)) or not FileAccess.file_exists(file):
+	if not is_custom(kind) or not valid_id(id_of(kind)):
+		return {}
+	return _read_item(folder(id_of(kind)), id_of(kind))
+
+static func _read_item(dir: String, id: String) -> Dictionary:
+	var file := dir.path_join(ITEM_FILE)
+	if not FileAccess.file_exists(file):
 		return {}
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(file))
-	if not parsed is Dictionary or not _valid_item(parsed, id_of(kind)):
+	if not parsed is Dictionary or not _valid_item(parsed, id, dir):
 		return {}
 	return parsed
 
-static func _valid_item(d: Dictionary, id: String) -> bool:
+static func fingerprint(bytes: PackedByteArray) -> String:
+	var h := HashingContext.new()
+	h.start(HashingContext.HASH_SHA256)
+	h.update(bytes)
+	return h.finish().hex_encode()
+
+## Whether the stored source is still the file that was accepted. Uploads saved
+## before fingerprints have nothing to compare, so they're trusted as before.
+static func _source_matches(path: String, wanted: Variant) -> bool:
+	if wanted == null:
+		return FileAccess.file_exists(path)
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null or not wanted is String:
+		return false
+	var stamp := [FileAccess.get_modified_time(path), f.get_length()]
+	f.close()
+	var known: Array = _fingerprints.get(path, [])
+	if known.is_empty() or known[0] != stamp:
+		known = [stamp, fingerprint(FileAccess.get_file_as_bytes(path))]
+		_fingerprints[path] = known
+	return known[1] == wanted
+
+static func _valid_item(d: Dictionary, id: String, dir: String) -> bool:
 	if d.get("id") != id or d.get("type") not in ["model", "image"] or not d.get("label") is String or name_problem(d.label) != "":
 		return false
 	for key in ["height", "radius"]:
@@ -91,7 +120,7 @@ static func _valid_item(d: Dictionary, id: String) -> bool:
 		return false
 	if d.type == "model" and d.get("upright", "") not in UPRIGHTS:
 		return false
-	return d.get("source") is String and d.source.is_valid_filename() and FileAccess.file_exists(folder(id).path_join(d.source))
+	return d.get("source") is String and d.source.is_valid_filename() and _source_matches(dir.path_join(d.source), d.get("sha256"))
 
 ## Every upload as kit entries, ready to merge into the kit's models.
 static func models() -> Dictionary:
@@ -331,10 +360,17 @@ static func _glb_problem(json: Dictionary, bin: PackedByteArray, has_bin: bool, 
 		out.textures += 1
 		out.largest_texture = maxi(out.largest_texture, maxi(size.x, size.y))
 	var accessors: Array = lists.accessors
+	var values := 0
 	for i in accessors.size():
 		var problem := _accessor_problem(accessors[i], views)
 		if problem != "":
 			return "Damaged .glb: accessor %d %s." % [i, problem]
+		var parts: int = TYPE_COMPONENTS[str(accessors[i].type)]
+		values += int(accessors[i].count) * parts
+		if accessors[i].has("sparse"):
+			values += int(accessors[i].sparse.count) * parts
+		if values > MOST_VALUES:
+			return "Too much mesh data: it would unpack to %s values, %s over the %s limit. Simplify it and export it again." % [number(values), number(values - MOST_VALUES), number(MOST_VALUES)]
 	var mesh_triangles := []
 	for m in lists.meshes.size():
 		var primitives = lists.meshes[m].get("primitives")
@@ -582,9 +618,9 @@ static func display_mesh(image: Image, display: String, height: float) -> ArrayM
 	wood.albedo_color = Color(0.42, 0.29, 0.18)
 	wood.roughness = 0.85
 	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color(0.7, 0.71, 0.73)
-	metal.metallic = 0.2
-	metal.roughness = 0.5
+	metal.albedo_color = Color(0.33, 0.34, 0.36)
+	metal.metallic = 0.6
+	metal.roughness = 0.45
 	var painted := Image.create(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	painted.fill(Color.WHITE)
 	var source := image.duplicate() as Image
@@ -656,7 +692,7 @@ static func _box(st: SurfaceTool, centre: Vector3, size: Vector3) -> void:
 			var hu: float = h[(axis + 1) % 3]
 			var hv: float = absf(v.dot(h))
 			var corners := [c - u * hu - v * hv, c + u * hu - v * hv, c + u * hu + v * hv, c - u * hu + v * hv]
-			for i in [0, 1, 2, 0, 2, 3]:
+			for i in [0, 2, 1, 0, 3, 2]:
 				st.set_normal(n)
 				st.set_uv(Vector2(0.5, 0.5))
 				st.add_vertex(corners[i])
@@ -716,7 +752,7 @@ static func add(path: String, settings: Dictionary) -> Dictionary:
 		return {"error": "Nothing to show: it has no visible shape."}
 	var factor := height / box.end.y
 	var info := {"format": 1, "id": id, "type": type, "label": str(settings.label).strip_edges(), "height": height,
-		"radius": snappedf(maxf(box.size.x, box.size.z) / 2.0 * factor, 0.01), "bytes": bytes.size(),
+		"radius": maxf(0.01, snappedf(maxf(box.size.x, box.size.z) / 2.0 * factor, 0.01)), "bytes": bytes.size(), "sha256": fingerprint(bytes),
 		"source": "model.glb" if type == "model" else "image." + str(checked.kind)}
 	if type == "model":
 		info.triangles = int(checked.triangles)
@@ -727,16 +763,48 @@ static func add(path: String, settings: Dictionary) -> Dictionary:
 		info.triangles = 0
 		info.shape = float(checked.size.x) / checked.size.y
 	var dir := folder(id)
-	DirAccess.make_dir_recursive_absolute(dir)
-	var err := _write(dir.path_join(info.source), bytes)
+	var staging := dir + ".saving"
+	_remove_dir(staging)
+	var err := DirAccess.make_dir_recursive_absolute(staging)
 	if err == OK:
-		err = plain_icon(type).save_webp(dir.path_join(THUMB), true, 0.82)
+		err = _write(staging.path_join(info.source), bytes)
 	if err == OK:
-		err = _write(dir.path_join(ITEM_FILE), (JSON.stringify(info, " ") + "\n").to_utf8_buffer())
+		err = plain_icon(type).save_webp(staging.path_join(THUMB), true, 0.82)
+	if err == OK:
+		err = _write(staging.path_join(ITEM_FILE), (JSON.stringify(info, " ") + "\n").to_utf8_buffer())
+	if err == OK and _read_item(staging, id).is_empty():
+		err = ERR_FILE_CORRUPT
+	if err == OK:
+		err = _swap_in(staging, dir)
 	if err != OK:
-		remove(kind)
+		_remove_dir(staging)
 		return {"error": "The upload couldn't be saved (%s)." % error_string(err)}
 	return {"error": "", "kind": kind}
+
+## Puts a saved and checked upload in place, keeping any copy it replaces until
+## the new one is there.
+static func _swap_in(staging: String, dir: String) -> Error:
+	var old := dir + ".old"
+	_remove_dir(old)
+	var had := DirAccess.dir_exists_absolute(dir)
+	if had:
+		var moved := DirAccess.rename_absolute(dir, old)
+		if moved != OK:
+			return moved
+	var placed := DirAccess.rename_absolute(staging, dir)
+	if placed != OK:
+		if had:
+			DirAccess.rename_absolute(old, dir)
+		return placed
+	_remove_dir(old)
+	return OK
+
+static func _remove_dir(dir: String) -> Error:
+	if not DirAccess.dir_exists_absolute(dir):
+		return ERR_DOES_NOT_EXIST
+	for name in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(name))
+	return DirAccess.remove_absolute(dir)
 
 static func _write(path: String, bytes: PackedByteArray) -> Error:
 	var f := FileAccess.open(path, FileAccess.WRITE)
@@ -761,12 +829,7 @@ static func rename(kind: String, label: String) -> String:
 static func remove(kind: String) -> Error:
 	if not is_custom(kind) or not valid_id(id_of(kind)):
 		return ERR_INVALID_PARAMETER
-	var dir := folder(id_of(kind))
-	if not DirAccess.dir_exists_absolute(dir):
-		return ERR_DOES_NOT_EXIST
-	for name in DirAccess.get_files_at(dir):
-		DirAccess.remove_absolute(dir.path_join(name))
-	return DirAccess.remove_absolute(dir)
+	return _remove_dir(folder(id_of(kind)))
 
 static func save_thumb(kind: String, image: Image) -> Error:
 	if item(kind).is_empty() or image == null or image.is_empty():

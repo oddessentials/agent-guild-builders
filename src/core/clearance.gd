@@ -5,7 +5,7 @@ const COURTYARD_RADIUS := 13.7
 const CLEAR_MARGIN := 4.0
 ## How far up the screen each metre of height rises.
 const RISE := 1.55
-const MISSING_UPLOAD := "An item's custom upload is missing. Upload the same file again, or remove the missing items."
+const MISSING_UPLOAD := "An item's custom upload is missing or damaged. Upload the same file again, or remove the missing items."
 static var _terrain_limits := PackedFloat32Array()
 
 ## Metres from where halls and characters can stand: the courtyard and the rows
