@@ -1142,7 +1142,7 @@ func _update_cursor(pos: Vector2) -> void:
 				if text == "":
 					if _ghost.visible:
 						_ghost.mesh = _scene.mesh_for(place_kind)
-					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": turn, "scale": fitted})
+					_ghost.transform = _scene.transform_of({"kind": place_kind, "x": hit.x, "z": hit.z, "turn": turn, "scale": fitted})
 					var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
 					if behind != "":
 						text = "Behind the %s: this may be hidden from view." % behind
@@ -1333,7 +1333,7 @@ func _thing_at(pos: Vector2) -> Dictionary:
 		var base_x: float = origin.x + (float(t.x) * right.x + float(t.z) * right.z) / per_pixel
 		if absf(base_x - pos.x) >= radius:
 			continue
-		var base := Vector3(t.x, doc.height_at(t.x, t.z), t.z)
+		var base := Vector3(t.x, Placing.base_height(doc, t), t.z)
 		var from := origin + Vector2(base.dot(right), -base.dot(up)) / per_pixel
 		var to := from + Vector2(0.0, -float(info.get("height", 1.0)) * s * up.y / per_pixel)
 		var fit := Geometry2D.get_closest_point_to_segment(pos, from, to).distance_to(pos) / radius
@@ -1526,10 +1526,14 @@ func _scatter_at(hit: Vector3, first: bool) -> void:
 		var a := _rng.range_f(0.0, TAU)
 		var r: float = sqrt(_rng.next()) * brush_radius
 		var spot := Placing.on_grid(doc, kind, Vector3(hit.x + cos(a) * r, 0.0, hit.z + sin(a) * r))
-		if Placing.why_not(doc, kind, spot.x, spot.z, s) != "":
+		var turn := NAN
+		if Placing.seated(kind):
+			turn = _rng.range_f(0.0, TAU)
+		if Placing.why_not(doc, kind, spot.x, spot.z, s, snappedf(turn, PI / 2.0) if Placing.modular(kind) else turn) != "":
 			_stroke_skipped += 1
 			continue
-		var turn := _rng.range_f(0.0, TAU)
+		if is_nan(turn):
+			turn = _rng.range_f(0.0, TAU)
 		_add_stroke_thing(kind, spot.x, spot.z, snappedf(turn, PI / 2.0) if Placing.modular(kind) else turn, s)
 
 func _show_placed_ring(hit: Vector3, scale: float) -> void:

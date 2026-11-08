@@ -137,6 +137,7 @@ MODELS = {
 }
 MODULAR = {key for key in MODELS if key.startswith('fort_')} | {'castle_door'}
 JOINS = MODULAR - {'castle_door', 'fort_thick_corner_b', 'fort_walkway_corner_b'}
+SEATED_GROUPS = {'city', 'medieval', 'gnomes', 'goblins', 'forest', 'space'}
 MADE_HERE = {
     'xmas_tree': ('Christmas tree', 8), 'gift_red': ('Red gift', 2), 'gift_green': ('Green gift', 2), 'gift_pile': ('Pile of gifts', 4),
     'snowman': ('Snowman', 3), 'candy_cane': ('Candy cane', 2), 'sleigh': ('Sleigh', 5), 'wreath_arch': ('Wreath arch', 6),
@@ -412,7 +413,7 @@ def joints_of(kit_id, parts):
 
 def described(entry, kit_id, spec):
     entry.update({'label': spec[2], 'group': spec[3], 'spacing': spec[4]})
-    for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR), ('joins', kit_id in JOINS)):
+    for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR), ('joins', kit_id in JOINS), ('seated', spec[3] in SEATED_GROUPS)):
         entry.pop(key, None)
         if on:
             entry[key] = LIGHTS[kit_id] if key == 'light' else True
