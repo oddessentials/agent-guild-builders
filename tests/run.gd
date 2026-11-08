@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -1211,4 +1211,287 @@ func _review_hidden() -> bool:
 	view.history.set_value("Season", doc.data, "season", "summer", "winter")
 	check(Placing.why_not_one(doc, "fern", fern.x, fern.z) != "", "hidden: back in summer the plant counts again")
 	view.free()
+	return true
+
+func _glb(json: Dictionary, bin: PackedByteArray) -> PackedByteArray:
+	return _glb_raw(JSON.stringify(json).to_utf8_buffer(), bin)
+
+func _glb_raw(text: PackedByteArray, bin: PackedByteArray) -> PackedByteArray:
+	var json_chunk := text.duplicate()
+	while json_chunk.size() % 4 != 0:
+		json_chunk.append(0x20)
+	var bin_chunk := bin.duplicate()
+	while bin_chunk.size() % 4 != 0:
+		bin_chunk.append(0)
+	var out := PackedByteArray()
+	out.resize(12)
+	out.encode_u32(0, CustomItems.GLB_MAGIC)
+	out.encode_u32(4, 2)
+	for chunk in [[json_chunk, CustomItems.CHUNK_JSON], [bin_chunk, CustomItems.CHUNK_BIN]]:
+		var head := PackedByteArray()
+		head.resize(8)
+		head.encode_u32(0, chunk[0].size())
+		head.encode_u32(4, chunk[1])
+		out.append_array(head)
+		out.append_array(chunk[0])
+	out.encode_u32(8, out.size())
+	return out
+
+func _scene_glb(mesh: Mesh) -> PackedByteArray:
+	var holder := Node3D.new()
+	var part := MeshInstance3D.new()
+	part.mesh = mesh
+	holder.add_child(part)
+	part.owner = holder
+	var g := GLTFDocument.new()
+	var state := GLTFState.new()
+	g.append_from_scene(holder, state)
+	holder.free()
+	return g.generate_buffer(state)
+
+func _plane(cuts: int) -> PlaneMesh:
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(2, 2)
+	plane.subdivide_width = cuts
+	plane.subdivide_depth = cuts
+	return plane
+
+func _refuses_glb(bytes: PackedByteArray, wanted: Array, what: String) -> void:
+	var error: String = CustomItems.check_glb(bytes).error
+	check(error != "" and wanted.all(func(w): return error.contains(w)), "custom: refuses %s: %s" % [what, error])
+
+func _file(dir: String, name: String, bytes: PackedByteArray) -> String:
+	var at := dir.path_join(name)
+	_store(at, bytes)
+	return at
+
+func _box_of(mesh: Mesh, surface: int) -> AABB:
+	var points := mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX] as PackedVector3Array
+	var box := AABB(points[0], Vector3.ZERO)
+	for v in points:
+		box = box.expand(v)
+	return box
+
+func _remove_tree(dir: String) -> void:
+	if not DirAccess.dir_exists_absolute(dir):
+		return
+	for sub in DirAccess.get_directories_at(dir):
+		_remove_tree(dir.path_join(sub))
+	for name in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(name))
+	DirAccess.remove_absolute(dir)
+
+func _custom() -> bool:
+	var keep_custom := CustomItems.root_override
+	var keep_worlds := WorldLibrary.root_override
+	CustomItems.root_override = OS.get_user_data_dir().path_join("custom-test")
+	WorldLibrary.root_override = OS.get_user_data_dir().path_join("custom-worlds-test")
+	var files := OS.get_user_data_dir().path_join("custom-files-test")
+	for dir in [CustomItems.root_override, WorldLibrary.root_override, files]:
+		_remove_tree(dir)
+	DirAccess.make_dir_recursive_absolute(files)
+	WorldScene.refresh_custom()
+	var models: Dictionary = WorldScene.load_kit().models
+	var barrel := FileAccess.get_file_as_bytes(WorldScene.kit_file("models/barrel.glb"))
+	var good := _file(files, "barrel.glb", barrel)
+	var checked := CustomItems.check_model_file(good)
+	check(checked.error == "" and checked.warning == "" and checked.triangles == int(models.barrel.triangles), "custom: a kit model passes with its triangles counted: %s %d" % [checked.error, checked.triangles])
+	var parts := CustomItems.glb_parts(barrel)
+	var magic := barrel.duplicate()
+	magic[0] = 0
+	_refuses_glb(magic, ["Not a .glb file"], "a file that isn't a .glb")
+	var longer := barrel.duplicate()
+	longer.append_array(PackedByteArray([0, 0, 0, 0]))
+	_refuses_glb(longer, ["header says", "4 extra bytes"], "a length that doesn't match")
+	_refuses_glb(barrel.slice(0, barrel.size() - 10), ["10 bytes missing"], "a cut-short file")
+	var external: Dictionary = parts.json.duplicate(true)
+	external.buffers[0].uri = "barrel.bin"
+	_refuses_glb(_glb(external, parts.bin), ["external buffer file (barrel.bin)"], "an external buffer")
+	var linked: Dictionary = parts.json.duplicate(true)
+	linked.images[0].erase("bufferView")
+	linked.images[0].uri = "textures/wood.png"
+	_refuses_glb(_glb(linked, parts.bin), ["external image file (wood.png)"], "an external image")
+	var squeezed: Dictionary = parts.json.duplicate(true)
+	squeezed.extensionsUsed = ["KHR_draco_mesh_compression"]
+	squeezed.extensionsRequired = ["KHR_draco_mesh_compression"]
+	_refuses_glb(_glb(squeezed, parts.bin), ["Draco", "KHR_draco_mesh_compression"], "Draco compression")
+	var meshopt: Dictionary = parts.json.duplicate(true)
+	meshopt.extensionsUsed = ["EXT_meshopt_compression"]
+	_refuses_glb(_glb(meshopt, parts.bin), ["meshopt"], "meshopt compression")
+	var overrun: Dictionary = parts.json.duplicate(true)
+	overrun.accessors[0].count = 100000000
+	_refuses_glb(_glb(overrun, parts.bin), ["accessor 0", "past the end"], "an accessor past its data")
+	var looped: Dictionary = parts.json.duplicate(true)
+	looped.nodes[0].children = [0]
+	_refuses_glb(_glb(looped, parts.bin), ["more than once"], "a node that contains itself")
+	_refuses_glb(_glb_raw("{\"asset\": {\"version\": \"2.0\"}, \"meshes\": [".to_utf8_buffer(), parts.bin), ["JSON can't be read"], "malformed JSON")
+	_refuses_glb(PackedByteArray([1, 2, 3]), ["too short"], "a tiny file")
+	_refuses_glb(_scene_glb(_plane(300)), ["181,202", "31,202 over the 150,000 limit"], "too many triangles")
+	var middling := CustomItems.check_glb(_scene_glb(_plane(200)))
+	check(middling.error == "" and middling.warning.contains("80,802") and middling.warning.contains("20,802 over the 60,000"), "custom: warns above 60,000 triangles: " + middling.warning)
+	var huge := PackedByteArray()
+	huge.resize(55050240)
+	var too_big := CustomItems.check_model_file(_file(files, "huge.glb", huge))
+	check(too_big.error == "Too large: 52.5 MB, 2.5 MB over the 50 MB limit.", "custom: refuses a model over 50 MB: " + too_big.error)
+	DirAccess.remove_absolute(files.path_join("huge.glb"))
+	check(CustomItems.check_model_file(_file(files, "barrel.obj", barrel)).error.contains(".glb"), "custom: asks for a .glb file")
+	var wide_picture := Image.create(3000, 1000, false, Image.FORMAT_RGBA8)
+	wide_picture.fill(Color(0.8, 0.2, 0.2))
+	var painted := StandardMaterial3D.new()
+	painted.albedo_texture = ImageTexture.create_from_image(wide_picture)
+	var box := BoxMesh.new()
+	box.material = painted
+	var textured := _scene_glb(box)
+	check(CustomItems.check_glb(textured).error == "", "custom: a model with a large texture passes")
+	var read := WorldScene.glb_mesh(textured, true)
+	var texture: Texture2D = (read.surface_get_material(0) as BaseMaterial3D).albedo_texture if read.get_surface_count() > 0 else null
+	check(texture != null and texture.get_size() == Vector2(2048, 683), "custom: textures over 2,048 px are scaled down to 2,048: %s" % [texture.get_size() if texture else "none"])
+	var picture := Image.create(400, 200, false, Image.FORMAT_RGB8)
+	picture.fill(Color(0.1, 0.4, 0.8))
+	var sign_file := _file(files, "logo.png", picture.save_png_to_buffer())
+	var scaled := CustomItems.check_image(Image.create(3000, 1500, false, Image.FORMAT_RGB8).save_png_to_buffer())
+	check(scaled.error == "" and scaled.image.get_size() == Vector2i(2048, 1024), "custom: a picture is scaled down to 2,048 px")
+	var oversized := CustomItems.check_image(Image.create(9000, 3000, false, Image.FORMAT_L8).save_png_to_buffer())
+	check(oversized.error == "The picture is 9,000 × 3,000 px, 808 px over the 8,192 px limit.", "custom: refuses a picture over 8,192 px: " + oversized.error)
+	var stretched := CustomItems.check_image(Image.create(900, 200, false, Image.FORMAT_RGB8).save_png_to_buffer())
+	check(stretched.error == "Too wide: 4.5 to 1, over the 4 to 1 limit by 0.5.", "custom: refuses a very wide picture: " + stretched.error)
+	check(CustomItems.check_image("<svg/>".to_utf8_buffer()).error.contains("Not a PNG, JPG or WebP"), "custom: refuses something that isn't a picture")
+	var heavy_picture := PackedByteArray()
+	heavy_picture.resize(22020096)
+	check(CustomItems.check_image_file(_file(files, "heavy.png", heavy_picture)).error == "Too large: 21.0 MB, 1.0 MB over the 20 MB limit.", "custom: refuses a picture over 20 MB")
+	DirAccess.remove_absolute(files.path_join("heavy.png"))
+	check(CustomItems.check_image(picture.save_jpg_to_buffer()).size == Vector2i(400, 200) and CustomItems.check_image(picture.save_webp_to_buffer()).size == Vector2i(400, 200), "custom: JPG and WebP sizes are read")
+	var sign_layout := CustomItems.display_layout("sign", 2.0, 2.0)
+	check(is_equal_approx(sign_layout.picture.x / sign_layout.picture.y, 2.0), "custom: a sign takes the picture's shape")
+	var banner_mesh := CustomItems.display_mesh(picture, "banner", 3.0)
+	var cloth := _box_of(banner_mesh, banner_mesh.get_surface_count() - 1)
+	check(is_equal_approx(banner_mesh.get_aabb().end.y, 3.0) and is_equal_approx(cloth.size.x / cloth.size.y, 2.0), "custom: a banner is its height and its cloth the picture's shape")
+	check(CustomItems.name_problem("Giant gold bauble") == "" and CustomItems.name_problem("A very long name for my company HQ").begins_with("Name too long for its button: shorten it by") and CustomItems.name_problem("  ") == "Give it a name.", "custom: names must fit their button")
+	var settings := {"type": "model", "label": "My barrel", "height": 6.0, "rights": true, "upright": "", "seated": true}
+	check(CustomItems.add(good, {"type": "model", "label": "My barrel", "height": 6.0, "rights": false}).error.contains("rights"), "custom: asks for the rights")
+	check(CustomItems.add(good, {"type": "model", "label": "A very long name for my company HQ", "height": 6.0, "rights": true}).error.begins_with("Name too long"), "custom: refuses a name that won't fit")
+	var added := CustomItems.add(good, settings)
+	var kind: String = added.get("kind", "")
+	check(added.error == "" and CustomItems.is_custom(kind), "custom: a model is stored: " + added.error)
+	check(CustomItems.add(good, settings).error == "This file is already in Custom as “My barrel”.", "custom: the same file isn't stored twice")
+	var stored := CustomItems.folder(CustomItems.id_of(kind))
+	check(FileAccess.file_exists(stored.path_join("model.glb")) and FileAccess.file_exists(stored.path_join(CustomItems.ITEM_FILE)) and FileAccess.file_exists(stored.path_join(CustomItems.THUMB)), "custom: source, item.json and thumb.webp are kept")
+	WorldScene.refresh_custom()
+	models = WorldScene.load_kit().models
+	check(models.has(kind) and models[kind].group == CustomItems.GROUP and models[kind].label == "My barrel" and models[kind].get("seated", false), "custom: uploads join the kit's models")
+	check(models.has("barrel") and models.size() > 100, "custom: the kit's own models stay")
+	check(is_equal_approx(WorldScene.mesh_of(kind).get_aabb().end.y, 6.0), "custom: the model is drawn at its height")
+	check(ProTheme.thumb(kind) != null, "custom: it has a picture")
+	check(not Placing.modular(kind) and not Placing.joins(kind) and Placing.sizes(kind) == Vector2(Placing.SMALLEST, Placing.LARGEST), "custom: uploads never join and aren't modular")
+	var slope := _sloped(0.05)
+	check(Placing.why_not_one(slope, kind, -60.0, -100.0, 0.0) == "" and Placing.why_not_one(slope, kind, 0.0, 0.0, 0.0) != "", "custom: placed like any item, kept off the crews' ground")
+	var placed := slope.add_thing(kind, -60.0, -100.0, 0.0, 1.0)
+	check(is_equal_approx(Placing.base_height(slope, placed), Placing.ground_span(slope, kind, -60.0, -100.0, 0.0, 1.0).x), "custom: stands on the lowest ground under its flat base")
+	check(Placing.why_not_one(_sloped(0.4), kind, -60.0, -100.0, 0.0) == Placing.STEEP, "custom: refused on a steep slope")
+	check(Placing.why_not_one(slope, "fern", -60.0, -100.0).contains("my barrel"), "custom: other things keep clear of it by name")
+	var signed := CustomItems.add(sign_file, {"type": "image", "label": "Logo sign", "height": 2.0, "rights": true, "display": "sign"})
+	var sign_kind: String = signed.get("kind", "")
+	WorldScene.refresh_custom()
+	var sign_mesh := WorldScene.mesh_of(sign_kind)
+	var face := _box_of(sign_mesh, sign_mesh.get_surface_count() - 1) if sign_mesh.get_surface_count() > 0 else AABB()
+	check(signed.error == "" and is_equal_approx(sign_mesh.get_aabb().end.y, 2.0) and is_equal_approx(face.size.x / face.size.y, 2.0), "custom: a picture on a sign is its height, in the picture's shape")
+	check(not WorldScene.load_kit().models[sign_kind].get("seated", false), "custom: a sign stands at its middle")
+	check(CustomItems.add(sign_file, {"type": "image", "label": "Logo banner", "height": 3.0, "rights": true, "display": "banner"}).error == "", "custom: the same picture can also be a banner")
+	check(CustomItems.rename(kind, "Big barrel") == "" and CustomItems.rename(kind, "A very long name for my company HQ").begins_with("Name too long"), "custom: renames, and refuses a name that won't fit")
+	WorldScene.refresh_custom()
+	check(WorldScene.load_kit().models[kind].label == "Big barrel", "custom: the new name shows")
+	var view: Control = load("res://src/ui/editor_view.gd").new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	var world := WorldDoc.create("guild", "Custom world", 3)
+	var here := world.add_thing(kind, 60.0, -60.0, 0.0, 1.0)
+	DirAccess.make_dir_recursive_absolute(WorldLibrary.root_override)
+	var world_path := WorldLibrary.folder_for("Custom world")
+	check(world.save(world_path) == OK, "custom: a world using an upload saves")
+	view.open(world, world_path)
+	await process_frame
+	view.place_mode = "one"
+	view._choose(kind)
+	view._build_options()
+	check(view._place_group == CustomItems.GROUP and view._item_buttons.has(kind) and view._options.find_child("CustomUploads", true, false) != null, "custom: the Custom group lists uploads")
+	var actions: Node = view._options.find_child("CustomActions", true, false)
+	check(actions != null and not actions.get_child(0).disabled, "custom: rename and delete are offered for an upload")
+	view._place_search = "big bar"
+	view._fill_place_items()
+	check(view._item_buttons.has(kind) and view._item_buttons.size() == 1, "custom: search finds uploads")
+	view._place_search = ""
+	check(view._scene._nodes.has(view._scene._key_of(here)), "custom: a placed upload is drawn")
+	check(view.custom_users(kind) == ["Custom world (open now)"], "custom: delete warns which worlds use it: %s" % [view.custom_users(kind)])
+	check(CustomItems.worlds_using(kind) == ["Custom world"], "custom: finds saved worlds that use it")
+	view.rename_custom(kind, "HQ")
+	check(view._thing_name(kind) == "HQ", "custom: renaming from the panel shows at once")
+	view.delete_custom(kind)
+	check(not DirAccess.dir_exists_absolute(stored) and not WorldScene.load_kit().models.has(kind) and view.place_kind == "fern", "custom: delete removes the upload")
+	check(not view._scene._nodes.has(view._scene._key_of(here)) and world.data.things.size() == 1, "custom: its copies stay in the world, not drawn")
+	check(view._missing_button.visible and not Clearance.check_world(world).valid, "custom: missing items block export and offer removal")
+	view.free()
+	var loader := WorldLoader.new()
+	root.add_child(loader)
+	var result := {}
+	loader.done.connect(func(d): result.doc = d)
+	loader.start(func(): return null, world_path)
+	while not result.has("doc"):
+		await process_frame
+	loader.free()
+	var reopened: WorldDoc = result.doc
+	check(reopened != null and reopened.data.things.size() == 1 and reopened.notice.contains(Clearance.MISSING_UPLOAD), "custom: a world with a missing upload still opens and says why: %s" % [reopened.notice if reopened else "not opened"])
+	check(WorldScene.gone_in(kind, "summer") and Placing.why_not_one(reopened, "fern", 60.0, -60.0) == "", "custom: nothing is blocked by a missing item")
+	view = load("res://src/ui/editor_view.gd").new()
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(reopened, world_path)
+	await process_frame
+	view.remove_missing()
+	await process_frame
+	check(reopened.data.things.is_empty() and Clearance.check_world(reopened).valid and not view._missing_button.visible, "custom: one click removes missing items")
+	view.history.undo()
+	check(reopened.data.things.size() == 1 and not Clearance.check_world(reopened).valid, "custom: undo brings them back")
+	var again := CustomItems.add(good, settings)
+	view._uploads_changed()
+	check(again.get("kind", "") == kind and Clearance.check_world(reopened).valid and view._scene._nodes.has(view._scene._key_of(reopened.data.things[0])), "custom: uploading the same file again brings them back")
+	view.free()
+	var plates := files.path_join("plates")
+	DirAccess.make_dir_recursive_absolute(plates)
+	var tiny := Image.create(16, 16, false, Image.FORMAT_RGB8).save_webp_to_buffer(true, 0.5)
+	for name in WorldPackage.plate_names():
+		_store(plates.path_join(name.get_file()), tiny)
+	var skies := {}
+	for theme in Yard.THEMES:
+		skies[theme] = BakeSky.from_file(WorldScene.kit_file("skies/%s.hdr" % reopened.data.mood[theme].sky), 1.0)
+	var out := files.path_join("custom.agworld")
+	check(WorldPackage.write(reopened, plates, skies, null, out) == OK and WorldPackage.accepted(WorldPackage.check(out)), "custom: a world with uploads exports")
+	var unpacked := WorldPackage.read_tar(FileAccess.get_file_as_bytes(out).decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP))
+	var allowed := WorldPackage.allowed_names() + [WorldPackage.MANIFEST]
+	var clean: bool = unpacked.problem == "" and not unpacked.entries.is_empty() and unpacked.entries.all(func(e): return allowed.has(e[0]) and e[1] != barrel and e[1] != picture.save_png_to_buffer())
+	check(clean and not unpacked.entries[0][1].get_string_from_utf8().contains(CustomItems.PREFIX), "custom: the export holds no custom files")
+	var dialog := CustomDialog.new()
+	root.add_child(dialog)
+	dialog.use_file(_file(files, "broken.glb", magic))
+	check(dialog._message.text.begins_with("Not a .glb file") and dialog.get_ok_button().disabled, "dialog: a refused file says why and can't be added")
+	dialog.use_file(_file(files, "office_tower.glb", _scene_glb(_plane(200))))
+	check(dialog._message.text.contains("Heavy model") and dialog._name.text == "Office Tower" and dialog.why_not().contains("rights"), "dialog: warns, names it from the file, and asks for the rights: %s / %s" % [dialog._message.text, dialog._name.text])
+	dialog._rights.button_pressed = true
+	dialog._refresh_ok()
+	check(not dialog.get_ok_button().disabled and dialog._shown != null, "dialog: ready to add, with a preview")
+	var made := {}
+	dialog.added.connect(func(k): made.kind = k)
+	dialog._add()
+	check(CustomItems.is_custom(made.get("kind", "")), "dialog: adds the upload")
+	dialog = CustomDialog.new()
+	root.add_child(dialog)
+	dialog.set_type("image")
+	dialog.use_file(_file(files, "flag.png", picture.save_png_to_buffer()))
+	check(dialog._message.text == "" and dialog._shown != null and is_equal_approx(dialog._height.value, CustomItems.DISPLAY_HEIGHT.sign), "dialog: a picture previews on its sign")
+	dialog.free()
+	for dir in [CustomItems.root_override, WorldLibrary.root_override, files]:
+		_remove_tree(dir)
+	CustomItems.root_override = keep_custom
+	WorldLibrary.root_override = keep_worlds
+	WorldScene.refresh_custom()
 	return true

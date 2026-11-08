@@ -13,7 +13,7 @@ func start(make: Callable, path := "") -> void:
 		return
 	error = ""
 	_generation += 1
-	WorldScene.load_kit()
+	WorldScene.refresh_custom()
 	Yard.data()
 	_thread = Thread.new()
 	var started := _thread.start(_work.bind(make, path))
@@ -42,7 +42,7 @@ func _work(make: Callable, path: String) -> Dictionary:
 	if models.is_empty():
 		return {"error": "The Meadow kit is missing or damaged. Extract the complete app ZIP, including its kits folder."}
 	for thing in doc.data.things:
-		if not models.has(thing.kind):
+		if not models.has(thing.kind) and not CustomItems.is_custom(thing.kind):
 			return {"error": "This world uses an unavailable item: %s." % thing.kind}
 	_say("Loading ground textures…", 0.15)
 	for name in WorldScene.GROUND_ORDER + ["cobble"]:
@@ -51,14 +51,15 @@ func _work(make: Callable, path: String) -> Dictionary:
 				return {"error": "A ground texture is missing or damaged: %s. Extract the complete app ZIP, including its kits folder." % name}
 	var used := {}
 	for thing in doc.data.things:
-		used[thing.kind] = true
+		if models.has(thing.kind):
+			used[thing.kind] = true
 	var total := 0.0
 	for kind in used:
 		total += maxf(float(models[kind].get("bytes", 1)), 1.0)
 	var loaded := 0.0
 	for kind in used:
 		_say("Loading %s…" % str(models[kind].get("label", kind)).to_lower(), 0.25 + 0.6 * loaded / total)
-		if WorldScene.mesh_of(kind).get_surface_count() == 0:
+		if WorldScene.mesh_of(kind).get_surface_count() == 0 and not CustomItems.is_custom(kind):
 			return {"error": "An item is missing or damaged: %s. Extract the complete app ZIP, including its kits folder." % str(models[kind].get("label", kind))}
 		loaded += maxf(float(models[kind].get("bytes", 1)), 1.0)
 	_say("Loading the halls…", 0.85)

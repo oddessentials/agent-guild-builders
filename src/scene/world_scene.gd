@@ -70,17 +70,32 @@ static func load_kit() -> Dictionary:
 			return {}
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(kit_file("kit.json")))
 		kit = parsed if parsed is Dictionary else {}
+		if kit.get("models") is Dictionary:
+			kit.models.merge(CustomItems.models())
 	return kit
+
+## Picks up uploads added, renamed or deleted since the kit was read.
+static func refresh_custom() -> void:
+	if not load_kit().get("models") is Dictionary:
+		return
+	for kind in kit.models.keys():
+		if CustomItems.is_custom(kind):
+			kit.models.erase(kind)
+	kit.models.merge(CustomItems.models())
+	for cache in [_meshes, _season_meshes]:
+		for key in cache.keys():
+			if CustomItems.is_custom(key):
+				cache.erase(key)
 
 ## The kit's mesh for a kind, loaded once. Cutout leaves are solid to shadows and
 ## two-sided, as a path tracer sees them.
 static func mesh_ready(kind: String) -> bool:
 	return _meshes.has(kind)
 
-## Whether a kind has gone for the season: still in the world, but not drawn, and
+## Whether a kind has gone for the season, or its upload is missing: still in the world, but not drawn, and
 ## nothing can touch it or be stopped by it until it returns.
 static func gone_in(kind: String, season: String) -> bool:
-	return season == "winter" and kind in WINTER_GONE
+	return (season == "winter" and kind in WINTER_GONE) or (CustomItems.is_custom(kind) and not load_kit().get("models", {}).has(kind))
 
 ## A kind as it looks in a season. Summer is the model itself.
 static func season_mesh(kind: String, season: String) -> Mesh:
@@ -124,36 +139,67 @@ static func _dress_for(kind: String, season: String, plain: Mesh) -> ArrayMesh:
 static func mesh_of(kind: String) -> Mesh:
 	if _meshes.has(kind):
 		return _meshes[kind]
-	var doc_gltf := GLTFDocument.new()
-	var state := GLTFState.new()
 	var combined := ArrayMesh.new()
-	if doc_gltf.append_from_file(kit_file("models/%s.glb" % kind), state) == OK:
-		var root: Node = doc_gltf.generate_scene(state)
-		for mi in root.find_children("*", "MeshInstance3D", true, false):
-			var xf: Transform3D = _to_root(mi, root)
-			var mesh: Mesh = mi.mesh
-			for s in mesh.get_surface_count():
-				var arrays: Array = mesh.surface_get_arrays(s)
-				_transform_arrays(arrays, xf)
-				combined.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-				var m: Material = mi.get_active_material(s)
-				var sm := m as StandardMaterial3D
-				if sm:
-					_add_mipmaps(sm)
-				if sm and sm.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
-					sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-					sm.alpha_scissor_threshold = 0.3
-					sm.cull_mode = BaseMaterial3D.CULL_DISABLED
-					sm.backlight_enabled = true
-					var tree: bool = load_kit().get("models", {}).get(kind, {}).get("group") == "trees"
-					sm.backlight = Color(0.5, 0.58, 0.25) if tree else Color(0.25, 0.3, 0.12)
-					sm.albedo_color = Color(1.2, 1.2, 1.2) if tree else Color.WHITE
-				combined.surface_set_material(combined.get_surface_count() - 1, m)
-		root.free()
+	if CustomItems.is_custom(kind):
+		if load_kit().get("models", {}).has(kind):
+			combined = CustomItems.mesh_for(kind)
+	else:
+		var doc_gltf := GLTFDocument.new()
+		var state := GLTFState.new()
+		if doc_gltf.append_from_file(kit_file("models/%s.glb" % kind), state) == OK:
+			combined = _combined(doc_gltf, state, load_kit().get("models", {}).get(kind, {}).get("group") == "trees", false)
 	var mesh := _scaled_to_height(combined, kind)
 	if mesh.get_surface_count() > 0:
 		_meshes[kind] = mesh
 	return mesh
+
+## An uploaded .glb as one mesh, read only from memory, with large textures
+## scaled down and any rig left out.
+static func glb_mesh(bytes: PackedByteArray, uploaded: bool) -> ArrayMesh:
+	var doc_gltf := GLTFDocument.new()
+	var state := GLTFState.new()
+	state.handle_binary_image_mode = GLTFState.HANDLE_BINARY_IMAGE_MODE_EMBED_AS_UNCOMPRESSED
+	if doc_gltf.append_from_buffer(bytes, "", state) != OK:
+		return ArrayMesh.new()
+	return _combined(doc_gltf, state, false, uploaded)
+
+static func _combined(doc_gltf: GLTFDocument, state: GLTFState, tree: bool, uploaded: bool) -> ArrayMesh:
+	var combined := ArrayMesh.new()
+	var root: Node = doc_gltf.generate_scene(state)
+	if root == null:
+		return combined
+	var fitted := {}
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var xf: Transform3D = _to_root(mi, root)
+		var mesh: Mesh = mi.mesh
+		if mesh == null:
+			continue
+		for s in mesh.get_surface_count():
+			if mesh.surface_get_primitive_type(s) != Mesh.PRIMITIVE_TRIANGLES:
+				continue
+			var arrays: Array = mesh.surface_get_arrays(s)
+			if uploaded:
+				arrays[Mesh.ARRAY_BONES] = null
+				arrays[Mesh.ARRAY_WEIGHTS] = null
+			_transform_arrays(arrays, xf)
+			combined.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			var m: Material = mi.get_active_material(s)
+			var sm := m as StandardMaterial3D
+			if m is BaseMaterial3D and uploaded:
+				CustomItems.fit_textures(m, fitted)
+			if sm:
+				_add_mipmaps(sm)
+			if sm and sm.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+				sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+				sm.alpha_scissor_threshold = 0.3
+				sm.cull_mode = BaseMaterial3D.CULL_DISABLED
+				if not uploaded:
+					sm.backlight_enabled = true
+					sm.backlight = Color(0.5, 0.58, 0.25) if tree else Color(0.25, 0.3, 0.12)
+					sm.albedo_color = Color(1.2, 1.2, 1.2) if tree else Color.WHITE
+			combined.surface_set_material(combined.get_surface_count() - 1, m)
+	root.free()
+	return combined
 
 ## A model at its real-world height (kit.json), so a scale of 1 means life size.
 static func _scaled_to_height(mesh: ArrayMesh, kind: String) -> ArrayMesh:

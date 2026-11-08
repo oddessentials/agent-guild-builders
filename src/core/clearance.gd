@@ -5,6 +5,7 @@ const COURTYARD_RADIUS := 13.7
 const CLEAR_MARGIN := 4.0
 ## How far up the screen each metre of height rises.
 const RISE := 1.55
+const MISSING_UPLOAD := "An item's custom upload is missing. Upload the same file again, or remove the missing items."
 static var _terrain_limits := PackedFloat32Array()
 
 ## Metres from where halls and characters can stand: the courtyard and the rows
@@ -140,7 +141,9 @@ static func check_world(doc: WorldDoc) -> Dictionary:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	for thing in doc.data.things:
 		var problem := ""
-		if not models.has(thing.kind):
+		if not models.has(thing.kind) and CustomItems.is_custom(thing.kind):
+			problem = MISSING_UPLOAD
+		elif not models.has(thing.kind):
 			problem = "An item is unavailable: " + str(thing.kind)
 		else:
 			var top := doc.height_at(thing.x, thing.z) + float(models[thing.kind].height) * float(thing.scale)

@@ -24,7 +24,7 @@ const NUDGES := {KEY_RIGHT: Vector2(1, 0), KEY_LEFT: Vector2(-1, 0), KEY_UP: Vec
 const SMALLEST_SIZE := 0.5
 const LARGEST_SIZE := 2.0
 const WATER_LOWEST := -20.0
-const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks & logs"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["city", "City"], ["medieval", "Medieval"], ["gnomes", "Gnomes"], ["goblins", "Goblins"], ["forest", "Forest folk"], ["space", "Space"], ["holiday", "Holiday"]]
+const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks & logs"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["city", "City"], ["medieval", "Medieval"], ["gnomes", "Gnomes"], ["goblins", "Goblins"], ["forest", "Forest folk"], ["space", "Space"], ["holiday", "Holiday"], [CustomItems.GROUP, "Custom"]]
 const TOOL_KEYS := {KEY_M: Tool.ARRANGE, KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
 var doc: WorldDoc
@@ -74,6 +74,7 @@ var _problem_index := -1
 var _problem_row: HBoxContainer
 var _problem_label: Label
 var _problem_button: Button
+var _missing_button: Button
 var _problem_markers: Node3D
 var _problem_zones: Decal
 var _track_problems := false
@@ -354,6 +355,12 @@ func _build_ui() -> void:
 	_problem_button.text = "Show problem"
 	_problem_button.pressed.connect(_show_problem)
 	_problem_row.add_child(_problem_button)
+	_missing_button = Button.new()
+	_missing_button.text = "Remove missing items"
+	_missing_button.tooltip_text = "Remove every item whose custom upload isn't on this computer"
+	_missing_button.visible = false
+	_missing_button.pressed.connect(remove_missing)
+	_problem_row.add_child(_missing_button)
 	var foot_row := HBoxContainer.new()
 	foot_content.add_child(foot_row)
 	_status = ProTheme.note("")
@@ -798,6 +805,12 @@ func _build_place_options() -> void:
 				search.text = ""
 			_fill_place_items())
 		groups.add_child(b)
+	var uploads := Button.new()
+	uploads.name = "CustomUploads"
+	uploads.text = "Custom uploads…"
+	uploads.tooltip_text = "Add your own 3D model, or a picture on a sign or banner"
+	uploads.pressed.connect(_open_custom_dialog)
+	_options.add_child(uploads)
 	_place_items = VBoxContainer.new()
 	_options.add_child(_place_items)
 	_fill_place_items()
@@ -820,6 +833,156 @@ func _fill_place_items() -> void:
 			grid.add_child(_choice_button(key, models[key].label, key))
 	if grid.get_child_count() == 0:
 		_place_items.add_child(ProTheme.note("Nothing matches that."))
+	if wanted == "" and _place_group == CustomItems.GROUP:
+		var actions := HBoxContainer.new()
+		actions.name = "CustomActions"
+		actions.add_theme_constant_override("separation", 4)
+		_place_items.add_child(actions)
+		for entry in [["Rename…", _rename_custom_dialog], ["Delete…", _delete_custom_dialog]]:
+			var b := Button.new()
+			b.text = entry[0]
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.pressed.connect(entry[1])
+			actions.add_child(b)
+		_refresh_custom_actions()
+
+func _refresh_custom_actions() -> void:
+	var actions := _place_items.get_node_or_null("CustomActions") if _place_items and is_instance_valid(_place_items) else null
+	if actions == null:
+		return
+	var chosen := _chosen()
+	for b: Button in actions.get_children():
+		b.disabled = not CustomItems.is_custom(chosen)
+		b.tooltip_text = "%s %s" % [b.text.trim_suffix("…"), _thing_name(chosen)] if not b.disabled else "Choose one of your uploads first"
+
+func _open_custom_dialog() -> void:
+	_finish_edits()
+	_dismiss_preview()
+	var d := CustomDialog.new()
+	add_child(d)
+	d.added.connect(_on_custom_added)
+	d.popup_centered()
+
+func _on_custom_added(kind: String) -> void:
+	_uploads_changed()
+	_place_group = CustomItems.GROUP
+	_place_search = ""
+	if tool == Tool.SCATTER:
+		_choose(kind)
+		_build_options()
+	_set_status("Added %s to Custom. Click where it goes." % _thing_name(kind))
+	await _render_custom_thumb(kind)
+
+func _render_custom_thumb(kind: String) -> void:
+	if not ThumbStage.can_render() or not is_inside_tree():
+		return
+	var stage := ThumbStage.make(self)
+	var img: Image = await ThumbStage.shoot(stage, [WorldScene.mesh_of(kind)])
+	stage.queue_free()
+	if img and CustomItems.save_thumb(kind, img) == OK:
+		ProTheme.forget_thumb(kind)
+		if is_inside_tree() and tool == Tool.SCATTER:
+			_build_options()
+
+## Redraws what the uploads on this computer change: new, renamed or deleted items.
+func _uploads_changed() -> void:
+	WorldScene.refresh_custom()
+	for kind in [place_kind, paint_choice]:
+		if CustomItems.is_custom(kind) and not WorldScene.load_kit().get("models", {}).has(kind):
+			place_kind = "fern"
+			paint_choice = "fern"
+	if _scene:
+		_scene.refresh_things(theme_name)
+	_refresh_problems()
+	if tool == Tool.ARRANGE:
+		_refresh_selection()
+	else:
+		_build_options()
+	_update_zones()
+
+func _rename_custom_dialog() -> void:
+	var kind := _chosen()
+	if not CustomItems.is_custom(kind):
+		return
+	var ask := ConfirmationDialog.new()
+	ask.title = "Rename upload"
+	ask.ok_button_text = "Rename"
+	ask.dialog_hide_on_ok = false
+	var box := VBoxContainer.new()
+	ask.add_child(box)
+	var field := LineEdit.new()
+	field.text = _thing_name(kind)
+	field.max_length = CustomItems.LONGEST_NAME
+	box.add_child(field)
+	var why := ProTheme.note("")
+	box.add_child(why)
+	field.text_changed.connect(func(text):
+		why.text = CustomItems.name_problem(text)
+		ask.get_ok_button().disabled = why.text != "")
+	ask.register_text_enter(field)
+	add_child(ask)
+	ask.confirmed.connect(func():
+		var problem := rename_custom(kind, field.text)
+		if problem != "":
+			why.text = problem
+			return
+		ask.hide()
+		ask.queue_free())
+	ask.canceled.connect(ask.queue_free)
+	ask.popup_centered(Vector2i(380, 120))
+	field.grab_focus()
+	field.select_all()
+
+func rename_custom(kind: String, label: String) -> String:
+	var problem := CustomItems.rename(kind, label)
+	if problem == "":
+		_uploads_changed()
+		_set_status("Renamed it %s." % label.strip_edges())
+	return problem
+
+## Where an upload is used, for the warning before it's deleted.
+func custom_users(kind: String) -> Array:
+	var users := CustomItems.worlds_using(kind, path)
+	if doc.data.things.any(func(t): return t.kind == kind):
+		users.push_front(str(doc.data.title) + " (open now)")
+	return users
+
+func _delete_custom_dialog() -> void:
+	var kind := _chosen()
+	if not CustomItems.is_custom(kind):
+		return
+	var users := custom_users(kind)
+	var ask := ConfirmationDialog.new()
+	ask.title = "Delete upload"
+	ask.dialog_autowrap = true
+	ask.dialog_text = "Delete “%s” from this computer?" % _thing_name(kind)
+	if not users.is_empty():
+		ask.dialog_text += "\n\nIt's placed in %d %s: %s. Those copies stay in the %s but won't show until you upload the same file again or remove them, and the %s can't be exported until then." % [users.size(), "world" if users.size() == 1 else "worlds", ", ".join(users), "world" if users.size() == 1 else "worlds", "world" if users.size() == 1 else "worlds"]
+	ask.ok_button_text = "Delete"
+	add_child(ask)
+	ask.confirmed.connect(func():
+		ask.queue_free()
+		delete_custom(kind))
+	ask.canceled.connect(ask.queue_free)
+	ask.popup_centered(Vector2i(480, 160))
+
+func delete_custom(kind: String) -> void:
+	_finish_edits()
+	var label := _thing_name(kind)
+	if CustomItems.remove(kind) != OK:
+		_set_status("%s couldn't be deleted." % label)
+		return
+	ProTheme.forget_thumb(kind)
+	_uploads_changed()
+	_set_status("Deleted %s." % label)
+
+func remove_missing() -> void:
+	_finish_edits()
+	var missing := CustomItems.missing_in(doc)
+	if missing.is_empty():
+		return
+	history.things_edit("Remove missing items", [], missing)
+	_set_status("Removed %d missing %s." % [missing.size(), "item" if missing.size() == 1 else "items"])
 
 func _schedule_reveal_choice() -> void:
 	if not get_tree().process_frame.is_connected(_reveal_choice):
@@ -876,6 +1039,7 @@ func _choose(key: String) -> void:
 			place_kind = key
 	for k in _item_buttons:
 		_item_buttons[k].button_pressed = k == key
+	_refresh_custom_actions()
 	_refresh_tall_note()
 	_update_zones()
 	_roll_next()
@@ -1710,6 +1874,7 @@ func _refresh_problems() -> bool:
 	_problem_button.text = "Show problem"
 	_problem_row.visible = not checked.get("valid", false)
 	_problem_button.visible = not _problems.is_empty()
+	_missing_button.visible = not CustomItems.missing_in(doc).is_empty()
 	_problem_label.text = checked.get("summary", checked.get("problem", ""))
 	_track_problems = _track_problems or not _problems.is_empty()
 	for child in _problem_markers.get_children():
@@ -2106,6 +2271,7 @@ func _end_job() -> void:
 
 func _set_controls_enabled(on: bool) -> void:
 	_problem_button.disabled = not on
+	_missing_button.disabled = not on
 	for k in _tools:
 		_tools[k].disabled = not on
 	for c: Control in [_preview_button, _export_button, _quality_pick, _day_button, _dusk_button, _undo_button, _redo_button]:

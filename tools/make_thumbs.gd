@@ -3,7 +3,7 @@ extends SceneTree
 ## godot --path . --script res://tools/make_thumbs.gd
 
 const OUT := "res://data/thumbs"
-const ITEM := Vector2i(232, 160)
+const ITEM := ThumbStage.ITEM
 const TEMPLATE := Vector2i(600, 340)
 
 func _initialize() -> void:
@@ -39,66 +39,16 @@ func _made(name: String) -> bool:
 	return FileAccess.file_exists("%s/%s.webp" % [OUT, name])
 
 func _stage() -> SubViewport:
-	var v := SubViewport.new()
-	v.size = ITEM * 2
-	v.own_world_3d = true
-	v.msaa_3d = Viewport.MSAA_4X
-	v.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	root.add_child(v)
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.93, 0.94, 0.96)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color.WHITE
-	env.ambient_light_energy = 0.7
-	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	var we := WorldEnvironment.new()
-	we.environment = env
-	v.add_child(we)
-	var sun := DirectionalLight3D.new()
-	sun.light_energy = 1.6
-	sun.shadow_enabled = true
-	sun.look_at_from_position(Vector3(1, 2, 1.5), Vector3.ZERO, Vector3.UP)
-	v.add_child(sun)
-	var cam := Camera3D.new()
-	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	v.add_child(cam)
-	cam.current = true
-	v.set_meta("camera", cam)
-	return v
+	return ThumbStage.make(root)
 
 func _shoot(stage: SubViewport, kinds: Array, name: String) -> void:
-	var holder := Node3D.new()
-	stage.add_child(holder)
-	var box := AABB()
+	var meshes := []
 	var seen := {}
-	var x := 0.0
 	for kind in kinds:
-		if seen.has(kind):
-			continue
-		seen[kind] = true
-		var mesh := WorldScene.mesh_of(kind)
-		var part := MeshInstance3D.new()
-		part.mesh = mesh
-		var aabb := mesh.get_aabb()
-		part.position.x = x - aabb.position.x
-		holder.add_child(part)
-		var placed := AABB(aabb.position + part.position, aabb.size)
-		box = placed if box.size == Vector3.ZERO else box.merge(placed)
-		x += aabb.size.x * 0.9
-	var cam: Camera3D = stage.get_meta("camera")
-	var centre := box.get_center()
-	var dir := Vector3(0.45, 0.45, 1.0).normalized()
-	cam.size = maxf(box.size.y * 1.12, maxf(box.size.x, box.size.z) * 1.05 * float(ITEM.y) / ITEM.x)
-	var reach := box.size.length() + 10.0
-	cam.far = reach * 3.0
-	cam.look_at_from_position(centre + dir * reach, centre, Vector3.UP)
-	for i in 4:
-		await RenderingServer.frame_post_draw
-	var img := stage.get_texture().get_image()
-	img.resize(ITEM.x, ITEM.y, Image.INTERPOLATE_LANCZOS)
-	_save(img, name)
-	holder.free()
+		if not seen.has(kind):
+			seen[kind] = true
+			meshes.append(WorldScene.mesh_of(kind))
+	_save(await ThumbStage.shoot(stage, meshes), name)
 
 func _template(key: String) -> void:
 	var script: GDScript = load("res://src/ui/editor_view.gd")

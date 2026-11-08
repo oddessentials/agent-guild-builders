@@ -21,6 +21,7 @@ const FONT_SIZE := 14
 
 static var dark := false
 static var _thumbs := {}
+static var _text_font: Font
 
 static func color(token: String) -> Color:
 	return Color((DARK if dark else LIGHT)[token])
@@ -39,12 +40,17 @@ static func box(fill: Color, edge: Color = Color.TRANSPARENT, radius := RADIUS, 
 	s.anti_aliasing = true
 	return s
 
+static func text_font() -> Font:
+	if _text_font == null:
+		var font := SystemFont.new()
+		font.font_names = PackedStringArray(["Segoe UI Variable Text", "Segoe UI", "SF Pro Text", "Roboto", "Noto Sans", "sans-serif"])
+		font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
+		_text_font = font
+	return _text_font
+
 static func make() -> Theme:
 	var t := Theme.new()
-	var font := SystemFont.new()
-	font.font_names = PackedStringArray(["Segoe UI Variable Text", "Segoe UI", "SF Pro Text", "Roboto", "Noto Sans", "sans-serif"])
-	font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
-	t.default_font = font
+	t.default_font = text_font()
 	t.default_font_size = FONT_SIZE
 	var text := color("text")
 	var muted := color("muted")
@@ -151,12 +157,17 @@ static func brand(name: String, height: float) -> TextureRect:
 static func thumb(name: String) -> Texture2D:
 	if _thumbs.has(name):
 		return _thumbs[name]
-	var path := "res://data/thumbs/%s.webp" % name
 	var tex: Texture2D = null
-	if ResourceLoader.exists(path):
-		tex = load(path) as Texture2D
+	if CustomItems.is_custom(name):
+		var img := Image.load_from_file(CustomItems.thumb_path(name)) if FileAccess.file_exists(CustomItems.thumb_path(name)) else null
+		tex = ImageTexture.create_from_image(img) if img and not img.is_empty() else null
+	elif ResourceLoader.exists("res://data/thumbs/%s.webp" % name):
+		tex = load("res://data/thumbs/%s.webp" % name) as Texture2D
 	_thumbs[name] = tex
 	return tex
+
+static func forget_thumb(name: String) -> void:
+	_thumbs.erase(name)
 
 ## Shows a button's icon in its own colours rather than tinted like text.
 static func picture_button(button: Button) -> void:
