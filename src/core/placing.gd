@@ -14,11 +14,61 @@ const MIXES := {
 }
 
 const GRID := 0.5
+const JOIN_REACH := 3.0
 
 static func modular(kind: String) -> bool:
 	return bool(WorldScene.load_kit().get("models", {}).get(kind, {}).get("modular", false))
 
-static func snapped(doc: WorldDoc, kind: String, at: Vector3) -> Vector3:
+static func sizes(kind: String) -> Vector2:
+	return Vector2.ONE if modular(kind) else Vector2(SMALLEST, LARGEST)
+
+static func placement(doc: WorldDoc, kind: String, at: Vector3, turn: float, ignore_id := -1) -> Dictionary:
+	if not modular(kind):
+		return {"at": at, "turn": turn, "joins": ""}
+	var joined := _joined(doc, kind, Vector2(at.x, at.z), ignore_id)
+	if joined.is_empty():
+		return {"at": on_grid(doc, kind, at), "turn": turn, "joins": ""}
+	return {"at": Vector3(joined.x, doc.height_at(joined.x, joined.z), joined.z), "turn": joined.turn, "joins": joined.joins}
+
+static func _joined(doc: WorldDoc, kind: String, pointer: Vector2, ignore_id: int) -> Dictionary:
+	var models: Dictionary = WorldScene.load_kit().get("models", {})
+	var own: Array = models.get(kind, {}).get("joints", [])
+	var best := {}
+	var best_score := INF
+	for t in doc.data.things:
+		if int(t.id) == ignore_id or not modular(t.kind):
+			continue
+		var centre := Vector2(float(t.x), float(t.z))
+		for j in models.get(t.kind, {}).get("joints", []):
+			var at := centre + _turned(Vector2(j[0], j[1]), float(t.turn))
+			var reach := at.distance_to(pointer)
+			if reach > JOIN_REACH:
+				continue
+			var facing := _turned(Vector2(j[2], j[3]), float(t.turn))
+			var hand := _hand(Vector2(j[0], j[1]), Vector2(j[2], j[3]))
+			for k in own:
+				var k_at := Vector2(k[0], k[1])
+				var k_facing := Vector2(k[2], k[3])
+				var k_hand := _hand(k_at, k_facing)
+				if int(k[4]) != int(j[4]) or (hand != 0.0 and k_hand != 0.0 and hand == k_hand):
+					continue
+				var turn := wrapf(k_facing.angle() - (-facing).angle(), 0.0, TAU)
+				var spot := at - _turned(k_at, turn)
+				var score := reach + 0.01 * spot.distance_to(pointer)
+				if score < best_score:
+					best_score = score
+					best = {"x": spot.x, "z": spot.y, "turn": turn, "joins": t.kind}
+	return best
+
+static func _turned(v: Vector2, turn: float) -> Vector2:
+	var r := Vector3(v.x, 0.0, v.y).rotated(Vector3.UP, turn)
+	return Vector2(r.x, r.z)
+
+static func _hand(at: Vector2, facing: Vector2) -> float:
+	var side := facing.cross(-at)
+	return 0.0 if absf(side) < 0.01 else signf(side)
+
+static func on_grid(doc: WorldDoc, kind: String, at: Vector3) -> Vector3:
 	if not modular(kind):
 		return at
 	var x := snappedf(at.x, GRID)
@@ -55,7 +105,7 @@ static func why_not(doc: WorldDoc, kind: String, x: float, z: float, scale: floa
 ## only an item standing on the same spot gets in the way.
 static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float) -> String:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
-	var why := _why_not_here(doc, models.get(kind, {}), x, z, 1.0 if modular(kind) else SMALLEST)
+	var why := _why_not_here(doc, models.get(kind, {}), x, z, sizes(kind).x)
 	if why != "":
 		return why
 	return _too_close(models, _standing_on(doc, models, kind, x, z))
@@ -75,9 +125,8 @@ static func largest_scale(doc: WorldDoc, kind: String, x: float, z: float) -> fl
 
 ## `rolled`, capped to the largest size that keeps the Yard clear at this spot.
 static func fitted_scale(doc: WorldDoc, kind: String, x: float, z: float, rolled: float) -> float:
-	if modular(kind):
-		return 1.0
-	return maxf(SMALLEST, minf(rolled, largest_scale(doc, kind, x, z)))
+	var allowed := sizes(kind)
+	return clampf(minf(rolled, largest_scale(doc, kind, x, z)), allowed.x, allowed.y)
 
 ## What would mostly hide this item on screen, or "" if nothing would.
 static func hidden_behind(doc: WorldDoc, kind: String, x: float, z: float, scale: float) -> String:

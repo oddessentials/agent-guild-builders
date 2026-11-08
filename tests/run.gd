@@ -781,11 +781,16 @@ func _place_panel() -> bool:
 	var after_e: float = view._next_turn
 	turns.get_child(0).pressed.emit()
 	check(turns.get_child_count() == 2 and is_equal_approx(wrapf(after_e - before, 0.0, TAU), PI / 2.0) and is_equal_approx(view._next_turn, before), "panel: the turn buttons turn the next piece both ways")
-	var spot := Placing.snapped(doc, "fort_thick_straight", Vector3(-60.13, 0.0, -80.38))
-	check(spot.x == -60.0 and spot.z == -80.5 and Placing.snapped(doc, "barrel", Vector3(1.13, 0.0, 2.38)) == Vector3(1.13, 0.0, 2.38), "panel: castle pieces snap to the grid and other things don't")
+	var spot := Placing.on_grid(doc, "fort_thick_straight", Vector3(-60.13, 0.0, -80.38))
+	check(spot.x == -60.0 and spot.z == -80.5 and Placing.on_grid(doc, "barrel", Vector3(1.13, 0.0, 2.38)) == Vector3(1.13, 0.0, 2.38), "panel: castle pieces snap to the grid and other things don't")
 	check(Placing.fitted_scale(doc, "fort_tower_round", spot.x, spot.z, 0.9) == 1.0, "panel: castle pieces keep their size")
 	doc.add_thing("fort_thick_straight", spot.x, spot.z, 0.0, 1.0)
 	check(Placing.why_not_one(doc, "fort_walkway_straight", spot.x + 0.2, spot.z) == "" and Placing.why_not_one(doc, "barrel", spot.x + 0.2, spot.z) != "", "panel: castle pieces may meet, other things keep clear")
+	view.tool = view.Tool.SCATTER
+	view._choose("fort_tower_round")
+	view._update_zones()
+	check(view._zone_wanted == 13.5, "panel: the red zone for a castle piece uses its full size")
+	_joining()
 	view.free()
 	var opened := WorldDoc.create("guild", "T", 3)
 	opened.add_thing("stone", 40.0, 40.0, 0.0, 1.0)
@@ -802,6 +807,38 @@ func _place_panel() -> bool:
 	made.free()
 	check(result.doc != null and WorldScene.mesh_ready("stone"), "panel: opening a world loads what it uses")
 	return true
+
+func _joined_end(doc: WorldDoc, thing: Dictionary, kind: String, spot: Dictionary) -> bool:
+	var models: Dictionary = WorldScene.load_kit().models
+	for j in models[thing.kind].joints:
+		var a: Vector2 = Vector2(thing.x, thing.z) + Placing._turned(Vector2(j[0], j[1]), thing.turn)
+		for k in models[kind].joints:
+			var b: Vector2 = Vector2(spot.at.x, spot.at.z) + Placing._turned(Vector2(k[0], k[1]), spot.turn)
+			var fa := Placing._turned(Vector2(j[2], j[3]), thing.turn)
+			var fb := Placing._turned(Vector2(k[2], k[3]), spot.turn)
+			if a.distance_to(b) < 0.001 and fa.dot(fb) < -0.999:
+				return true
+	return false
+
+func _joining() -> void:
+	var doc := WorldDoc.create("guild", "Castle", 3)
+	var wall := doc.add_thing("fort_thick_straight", -60.0, -80.0, 0.0, 1.0)
+	var end := Vector2(-60.0, -80.0) + Placing._turned(Vector2(7.281, 2.086), 0.0)
+	var next := Placing.placement(doc, "fort_thick_straight", Vector3(end.x + 1.0, 0.0, end.y + 0.5), 1.0)
+	check(next.joins == "fort_thick_straight" and is_equal_approx(next.at.x, -60.0 + 14.562) and is_equal_approx(next.at.z, -80.0) and is_zero_approx(wrapf(next.turn, -PI, PI)), "joining: a wall continues the wall it's dropped beside")
+	var turned := doc.add_thing("fort_thin_straight", 60.0, -80.0, PI / 2.0, 1.0)
+	var t_end := Vector2(60.0, -80.0) + Placing._turned(Vector2(7.41, 1.275), PI / 2.0)
+	var after := Placing.placement(doc, "fort_thin_straight", Vector3(t_end.x, 0.0, t_end.y), 0.0)
+	check(_joined_end(doc, turned, "fort_thin_straight", after) and Vector2(after.at.x, after.at.z).distance_to(Vector2(60.0, -80.0)) > 14.0, "joining: a turned wall is continued, not doubled back")
+	var corner := Placing.placement(doc, "fort_thick_corner", Vector3(end.x, 0.0, end.y), 0.0)
+	check(corner.joins == "fort_thick_straight" and _joined_end(doc, wall, "fort_thick_corner", corner), "joining: a corner meets a wall end exactly")
+	var ledge := Vector2(-60.0, -80.0) + Placing._turned(Vector2(-7.281, -2.086), 0.0)
+	var walk := Placing.placement(doc, "fort_walkway_straight", Vector3(ledge.x, 0.0, ledge.y), 0.0)
+	check(walk.joins == "fort_thick_straight" and _joined_end(doc, wall, "fort_walkway_straight", walk) and is_zero_approx(wrapf(walk.turn, -PI, PI)), "joining: a walkway stands behind a wall")
+	var free := Placing.placement(doc, "fort_thick_straight", Vector3(-20.13, 0.0, -90.38), PI / 2.0)
+	check(free.joins == "" and free.at.x == -20.0 and free.at.z == -90.5 and free.turn == PI / 2.0, "joining: away from other pieces, pieces sit on the grid")
+	var dragged := Placing.placement(doc, "fort_thick_straight", Vector3(end.x, 0.0, end.y), 0.0, int(wall.id))
+	check(dragged.joins == "", "joining: a piece being moved doesn't join itself")
 
 func _alpha_surfaces(mesh: Mesh) -> int:
 	var count := 0

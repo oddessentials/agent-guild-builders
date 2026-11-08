@@ -895,13 +895,12 @@ func _tallest_chosen() -> float:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	var top := 0.0
 	for kind in _chosen_kinds():
-		top = maxf(top, float(models.get(kind, {}).get("height", 1.0)))
+		var allowed := Placing.sizes(kind)
+		top = maxf(top, float(models.get(kind, {}).get("height", 1.0)) * (allowed.x if place_mode == "one" else allowed.y))
 	return top
 
-## Whether anything chosen could stand tall enough to be refused for its height,
-## at the largest size it may be placed.
 func _chosen_is_tall() -> bool:
-	return _tallest_chosen() * (Placing.SMALLEST if place_mode == "one" else Placing.LARGEST) > 1.0
+	return _tallest_chosen() > 1.0
 
 func _brush_slider() -> void:
 	_slider("Brush size", 1.0, 40.0, 0.5, brush_radius, "%.1f m", func(v):
@@ -1113,8 +1112,13 @@ func _update_cursor(pos: Vector2) -> void:
 	if hit == null or not shows_brush:
 		_on_stage_left()
 		return
+	var turn := _next_turn
+	var joins := ""
 	if tool == Tool.SCATTER and place_mode == "one":
-		hit = Placing.snapped(doc, place_kind, hit)
+		var spot := Placing.placement(doc, place_kind, hit, _next_turn)
+		hit = spot.at
+		turn = spot.turn
+		joins = spot.joins
 	_brush.visible = true
 	_brush.mesh = _spot_ring if tool == Tool.SCATTER and place_mode == "one" else _wide_ring
 	_brush.position = hit + Vector3.UP * 0.1
@@ -1136,10 +1140,12 @@ func _update_cursor(pos: Vector2) -> void:
 				if text == "":
 					if _ghost.visible:
 						_ghost.mesh = _scene.mesh_for(place_kind)
-					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": _next_turn, "scale": fitted})
+					_ghost.transform = _scene.transform_of({"x": hit.x, "z": hit.z, "turn": turn, "scale": fitted})
 					var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
 					if behind != "":
 						text = "Behind the %s: this may be hidden from view." % behind
+					elif joins != "":
+						text = "Joins the %s." % _thing_name(joins).to_lower()
 				else:
 					colour = ProTheme.color("danger")
 			else:
@@ -1333,7 +1339,9 @@ func _drag_thing(pos: Vector2) -> void:
 		_selected_ring.visible = false
 	var hit = _ground_at(pos + _drag.grip * float(_viewport.size.y) / _camera.size)
 	if hit != null:
-		hit = Placing.snapped(doc, thing.kind, hit)
+		var spot := Placing.placement(doc, thing.kind, hit, float(thing.turn), int(thing.id))
+		hit = spot.at
+		_drag.turn = spot.turn
 		_drag.hit = hit
 		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z)
 
@@ -1347,6 +1355,7 @@ func _arrange_cursor(pos: Vector2) -> void:
 		var moved: Dictionary = thing.duplicate()
 		moved.x = _drag.hit.x
 		moved.z = _drag.hit.z
+		moved.turn = _drag.get("turn", thing.turn)
 		_ghost.mesh = _scene.mesh_for(thing.kind)
 		_ghost.transform = _scene.transform_of(moved)
 		_ghost.visible = true
@@ -1376,6 +1385,7 @@ func _finish_drag() -> void:
 	var moving: bool = _drag.moving
 	var hit = _drag.hit
 	var why: String = _drag.why
+	var turn = _drag.get("turn")
 	_drag = {}
 	var thing := _selected()
 	if not moving or thing.is_empty():
@@ -1390,6 +1400,8 @@ func _finish_drag() -> void:
 	var moved: Dictionary = thing.duplicate()
 	moved.x = hit.x
 	moved.z = hit.z
+	if turn != null:
+		moved.turn = turn
 	history.things_edit("Move " + _thing_name(thing.kind), [moved], [thing])
 	_set_status("Moved %s." % _thing_name(thing.kind))
 	_show_selection()
@@ -1398,11 +1410,12 @@ func _footprint(kind: String, scale: float) -> float:
 	return maxf(float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("radius", 0.5)) * scale, 0.8)
 
 func _roll_next() -> void:
+	var allowed := Placing.sizes(place_kind)
 	if Placing.modular(place_kind):
-		_next_scale = 1.0
+		_next_scale = allowed.x
 		_next_turn = wrapf(snappedf(_next_turn, PI / 2.0), 0.0, TAU)
 	else:
-		_next_scale = _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
+		_next_scale = _rng.range_f(allowed.x, allowed.y)
 		_next_turn = _rng.range_f(0.0, TAU)
 	_update_zones()
 
@@ -1463,7 +1476,9 @@ func _apply_brush(hit: Vector3, first: bool) -> void:
 
 func _scatter_at(hit: Vector3, first: bool) -> void:
 	if place_mode == "one":
-		hit = Placing.snapped(doc, place_kind, hit)
+		var spot := Placing.placement(doc, place_kind, hit, _next_turn)
+		hit = spot.at
+		_next_turn = spot.turn
 		var why := _why_not_place(hit)
 		if why != "":
 			_set_status(why)
@@ -1481,12 +1496,11 @@ func _scatter_at(hit: Vector3, first: bool) -> void:
 	var kinds := _chosen_kinds()
 	for attempt in (1 if first else 2):
 		var kind: String = kinds[int(_rng.next() * kinds.size()) % kinds.size()]
-		var s := _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
+		var allowed := Placing.sizes(kind)
+		var s := _rng.range_f(allowed.x, allowed.y)
 		var a := _rng.range_f(0.0, TAU)
 		var r: float = sqrt(_rng.next()) * brush_radius
-		var spot := Placing.snapped(doc, kind, Vector3(hit.x + cos(a) * r, 0.0, hit.z + sin(a) * r))
-		if Placing.modular(kind):
-			s = 1.0
+		var spot := Placing.on_grid(doc, kind, Vector3(hit.x + cos(a) * r, 0.0, hit.z + sin(a) * r))
 		if Placing.why_not(doc, kind, spot.x, spot.z, s) != "":
 			_stroke_skipped += 1
 			continue
@@ -1797,7 +1811,7 @@ func _update_zones() -> void:
 	if tool == Tool.LAND:
 		wanted = 0.0
 	elif tool == Tool.SCATTER and (_chosen_is_tall() or _raised_land):
-		wanted = ceilf(_tallest_chosen() * (Placing.SMALLEST if place_mode == "one" else Placing.LARGEST) * 10.0) / 10.0
+		wanted = ceilf(_tallest_chosen() * 10.0) / 10.0
 	_zone_wanted = wanted
 	_show_zone()
 

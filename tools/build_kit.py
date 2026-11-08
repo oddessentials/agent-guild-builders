@@ -1,4 +1,4 @@
-import json, re, shutil, sys, tempfile
+import json, math, re, shutil, sys, tempfile
 from pathlib import Path
 def inputs(args):
     if len(args) < 2:
@@ -288,7 +288,7 @@ def standard_foliage(material):
     material.surface_render_method = 'DITHERED'
 
 
-def stand_at_origin(parts):
+def stand_at_origin(parts, grounded=True):
     worlds = [o.matrix_world.copy() for o in parts]
     for o, world in zip(parts, worlds):
         o.parent = None
@@ -297,7 +297,7 @@ def stand_at_origin(parts):
     corners = [o.matrix_world @ Vector(c) for o in parts for c in o.bound_box]
     shift = Vector(((min(c.x for c in corners) + max(c.x for c in corners)) / -2,
                     (min(c.y for c in corners) + max(c.y for c in corners)) / -2,
-                    -min(c.z for c in corners)))
+                    -min(c.z for c in corners) if grounded else 0))
     for o in parts:
         o.matrix_world.translation += shift
     bpy.context.view_layer.update()
@@ -341,6 +341,62 @@ def blend_parts(kit_id, name, lod):
     return parts
 
 
+JOINT_WIDTHS = (2.55, 3.12, 3.54, 4.17)
+TOWER_REACH = 7.0
+
+
+def joints_of(kit_id, parts):
+    """Where a modular piece meets others, in the model's own frame as Godot reads
+    it: [x, z, facing x, facing z, 0 for an end or 1 for a ledge]. An open end is a full-height cut face one wall
+    thick, met at its ground corner on the battered outer side; a full-length face
+    at the 7.08 m ledge is where a walkway stands behind a wall."""
+    if kit_id == 'fort_tower_round':
+        return [[x * TOWER_REACH, z * TOWER_REACH, x, z, 0] for x, z in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+    faces = {}
+    for o in parts:
+        to_world = o.matrix_world
+        normals = to_world.to_3x3().inverted().transposed()
+        for poly in o.data.polygons:
+            n = (normals @ poly.normal).normalized()
+            if abs(n.z) > 0.05:
+                continue
+            points = [to_world @ o.data.vertices[i].co for i in poly.vertices]
+            angle = round(math.degrees(math.atan2(n.y, n.x)) / 2) * 2
+            faces.setdefault(angle, []).append((n.x * points[0].x + n.y * points[0].y, points))
+    planes = []
+    for angle, found in faces.items():
+        found.sort(key=lambda f: f[0])
+        for offset, points in found:
+            if planes and planes[-1][0] == angle and offset - planes[-1][1] <= 0.03:
+                planes[-1][2].extend(points)
+            else:
+                planes.append([angle, offset, list(points)])
+    joints = []
+    for angle, offset, points in planes:
+        n = Vector((math.cos(math.radians(angle)), math.sin(math.radians(angle))))
+        t = Vector((-n.y, n.x))
+        along = [t.x * p.x + t.y * p.y for p in points]
+        z0, z1 = min(p.z for p in points), max(p.z for p in points)
+        width = max(along) - min(along)
+        if z0 > 0.25:
+            continue
+        if z1 >= 7.4 and any(abs(width - w) < 0.06 for w in JOINT_WIDTHS):
+            low = [a for a, p in zip(along, points) if p.z < z0 + 0.05]
+            high = [a for a, p in zip(along, points) if p.z > z1 - 0.3]
+            near, far = abs(min(high) - min(low)), abs(max(high) - max(low))
+            if abs(near - far) < 0.2:
+                continue
+            corners, ledge = [min(low) if near > far else max(low)], 0
+        elif width >= 7.0 and 7.0 <= z1 <= 7.15:
+            corners, ledge = [min(along), max(along)], 1
+        else:
+            continue
+        for c in corners:
+            at = n * offset + t * c
+            joints.append([round(at.x, 3), round(-at.y, 3), round(n.x, 3), round(-n.y, 3), ledge])
+    return sorted(joints)
+
+
 def described(entry, kit_id, spec):
     entry.update({'label': spec[2], 'group': spec[3], 'spacing': spec[4]})
     for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR)):
@@ -357,7 +413,7 @@ def export_model(kit_id, spec):
         print('KIT missing', name)
         return None
     if kit_id not in LEGACY:
-        stand_at_origin(parts)
+        stand_at_origin(parts, kit_id not in MODULAR)
     low, high = Vector((1e9, 1e9, 1e9)), Vector((-1e9, -1e9, -1e9))
     tris = 0
     for o in parts:
@@ -374,13 +430,15 @@ def export_model(kit_id, spec):
     out = KIT / 'models' / f'{kit_id}.glb'
     bpy.ops.export_scene.gltf(filepath=str(out), use_selection=True, export_format='GLB', export_image_format='WEBP',
                               export_image_quality=85, export_animations=False, export_cameras=False, export_lights=False)
-    size = max(high.z - min(low.z, 0), .001)
+    size = max(high.z if kit_id in MODULAR else high.z - min(low.z, 0), .001)
     target = TARGET.get(kit_id, round(size, 2))
     licence = MADE_LICENCE if kit_id in MADE_HERE else GUILD_LICENCE if kit_id in GUILD else LICENCE
     entry = {'label': label, 'group': group, 'spacing': spacing, 'height': target,
              'radius': round(max(high.x - low.x, high.y - low.y) / 2 * target / size, 2), 'triangles': tris,
              'source': f'{name} {lod}' if kit_id in GUILD and lod else name, 'licence': licence, 'bytes': out.stat().st_size}
     described(entry, kit_id, spec)
+    if kit_id in MODULAR:
+        entry['joints'] = joints_of(kit_id, parts)
     print('KIT', kit_id, tris, 'tris', entry['height'], 'm', entry['bytes'] // 1024, 'KiB', flush=True)
     return entry
 
