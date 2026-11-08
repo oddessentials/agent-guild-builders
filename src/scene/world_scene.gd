@@ -636,7 +636,7 @@ func _draw_cell(key: String) -> void:
 func transform_of(t: Dictionary) -> Transform3D:
 	var s: float = t.scale
 	var b := Basis(Vector3.UP, t.turn).scaled(Vector3(s, s, s))
-	return Transform3D(b, Vector3(t.x, doc.height_at(t.x, t.z), t.z))
+	return Transform3D(b, Vector3(t.x, Placing.base_height(doc, t), t.z))
 
 func _add_lamp(light: Dictionary, t: Dictionary) -> OmniLight3D:
 	var lamp := OmniLight3D.new()
@@ -647,6 +647,6 @@ func _add_lamp(light: Dictionary, t: Dictionary) -> OmniLight3D:
 	lamp.omni_range = 60.0
 	lamp.shadow_enabled = true
 	lamp.light_size = 0.12
-	lamp.position = Vector3(t.x, doc.height_at(t.x, t.z) + float(light.height) * float(t.scale), t.z)
+	lamp.position = Vector3(t.x, Placing.base_height(doc, t) + float(light.height) * float(t.scale), t.z)
 	lamps.add_child(lamp)
 	return lamp

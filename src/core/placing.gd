@@ -16,12 +16,38 @@ const MIXES := {
 const GRID := 0.5
 const JOIN_REACH := 3.0
 const DUPLICATE := "There's already one here. Move it a little, or turn it."
+const STEEPEST := 1.0
+const STEEP := "Too steep here. Smooth the ground first, or choose a flatter spot."
 
 static func modular(kind: String) -> bool:
 	return bool(WorldScene.load_kit().get("models", {}).get(kind, {}).get("modular", false))
 
 static func joins(kind: String) -> bool:
 	return bool(WorldScene.load_kit().get("models", {}).get(kind, {}).get("joins", false))
+
+static func seated(kind: String) -> bool:
+	return bool(WorldScene.load_kit().get("models", {}).get(kind, {}).get("seated", false))
+
+static func ground_span(doc: WorldDoc, kind: String, x: float, z: float, turn: float, scale: float) -> Vector2:
+	var box := WorldScene.mesh_of(kind).get_aabb()
+	var span := Vector2(INF, -INF)
+	for u in [0.0, 0.5, 1.0]:
+		for v in [0.0, 0.5, 1.0]:
+			var p := Vector2(x, z) + _turned(Vector2(box.position.x + box.size.x * u, box.position.z + box.size.z * v) * scale, turn)
+			var h := doc.height_at(p.x, p.y)
+			span = Vector2(minf(span.x, h), maxf(span.y, h))
+	return span
+
+static func base_height(doc: WorldDoc, t: Dictionary) -> float:
+	if seated(t.kind):
+		return ground_span(doc, t.kind, float(t.x), float(t.z), float(t.turn), float(t.scale)).x
+	return doc.height_at(float(t.x), float(t.z))
+
+static func _too_steep(doc: WorldDoc, kind: String, x: float, z: float, turn: float, scale: float) -> String:
+	if not seated(kind):
+		return ""
+	var span := ground_span(doc, kind, x, z, 0.0 if is_nan(turn) else turn, scale)
+	return STEEP if span.y - span.x > STEEPEST else ""
 
 static func sizes(kind: String) -> Vector2:
 	return Vector2.ONE if modular(kind) else Vector2(SMALLEST, LARGEST)
@@ -113,10 +139,12 @@ static func crowded_by(doc: WorldDoc, x: float, z: float, spacing: float) -> Str
 	return ""
 
 ## Why this can't go here, in plain words, or "" if it can.
-static func why_not(doc: WorldDoc, kind: String, x: float, z: float, scale: float) -> String:
+static func why_not(doc: WorldDoc, kind: String, x: float, z: float, scale: float, turn := NAN) -> String:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	var info: Dictionary = models.get(kind, {})
 	var why := _why_not_here(doc, info, x, z, scale)
+	if why == "":
+		why = _too_steep(doc, kind, x, z, turn, scale)
 	if why != "":
 		return why
 	return _too_close(models, crowded_by(doc, x, z, float(info.get("spacing", 2.0)) * scale))
@@ -124,6 +152,8 @@ static func why_not(doc: WorldDoc, kind: String, x: float, z: float, scale: floa
 static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float, turn := NAN) -> String:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	var why := _why_not_here(doc, models.get(kind, {}), x, z, sizes(kind).x)
+	if why == "":
+		why = _too_steep(doc, kind, x, z, turn, sizes(kind).x)
 	if why != "":
 		return why
 	if not is_nan(turn) and duplicate_of(doc, kind, x, z, turn):
@@ -133,10 +163,13 @@ static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float, turn :=
 ## The same question for a placed item moving to (x, z).
 static func why_not_moved(doc: WorldDoc, thing: Dictionary, x: float, z: float, turn := NAN) -> String:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
+	var turned := float(thing.turn) if is_nan(turn) else turn
 	var why := _why_not_here(doc, models.get(thing.kind, {}), x, z, float(thing.scale))
+	if why == "":
+		why = _too_steep(doc, thing.kind, x, z, turned, float(thing.scale))
 	if why != "":
 		return why
-	if duplicate_of(doc, thing.kind, x, z, float(thing.turn) if is_nan(turn) else turn, int(thing.id)):
+	if duplicate_of(doc, thing.kind, x, z, turned, int(thing.id)):
 		return DUPLICATE
 	return _too_close(models, _standing_on(doc, models, thing.kind, x, z, int(thing.id)))
 

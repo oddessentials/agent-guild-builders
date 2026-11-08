@@ -675,7 +675,8 @@
    "triangles": 4048,
    "source": "metal_trash_can",
    "licence": "CC0-1.0 (Poly Haven)",
-   "bytes": 523524
+   "bytes": 523524,
+   "seated": true
   },
   "cardboard_box": {
    "label": "Cardboard box",
@@ -763,7 +764,8 @@
    "triangles": 22888,
    "source": "fire_hydrant",
    "licence": "CC0-1.0 (Poly Haven)",
-   "bytes": 856084
+   "bytes": 856084,
+   "seated": true
   },
   "gnome": {
    "label": "Garden gnome",
@@ -774,7 +776,8 @@
    "triangles": 28858,
    "source": "garden_gnome",
    "licence": "CC0-1.0 (Poly Haven)",
-   "bytes": 954176
+   "bytes": 954176,
+   "seated": true
   },
   "road_barrier": {
    "label": "Road barrier",
@@ -785,7 +788,8 @@
    "triangles": 10890,
    "source": "concrete_road_barrier",
    "licence": "CC0-1.0 (Poly Haven)",
-   "bytes": 795124
+   "bytes": 795124,
+   "seated": true
   },
   "patio_set": {
    "label": "Patio set",
@@ -873,7 +877,8 @@
    "triangles": 21396,
    "source": "modular_street_seating",
    "licence": "CC0-1.0 (Poly Haven)",
-   "bytes": 1692432
+   "bytes": 1692432,
+   "seated": true
   },
   "plastic_chair": {
    "label": "Plastic chair",
@@ -1017,7 +1022,8 @@
    "source": "large_castle_door",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1174056,
-   "modular": true
+   "modular": true,
+   "seated": true
   },
   "chain_fence": {
    "label": "Chain fence",
@@ -1028,7 +1034,8 @@
    "triangles": 3028,
    "source": "modular_chainlink_fence",
    "licence": "CC0-1.0 (Poly Haven)",
-   "bytes": 865492
+   "bytes": 865492,
+   "seated": true
   },
   "fort_thick_straight": {
    "label": "Thick wall",
@@ -1040,8 +1047,6 @@
    "source": "modular_fort_01:wall_thick_straight_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1704956,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -7.2814,
@@ -1071,7 +1076,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thick_straight_b": {
    "label": "Gun-port wall",
@@ -1083,8 +1091,6 @@
    "source": "modular_fort_01:wall_thick_straight_02",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1813188,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -7.2814,
@@ -1114,7 +1120,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thick_corner": {
    "label": "Thick corner",
@@ -1126,8 +1135,6 @@
    "source": "modular_fort_01:wall_thick_corner_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1676964,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -2.9188,
@@ -1143,7 +1150,10 @@
      -1.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thick_corner_b": {
    "label": "Inner corner",
@@ -1155,7 +1165,8 @@
    "source": "modular_fort_01:wall_thick_corner_02",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1671720,
-   "modular": true
+   "modular": true,
+   "seated": true
   },
   "fort_thick_end": {
    "label": "Plain wall end",
@@ -1167,8 +1178,6 @@
    "source": "modular_fort_01:wall_thick_end_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1666232,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -2.4247,
@@ -1184,7 +1193,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thick_end_b": {
    "label": "Battlement end",
@@ -1196,8 +1208,6 @@
    "source": "modular_fort_01:wall_thick_end_02",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1669580,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -2.4246,
@@ -1213,7 +1223,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thick_thin_transition": {
    "label": "Wall join",
@@ -1225,8 +1238,6 @@
    "source": "modular_fort_01:wall_thick_thin_transition_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1665804,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -1.7783,
@@ -1242,7 +1253,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_straight": {
    "label": "Thin wall",
@@ -1254,8 +1268,6 @@
    "source": "modular_fort_01:wall_thin_straight_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1673960,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -7.4094,
@@ -1285,7 +1297,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_straight_b": {
    "label": "Arrow-slit wall",
@@ -1297,8 +1312,6 @@
    "source": "modular_fort_01:wall_thin_straight_02",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1688864,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -7.4097,
@@ -1328,7 +1341,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_straight_c": {
    "label": "Short plain wall",
@@ -1340,8 +1356,6 @@
    "source": "modular_fort_01:wall_thin_straight_03",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1665092,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -3.7046,
@@ -1371,7 +1385,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_straight_d": {
    "label": "Short thin wall",
@@ -1383,8 +1400,6 @@
    "source": "modular_fort_01:wall_thin_straight_04",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1667160,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -3.7046,
@@ -1414,7 +1429,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_corner": {
    "label": "Thin corner",
@@ -1426,8 +1444,6 @@
    "source": "modular_fort_01:wall_thin_corner_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1670032,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      0.2709,
@@ -1443,7 +1459,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_corner_b": {
    "label": "Rounded corner",
@@ -1455,8 +1474,6 @@
    "source": "modular_fort_01:wall_thin_corner_02",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1671044,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -2.6673,
@@ -1472,7 +1489,10 @@
      -1.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_corner_c": {
    "label": "Angled corner",
@@ -1484,8 +1504,6 @@
    "source": "modular_fort_01:wall_thin_corner_03",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1667044,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -1.3927,
@@ -1501,7 +1519,10 @@
      1.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_thin_gate": {
    "label": "Gate wall",
@@ -1513,8 +1534,6 @@
    "source": "modular_fort_01:wall_thin_gate_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1678860,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -3.7046,
@@ -1544,7 +1563,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_walkway_straight": {
    "label": "Walkway",
@@ -1556,8 +1578,6 @@
    "source": "modular_fort_01:wall_walkway_straight_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 2749704,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -7.2814,
@@ -1587,7 +1607,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_walkway_straight_b": {
    "label": "Plain walkway",
@@ -1599,8 +1622,6 @@
    "source": "modular_fort_01:wall_walkway_straight_02",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1661948,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -7.2814,
@@ -1630,7 +1651,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_walkway_corner": {
    "label": "Walkway corner",
@@ -1642,8 +1666,6 @@
    "source": "modular_fort_01:wall_walkway_corner_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1663916,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -0.7186,
@@ -1659,7 +1681,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_walkway_corner_b": {
    "label": "Walkway post",
@@ -1671,7 +1696,8 @@
    "source": "modular_fort_01:wall_walkway_corner_02",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1660096,
-   "modular": true
+   "modular": true,
+   "seated": true
   },
   "fort_walkway_end": {
    "label": "Walkway end",
@@ -1683,8 +1709,6 @@
    "source": "modular_fort_01:wall_walkway_end_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1661948,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -2.4246,
@@ -1700,7 +1724,10 @@
      -0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_stairs_straight": {
    "label": "Wall stairs",
@@ -1712,8 +1739,6 @@
    "source": "modular_fort_01:wall_stairs_straight_01",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1684472,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      -7.4097,
@@ -1736,7 +1761,10 @@
      0.0,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "fort_tower_round": {
    "label": "Round tower",
@@ -1748,8 +1776,6 @@
    "source": "modular_fort_01:tower_round",
    "licence": "CC0-1.0 (Poly Haven)",
    "bytes": 1771432,
-   "modular": true,
-   "joins": true,
    "joints": [
     [
      7.0,
@@ -1779,7 +1805,10 @@
      -1,
      0
     ]
-   ]
+   ],
+   "modular": true,
+   "joins": true,
+   "seated": true
   },
   "xmas_tree": {
    "label": "Christmas tree",
@@ -2097,7 +2126,8 @@
    "triangles": 39944,
    "source": "professional-yard/models/car_sedan.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2273960
+   "bytes": 2273960,
+   "seated": true
   },
   "car_hatch": {
    "label": "Hatchback",
@@ -2108,7 +2138,8 @@
    "triangles": 37381,
    "source": "professional-yard/models/car_hatch.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2149804
+   "bytes": 2149804,
+   "seated": true
   },
   "car_suv": {
    "label": "SUV",
@@ -2119,7 +2150,8 @@
    "triangles": 39964,
    "source": "professional-yard/models/car_suv.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2149140
+   "bytes": 2149140,
+   "seated": true
   },
   "car_taxi": {
    "label": "Taxi",
@@ -2130,7 +2162,8 @@
    "triangles": 38497,
    "source": "professional-yard/models/car_taxi.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2347964
+   "bytes": 2347964,
+   "seated": true
   },
   "city_bus": {
    "label": "City bus",
@@ -2141,7 +2174,8 @@
    "triangles": 39938,
    "source": "professional-yard/models/city_bus.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2045556
+   "bytes": 2045556,
+   "seated": true
   },
   "delivery_van": {
    "label": "Delivery van",
@@ -2152,7 +2186,8 @@
    "triangles": 39817,
    "source": "professional-yard/models/delivery_van.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2156172
+   "bytes": 2156172,
+   "seated": true
   },
   "gnome_cottage": {
    "label": "Gnome cottage",
@@ -2163,7 +2198,8 @@
    "triangles": 39645,
    "source": "gnomeland-yard/models/town_cottage_a.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2805536
+   "bytes": 2805536,
+   "seated": true
   },
   "gnome_cottage_small": {
    "label": "Gnome cabin",
@@ -2174,7 +2210,8 @@
    "triangles": 39829,
    "source": "gnomeland-yard/models/town_cottage_b.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3227320
+   "bytes": 3227320,
+   "seated": true
   },
   "gnome_tower": {
    "label": "Gnome tower",
@@ -2185,7 +2222,8 @@
    "triangles": 39604,
    "source": "gnomeland-yard/models/town_tower.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3166260
+   "bytes": 3166260,
+   "seated": true
   },
   "gnome_workshop": {
    "label": "Gnome workshop",
@@ -2196,7 +2234,8 @@
    "triangles": 39252,
    "source": "gnomeland-yard/models/town_workshop.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3745316
+   "bytes": 3745316,
+   "seated": true
   },
   "gnome_mill": {
    "label": "Gnome mill",
@@ -2207,7 +2246,8 @@
    "triangles": 39764,
    "source": "gnomeland-yard/models/town_mill.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3835244
+   "bytes": 3835244,
+   "seated": true
   },
   "goblin_house": {
    "label": "Goblin house",
@@ -2218,7 +2258,8 @@
    "triangles": 38714,
    "source": "goblinville-yard/models/town_house_a.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3658584
+   "bytes": 3658584,
+   "seated": true
   },
   "goblin_shack": {
    "label": "Goblin shack",
@@ -2229,7 +2270,8 @@
    "triangles": 39237,
    "source": "goblinville-yard/models/town_house_b.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3871664
+   "bytes": 3871664,
+   "seated": true
   },
   "goblin_hut": {
    "label": "Goblin hut",
@@ -2240,7 +2282,8 @@
    "triangles": 39114,
    "source": "goblinville-yard/models/town_house_c.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3586000
+   "bytes": 3586000,
+   "seated": true
   },
   "goblin_factory": {
    "label": "Goblin factory",
@@ -2251,7 +2294,8 @@
    "triangles": 39566,
    "source": "goblinville-yard/models/factory.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4079592
+   "bytes": 4079592,
+   "seated": true
   },
   "goblin_water_tower": {
    "label": "Water tower",
@@ -2262,7 +2306,8 @@
    "triangles": 39249,
    "source": "goblinville-yard/models/water_tower.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3355760
+   "bytes": 3355760,
+   "seated": true
   },
   "goblin_crane": {
    "label": "Goblin crane",
@@ -2273,7 +2318,8 @@
    "triangles": 39337,
    "source": "goblinville-yard/models/crane.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3966064
+   "bytes": 3966064,
+   "seated": true
   },
   "treehouse": {
    "label": "Treehouse",
@@ -2284,7 +2330,8 @@
    "triangles": 39076,
    "source": "grove-yard/models/town_treehouse.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3364692
+   "bytes": 3364692,
+   "seated": true
   },
   "stump_house": {
    "label": "Stump house",
@@ -2295,7 +2342,8 @@
    "triangles": 37572,
    "source": "grove-yard/models/town_stump.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2530160
+   "bytes": 2530160,
+   "seated": true
   },
   "mushroom_house": {
    "label": "Mushroom house",
@@ -2306,7 +2354,8 @@
    "triangles": 39360,
    "source": "grove-yard/models/town_mushroom.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3092148
+   "bytes": 3092148,
+   "seated": true
   },
   "stone_lantern": {
    "label": "Stone lantern",
@@ -2326,7 +2375,8 @@
      0.3
     ],
     "height": 1.28
-   }
+   },
+   "seated": true
   },
   "space_dish": {
    "label": "Satellite dish",
@@ -2337,7 +2387,8 @@
    "triangles": 39612,
    "source": "orbital-yard/models/town_dish.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4415360
+   "bytes": 4415360,
+   "seated": true
   },
   "space_crane": {
    "label": "Gantry crane",
@@ -2348,7 +2399,8 @@
    "triangles": 39444,
    "source": "orbital-yard/models/town_crane.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3232788
+   "bytes": 3232788,
+   "seated": true
   },
   "space_shuttle": {
    "label": "Shuttle",
@@ -2359,7 +2411,8 @@
    "triangles": 39888,
    "source": "orbital-yard/models/town_shuttle.glb",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 2616384
+   "bytes": 2616384,
+   "seated": true
   },
   "hall_guild_anthropic": {
    "label": "Claude hall",
@@ -2370,7 +2423,8 @@
    "triangles": 8817,
    "source": "halls/guild.glb hall_anthropic_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 548576
+   "bytes": 548576,
+   "seated": true
   },
   "hall_guild_openai": {
    "label": "Codex hall",
@@ -2381,7 +2435,8 @@
    "triangles": 17381,
    "source": "halls/guild.glb hall_openai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 1134120
+   "bytes": 1134120,
+   "seated": true
   },
   "hall_guild_google": {
    "label": "Antigravity hall",
@@ -2392,7 +2447,8 @@
    "triangles": 11997,
    "source": "halls/guild.glb hall_google_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 462904
+   "bytes": 462904,
+   "seated": true
   },
   "hall_guild_xai": {
    "label": "Grok hall",
@@ -2403,7 +2459,8 @@
    "triangles": 8297,
    "source": "halls/guild.glb hall_xai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 537004
+   "bytes": 537004,
+   "seated": true
   },
   "hall_guild_docker": {
    "label": "Docker hall",
@@ -2414,7 +2471,8 @@
    "triangles": 17937,
    "source": "halls/guild.glb hall_docker_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 1189188
+   "bytes": 1189188,
+   "seated": true
   },
   "hall_guild_shell": {
    "label": "Shell hall",
@@ -2425,7 +2483,8 @@
    "triangles": 12769,
    "source": "halls/guild.glb hall_shell_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 825184
+   "bytes": 825184,
+   "seated": true
   },
   "hall_professional_anthropic": {
    "label": "Claude hall",
@@ -2436,7 +2495,8 @@
    "triangles": 2820,
    "source": "halls/professional.glb hall_anthropic_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 196204
+   "bytes": 196204,
+   "seated": true
   },
   "hall_professional_openai": {
    "label": "Codex hall",
@@ -2447,7 +2507,8 @@
    "triangles": 3392,
    "source": "halls/professional.glb hall_openai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 193908
+   "bytes": 193908,
+   "seated": true
   },
   "hall_professional_google": {
    "label": "Antigravity hall",
@@ -2458,7 +2519,8 @@
    "triangles": 840,
    "source": "halls/professional.glb hall_google_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 61520
+   "bytes": 61520,
+   "seated": true
   },
   "hall_professional_xai": {
    "label": "Grok hall",
@@ -2469,7 +2531,8 @@
    "triangles": 1568,
    "source": "halls/professional.glb hall_xai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 111480
+   "bytes": 111480,
+   "seated": true
   },
   "hall_professional_docker": {
    "label": "Docker hall",
@@ -2480,7 +2543,8 @@
    "triangles": 5460,
    "source": "halls/professional.glb hall_docker_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 377000
+   "bytes": 377000,
+   "seated": true
   },
   "hall_professional_shell": {
    "label": "Shell hall",
@@ -2491,7 +2555,8 @@
    "triangles": 4440,
    "source": "halls/professional.glb hall_shell_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 207596
+   "bytes": 207596,
+   "seated": true
   },
   "hall_gnomeland_anthropic": {
    "label": "Claude hall",
@@ -2502,7 +2567,8 @@
    "triangles": 59037,
    "source": "halls/gnomeland.glb hall_anthropic_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4460640
+   "bytes": 4460640,
+   "seated": true
   },
   "hall_gnomeland_openai": {
    "label": "Codex hall",
@@ -2513,7 +2579,8 @@
    "triangles": 58977,
    "source": "halls/gnomeland.glb hall_openai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4355512
+   "bytes": 4355512,
+   "seated": true
   },
   "hall_gnomeland_google": {
    "label": "Antigravity hall",
@@ -2524,7 +2591,8 @@
    "triangles": 59662,
    "source": "halls/gnomeland.glb hall_google_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4068248
+   "bytes": 4068248,
+   "seated": true
   },
   "hall_gnomeland_xai": {
    "label": "Grok hall",
@@ -2535,7 +2603,8 @@
    "triangles": 56217,
    "source": "halls/gnomeland.glb hall_xai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4388096
+   "bytes": 4388096,
+   "seated": true
   },
   "hall_gnomeland_docker": {
    "label": "Docker hall",
@@ -2546,7 +2615,8 @@
    "triangles": 58826,
    "source": "halls/gnomeland.glb hall_docker_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4770416
+   "bytes": 4770416,
+   "seated": true
   },
   "hall_gnomeland_shell": {
    "label": "Shell hall",
@@ -2557,7 +2627,8 @@
    "triangles": 59558,
    "source": "halls/gnomeland.glb hall_shell_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4134432
+   "bytes": 4134432,
+   "seated": true
   },
   "hall_goblinville_anthropic": {
    "label": "Claude hall",
@@ -2568,7 +2639,8 @@
    "triangles": 57503,
    "source": "halls/goblinville.glb hall_anthropic_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4504752
+   "bytes": 4504752,
+   "seated": true
   },
   "hall_goblinville_openai": {
    "label": "Codex hall",
@@ -2579,7 +2651,8 @@
    "triangles": 58892,
    "source": "halls/goblinville.glb hall_openai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4223496
+   "bytes": 4223496,
+   "seated": true
   },
   "hall_goblinville_google": {
    "label": "Antigravity hall",
@@ -2590,7 +2663,8 @@
    "triangles": 59151,
    "source": "halls/goblinville.glb hall_google_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4390192
+   "bytes": 4390192,
+   "seated": true
   },
   "hall_goblinville_xai": {
    "label": "Grok hall",
@@ -2601,7 +2675,8 @@
    "triangles": 59438,
    "source": "halls/goblinville.glb hall_xai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4713892
+   "bytes": 4713892,
+   "seated": true
   },
   "hall_goblinville_docker": {
    "label": "Docker hall",
@@ -2612,7 +2687,8 @@
    "triangles": 58628,
    "source": "halls/goblinville.glb hall_docker_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4818900
+   "bytes": 4818900,
+   "seated": true
   },
   "hall_goblinville_shell": {
    "label": "Shell hall",
@@ -2623,7 +2699,8 @@
    "triangles": 59109,
    "source": "halls/goblinville.glb hall_shell_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4361824
+   "bytes": 4361824,
+   "seated": true
   },
   "hall_grove_anthropic": {
    "label": "Claude hall",
@@ -2634,7 +2711,8 @@
    "triangles": 59218,
    "source": "halls/grove.glb hall_anthropic_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 5244448
+   "bytes": 5244448,
+   "seated": true
   },
   "hall_grove_openai": {
    "label": "Codex hall",
@@ -2645,7 +2723,8 @@
    "triangles": 59422,
    "source": "halls/grove.glb hall_openai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4564428
+   "bytes": 4564428,
+   "seated": true
   },
   "hall_grove_google": {
    "label": "Antigravity hall",
@@ -2656,7 +2735,8 @@
    "triangles": 59091,
    "source": "halls/grove.glb hall_google_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4980540
+   "bytes": 4980540,
+   "seated": true
   },
   "hall_grove_xai": {
    "label": "Grok hall",
@@ -2667,7 +2747,8 @@
    "triangles": 59257,
    "source": "halls/grove.glb hall_xai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4674764
+   "bytes": 4674764,
+   "seated": true
   },
   "hall_grove_docker": {
    "label": "Docker hall",
@@ -2678,7 +2759,8 @@
    "triangles": 59447,
    "source": "halls/grove.glb hall_docker_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4252028
+   "bytes": 4252028,
+   "seated": true
   },
   "hall_grove_shell": {
    "label": "Shell hall",
@@ -2689,7 +2771,8 @@
    "triangles": 59501,
    "source": "halls/grove.glb hall_shell_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 5143624
+   "bytes": 5143624,
+   "seated": true
   },
   "hall_orbital_anthropic": {
    "label": "Claude hall",
@@ -2700,7 +2783,8 @@
    "triangles": 59634,
    "source": "halls/orbital.glb hall_anthropic_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3822304
+   "bytes": 3822304,
+   "seated": true
   },
   "hall_orbital_openai": {
    "label": "Codex hall",
@@ -2711,7 +2795,8 @@
    "triangles": 59241,
    "source": "halls/orbital.glb hall_openai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 4123304
+   "bytes": 4123304,
+   "seated": true
   },
   "hall_orbital_google": {
    "label": "Antigravity hall",
@@ -2722,7 +2807,8 @@
    "triangles": 58638,
    "source": "halls/orbital.glb hall_google_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3930216
+   "bytes": 3930216,
+   "seated": true
   },
   "hall_orbital_xai": {
    "label": "Grok hall",
@@ -2733,7 +2819,8 @@
    "triangles": 56185,
    "source": "halls/orbital.glb hall_xai_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3395804
+   "bytes": 3395804,
+   "seated": true
   },
   "hall_orbital_docker": {
    "label": "Docker hall",
@@ -2744,7 +2831,8 @@
    "triangles": 59886,
    "source": "halls/orbital.glb hall_docker_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3517352
+   "bytes": 3517352,
+   "seated": true
   },
   "hall_orbital_shell": {
    "label": "Shell hall",
@@ -2755,7 +2843,8 @@
    "triangles": 59059,
    "source": "halls/orbital.glb hall_shell_mesh",
    "licence": "AGPL-3.0-only (Agent Guild)",
-   "bytes": 3711976
+   "bytes": 3711976,
+   "seated": true
   }
  },
  "grounds": {

@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -908,6 +908,39 @@ func _castle() -> bool:
 	view.history.undo()
 	check(Vector2(view._selected().x, view._selected().z) == before, "castle: undo takes the nudge back")
 	view.free()
+	return true
+
+func _sloped(grade: float) -> WorldDoc:
+	var doc := WorldDoc.create("guild", "Slope", 3)
+	var res := WorldDoc.TERRAIN_RES
+	for o in res * res:
+		var p := WorldDoc.cell_to_world(o % res, o / res)
+		if p.x > -100.0 and p.x < -20.0 and p.y > -140.0 and p.y < -60.0:
+			doc.heights[o] = grade * (p.x + 100.0)
+	return doc
+
+func _seating() -> bool:
+	var doc := _sloped(0.05)
+	var view: Control = load("res://src/ui/editor_view.gd").new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(doc, "")
+	await process_frame
+	var hut := doc.add_thing("goblin_hut", -60.0, -100.0, 0.0, 1.0)
+	var barrel := doc.add_thing("barrel", -50.0, -100.0, 0.0, 1.0)
+	var span := Placing.ground_span(doc, "goblin_hut", -60.0, -100.0, 0.0, 1.0)
+	var y: float = view._scene.transform_of(hut).origin.y
+	check(is_equal_approx(y, span.x) and y < doc.height_at(-60.0, -100.0) - 0.05, "seating: a building sits on the lowest ground under it")
+	check(is_equal_approx(view._scene.transform_of(barrel).origin.y, doc.height_at(-50.0, -100.0)), "seating: small things keep standing at their middle")
+	check(Placing.why_not_one(doc, "goblin_hut", -70.0, -120.0, 0.0) == "", "seating: a gentle slope is fine")
+	view.free()
+	var steep := _sloped(0.4)
+	check(Placing.why_not_one(steep, "goblin_hut", -60.0, -100.0, 0.0) == Placing.STEEP and Placing.why_not_one(steep, "barrel", -60.0, -100.0, 0.0) == "", "seating: a building is refused on a steep slope, small things aren't")
+	var cross := _sloped(0.1)
+	check(Placing.why_not_one(cross, "fort_thick_straight", -60.0, -100.0, 0.0) == Placing.STEEP and Placing.why_not_one(cross, "fort_thick_straight", -60.0, -100.0, PI / 2.0) == "", "seating: the slope is judged along the piece as it's turned")
+	var wall := cross.add_thing("fort_thick_straight", -60.0, -100.0, PI / 2.0, 1.0)
+	check(Placing.why_not_moved(cross, wall, -60.0, -100.0, 0.0) == Placing.STEEP, "seating: turning or moving onto a steep spot is refused too")
 	return true
 
 func _alpha_surfaces(mesh: Mesh) -> int:
