@@ -774,6 +774,13 @@ func _place_panel() -> bool:
 	view._choose("fort_thick_straight")
 	check(view._next_scale == 1.0 and (is_equal_approx(fposmod(view._next_turn, PI / 2.0), 0.0) or is_equal_approx(fposmod(view._next_turn, PI / 2.0), PI / 2.0)), "panel: a castle piece starts at full size and square")
 	check(view._turn_step("fort_thick_straight") == PI / 2.0 and view._turn_step("barrel") == view.TURN_STEP, "panel: castle pieces turn a quarter at a time")
+	view._build_options()
+	var turns: Node = view._options.find_child("Turns", true, false)
+	var before: float = view._next_turn
+	turns.get_child(1).pressed.emit()
+	var after_e: float = view._next_turn
+	turns.get_child(0).pressed.emit()
+	check(turns.get_child_count() == 2 and is_equal_approx(wrapf(after_e - before, 0.0, TAU), PI / 2.0) and is_equal_approx(view._next_turn, before), "panel: the turn buttons turn the next piece both ways")
 	var spot := Placing.snapped(doc, "fort_thick_straight", Vector3(-60.13, 0.0, -80.38))
 	check(spot.x == -60.0 and spot.z == -80.5 and Placing.snapped(doc, "barrel", Vector3(1.13, 0.0, 2.38)) == Vector3(1.13, 0.0, 2.38), "panel: castle pieces snap to the grid and other things don't")
 	check(Placing.fitted_scale(doc, "fort_tower_round", spot.x, spot.z, 0.9) == 1.0, "panel: castle pieces keep their size")

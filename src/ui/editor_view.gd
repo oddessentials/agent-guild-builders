@@ -726,7 +726,20 @@ func _build_place_options() -> void:
 			_update_zones())
 		modes.add_child(b)
 	if place_mode == "one":
-		_options.add_child(ProTheme.note("Choose something, then click where it goes."))
+		_options.add_child(ProTheme.note("Choose something, then click where it goes. Q and E turn it first."))
+		var turns := HBoxContainer.new()
+		turns.name = "Turns"
+		turns.add_theme_constant_override("separation", 4)
+		_options.add_child(turns)
+		for entry in [["Turn (Q)", -1.0, "Turns it clockwise"], ["Turn (E)", 1.0, "Turns it anticlockwise"]]:
+			var b := Button.new()
+			b.text = entry[0]
+			b.tooltip_text = entry[2]
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.add_theme_font_size_override("font_size", 13)
+			var direction: float = entry[1]
+			b.pressed.connect(func(): _turn_next(direction))
+			turns.add_child(b)
 	else:
 		_options.add_child(ProTheme.note("Drag to paint. A mix paints several things together."))
 		_brush_slider()
@@ -1246,6 +1259,10 @@ func _commit_selected(label: String, field: String, was: Variant) -> void:
 	before[field] = was
 	history.things_edit("%s %s" % [label, _thing_name(thing.kind)], [thing], [before], true)
 
+func _turn_next(direction: float) -> void:
+	_next_turn = wrapf(_next_turn + direction * _turn_step(place_kind), 0.0, TAU)
+	_update_cursor(_stage.get_local_mouse_position())
+
 func _turn_step(kind: String) -> float:
 	return PI / 2.0 if Placing.modular(kind) else TURN_STEP
 
@@ -1755,8 +1772,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if tool == Tool.ARRANGE:
 			_turn_selected(by)
 		elif tool == Tool.SCATTER and place_mode == "one":
-			_next_turn = wrapf(_next_turn + by, 0.0, TAU)
-			_update_cursor(_stage.get_local_mouse_position())
+			_turn_next(signf(by))
 		else:
 			return
 	elif tool == Tool.ARRANGE and (event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE):
