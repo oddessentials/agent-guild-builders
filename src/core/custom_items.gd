@@ -54,7 +54,6 @@ const CHUNK_JSON := 0x4E4F534A
 const CHUNK_BIN := 0x004E4942
 
 static var root_override := ""
-static var _fingerprints := {}
 
 static func root() -> String:
 	return root_override if root_override != "" else OS.get_user_data_dir().path_join("custom")
@@ -88,27 +87,13 @@ static func _read_item(dir: String, id: String) -> Dictionary:
 		return {}
 	return parsed
 
-static func fingerprint(bytes: PackedByteArray) -> String:
-	var h := HashingContext.new()
-	h.start(HashingContext.HASH_SHA256)
-	h.update(bytes)
-	return h.finish().hex_encode()
+static func _tag(d: Dictionary) -> String:
+	return "model" if d.type == "model" else str(d.display)
 
-## Whether the stored source is still the file that was accepted. Uploads saved
-## before fingerprints have nothing to compare, so they're trusted as before.
-static func _source_matches(path: String, wanted: Variant) -> bool:
-	if wanted == null:
-		return FileAccess.file_exists(path)
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null or not wanted is String:
-		return false
-	var stamp := [FileAccess.get_modified_time(path), f.get_length()]
-	f.close()
-	var known: Array = _fingerprints.get(path, [])
-	if known.is_empty() or known[0] != stamp:
-		known = [stamp, fingerprint(FileAccess.get_file_as_bytes(path))]
-		_fingerprints[path] = known
-	return known[1] == wanted
+## Whether the stored source is still the accepted file: its id is made from
+## those exact bytes.
+static func _source_matches(path: String, d: Dictionary, id: String) -> bool:
+	return FileAccess.file_exists(path) and new_id(FileAccess.get_file_as_bytes(path), _tag(d)) == id
 
 static func _valid_item(d: Dictionary, id: String, dir: String) -> bool:
 	if d.get("id") != id or d.get("type") not in ["model", "image"] or not d.get("label") is String or name_problem(d.label) != "":
@@ -120,7 +105,7 @@ static func _valid_item(d: Dictionary, id: String, dir: String) -> bool:
 		return false
 	if d.type == "model" and d.get("upright", "") not in UPRIGHTS:
 		return false
-	return d.get("source") is String and d.source.is_valid_filename() and _source_matches(dir.path_join(d.source), d.get("sha256"))
+	return d.get("source") is String and d.source.is_valid_filename() and _source_matches(dir.path_join(d.source), d, id)
 
 ## Every upload as kit entries, ready to merge into the kit's models.
 static func models() -> Dictionary:
@@ -702,7 +687,10 @@ static func mesh_for(kind: String) -> ArrayMesh:
 	var info := item(kind)
 	if info.is_empty():
 		return ArrayMesh.new()
-	var source := folder(info.id).path_join(info.source)
+	return _stored_mesh(folder(info.id), info)
+
+static func _stored_mesh(dir: String, info: Dictionary) -> ArrayMesh:
+	var source := dir.path_join(info.source)
 	if info.type == "model":
 		return model_mesh(FileAccess.get_file_as_bytes(source), str(info.get("upright", "")))
 	var image := decode_picture(FileAccess.get_file_as_bytes(source))
@@ -752,7 +740,7 @@ static func add(path: String, settings: Dictionary) -> Dictionary:
 		return {"error": "Nothing to show: it has no visible shape."}
 	var factor := height / box.end.y
 	var info := {"format": 1, "id": id, "type": type, "label": str(settings.label).strip_edges(), "height": height,
-		"radius": maxf(0.01, snappedf(maxf(box.size.x, box.size.z) / 2.0 * factor, 0.01)), "bytes": bytes.size(), "sha256": fingerprint(bytes),
+		"radius": maxf(0.01, snappedf(maxf(box.size.x, box.size.z) / 2.0 * factor, 0.01)), "bytes": bytes.size(),
 		"source": "model.glb" if type == "model" else "image." + str(checked.kind)}
 	if type == "model":
 		info.triangles = int(checked.triangles)
@@ -772,7 +760,7 @@ static func add(path: String, settings: Dictionary) -> Dictionary:
 		err = plain_icon(type).save_webp(staging.path_join(THUMB), true, 0.82)
 	if err == OK:
 		err = _write(staging.path_join(ITEM_FILE), (JSON.stringify(info, " ") + "\n").to_utf8_buffer())
-	if err == OK and _read_item(staging, id).is_empty():
+	if err == OK and (_read_item(staging, id).is_empty() or _stored_mesh(staging, info).get_surface_count() == 0):
 		err = ERR_FILE_CORRUPT
 	if err == OK:
 		err = _swap_in(staging, dir)

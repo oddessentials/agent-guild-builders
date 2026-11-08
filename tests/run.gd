@@ -1646,8 +1646,102 @@ func _custom_hardening(files: String) -> void:
 	WorldScene.refresh_custom()
 	check(replaced.error == "" and replaced.get("kind", "") == crate_kind and WorldScene.load_kit().models.has(crate_kind) and FileAccess.get_file_as_bytes(crate_dir.path_join("model.glb")) == whole and Clearance.check_world(doc).valid, "custom: re-uploading the same file replaces a damaged copy: " + replaced.error)
 	check(not DirAccess.dir_exists_absolute(crate_dir + ".saving") and not DirAccess.dir_exists_absolute(crate_dir + ".old"), "custom: replacing leaves nothing behind")
-	var info = JSON.parse_string(FileAccess.get_file_as_string(crate_dir.path_join(CustomItems.ITEM_FILE)))
-	info.erase("sha256")
-	_store(crate_dir.path_join(CustomItems.ITEM_FILE), JSON.stringify(info).to_utf8_buffer())
+	await _custom_integrity(files)
+
+func _usable(kind: String, doc: WorldDoc) -> Array:
 	WorldScene.refresh_custom()
-	check(WorldScene.load_kit().models.has(crate_kind), "custom: an upload saved before fingerprints still shows")
+	return [WorldScene.load_kit().models.has(kind), CustomItems.missing_in(doc).is_empty(), Clearance.check_world(doc).valid, not CustomItems.item(kind).is_empty()]
+
+func _flipped(bytes: PackedByteArray) -> PackedByteArray:
+	var out := bytes.duplicate()
+	for i in range(100, 200):
+		out[i] = out[i] ^ 0xFF
+	return out
+
+func _arranged(wrap: bool, mode: int) -> AABB:
+	var body := MeshInstance3D.new()
+	var block := BoxMesh.new()
+	block.size = Vector3(1, 2, 3)
+	body.mesh = block
+	body.rotation = Vector3(0.0, deg_to_rad(30.0), 0.0)
+	body.scale = Vector3(2, 2, 1)
+	var arm := MeshInstance3D.new()
+	var cube := BoxMesh.new()
+	cube.size = Vector3(0.5, 0.5, 0.5)
+	arm.mesh = cube
+	arm.position = Vector3(1, 0, 0)
+	body.add_child(arm)
+	arm.owner = body
+	var top: Node = body
+	if wrap:
+		top = Node3D.new()
+		top.add_child(body)
+		body.owner = top
+		arm.owner = top
+	var g := GLTFDocument.new()
+	g.root_node_mode = mode
+	var state := GLTFState.new()
+	g.append_from_scene(top, state)
+	var bytes := g.generate_buffer(state)
+	top.free()
+	return WorldScene.glb_mesh(bytes, true).get_aabb()
+
+func _custom_integrity(files: String) -> void:
+	var bucket_bytes := FileAccess.get_file_as_bytes(WorldScene.kit_file("models/bucket.glb"))
+	var bucket := _file(files, "bucket.glb", bucket_bytes)
+	var kind: String = CustomItems.add(bucket, {"type": "model", "label": "Bucket", "height": 1.0, "rights": true, "upright": "", "seated": false}).get("kind", "")
+	var dir := CustomItems.folder(CustomItems.id_of(kind))
+	var source := dir.path_join("model.glb")
+	check(kind == CustomItems.PREFIX + CustomItems.new_id(bucket_bytes, "model") and CustomItems.new_id(FileAccess.get_file_as_bytes(source), "model") == CustomItems.id_of(kind), "integrity: the stored model hashes to its id exactly as the id was made")
+	var flag := Image.create(300, 200, false, Image.FORMAT_RGB8)
+	flag.fill(Color(0.2, 0.6, 0.3))
+	var flag_bytes := flag.save_png_to_buffer()
+	var flag_path := _file(files, "flag.png", flag_bytes)
+	for display in CustomItems.DISPLAYS:
+		var shown: String = CustomItems.add(flag_path, {"type": "image", "label": "Flag", "height": 2.0, "rights": true, "display": display}).get("kind", "")
+		var stored := CustomItems.folder(CustomItems.id_of(shown)).path_join("image.png")
+		check(shown == CustomItems.PREFIX + CustomItems.new_id(flag_bytes, display) and CustomItems.new_id(FileAccess.get_file_as_bytes(stored), display) == CustomItems.id_of(shown) and not CustomItems.item(shown).is_empty(), "integrity: a picture on a %s hashes to its id exactly as the id was made" % display)
+	check(not FileAccess.get_file_as_string(dir.path_join(CustomItems.ITEM_FILE)).contains("sha256"), "integrity: no separate fingerprint is stored")
+	var doc := WorldDoc.create("guild", "Integrity", 3)
+	doc.add_thing(kind, 120.0, -120.0, 0.0, 1.0)
+	var settings := {"type": "model", "label": "Bucket", "height": 1.0, "rights": true, "upright": "", "seated": false}
+	for cycle in 3:
+		_store(source, _flipped(bucket_bytes))
+		check(FileAccess.get_file_as_bytes(source).size() == bucket_bytes.size() and _usable(kind, doc) == [false, false, false, false], "integrity: a same-length corruption is seen at once, cycle %d" % cycle)
+		var repaired := CustomItems.add(bucket, settings)
+		check(repaired.error == "" and _usable(kind, doc) == [true, true, true, true] and WorldScene.mesh_of(kind).get_surface_count() > 0, "integrity: an immediate repair is usable at once, cycle %d: %s" % [cycle, repaired.error])
+	var picture_kind := CustomItems.PREFIX + CustomItems.new_id(flag_bytes, "sign")
+	var picture_source := CustomItems.folder(CustomItems.id_of(picture_kind)).path_join("image.png")
+	_store(picture_source, _flipped(flag_bytes))
+	WorldScene.refresh_custom()
+	check(not WorldScene.load_kit().models.has(picture_kind), "integrity: a corrupted picture is unavailable too")
+	var legacy = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join(CustomItems.ITEM_FILE)))
+	legacy.erase("sha256")
+	_store(dir.path_join(CustomItems.ITEM_FILE), JSON.stringify(legacy).to_utf8_buffer())
+	check(_usable(kind, doc) == [true, true, true, true], "integrity: an upload saved before fingerprints still shows")
+	_store(source, bucket_bytes.slice(0, bucket_bytes.size() / 2))
+	check(_usable(kind, doc) == [false, false, false, false], "integrity: a damaged upload saved before fingerprints is unavailable, flagged and blocks export")
+	check(CustomItems.add(bucket, settings).error == "" and _usable(kind, doc) == [true, true, true, true], "integrity: re-uploading repairs an upload saved before fingerprints")
+	legacy = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join(CustomItems.ITEM_FILE)))
+	legacy.sha256 = "0".repeat(64)
+	_store(dir.path_join(CustomItems.ITEM_FILE), JSON.stringify(legacy).to_utf8_buffer())
+	check(_usable(kind, doc) == [true, true, true, true], "integrity: an upload is checked by its id, whatever else its file says")
+	var reference := AABB()
+	var body_xf := Transform3D(Basis.from_euler(Vector3(0.0, deg_to_rad(30.0), 0.0)).scaled_local(Vector3(2, 2, 1)), Vector3.ZERO)
+	reference = body_xf * AABB(Vector3(-0.5, -1.0, -1.5), Vector3(1, 2, 3))
+	reference = reference.merge(body_xf * Transform3D(Basis(), Vector3(1, 0, 0)) * AABB(Vector3(-0.25, -0.25, -0.25), Vector3(0.5, 0.5, 0.5)))
+	var arrangements := {"holder root": _arranged(true, GLTFDocument.ROOT_NODE_MODE_SINGLE_ROOT), "mesh as the root": _arranged(false, GLTFDocument.ROOT_NODE_MODE_SINGLE_ROOT), "several roots": _arranged(true, GLTFDocument.ROOT_NODE_MODE_MULTI_ROOT)}
+	for name in arrangements:
+		var box: AABB = arrangements[name]
+		check(box.position.is_equal_approx(reference.position) and box.size.is_equal_approx(reference.size), "geometry: %s gives the model's true bounds, transforms applied once: %s vs %s" % [name, box, reference])
+	var kit_dir := WorldScene.kit_file("models")
+	var plain_roots := true
+	for name in DirAccess.get_files_at(kit_dir):
+		if name.ends_with(".glb"):
+			var g := GLTFDocument.new()
+			var state := GLTFState.new()
+			if g.append_from_file(kit_dir.path_join(name), state) == OK:
+				var root: Node = g.generate_scene(state)
+				plain_roots = plain_roots and (not root is Node3D or (root as Node3D).transform == Transform3D.IDENTITY)
+				root.free()
+	check(plain_roots, "geometry: every kit model's root is untransformed, so applying the root changes no kit model")
