@@ -252,7 +252,7 @@ static func _list(json: Dictionary, key: String) -> Variant:
 ## Checks a .glb's structure and counts before Godot reads it:
 ## {error, warning, triangles}.
 static func check_glb(bytes: PackedByteArray) -> Dictionary:
-	var out := {"error": "", "warning": "", "triangles": 0}
+	var out := {"error": "", "warning": "", "triangles": 0, "textures": 0, "largest_texture": 0}
 	if bytes.size() > MODEL_BYTES:
 		out.error = _too_large(bytes.size(), MODEL_BYTES)
 		return out
@@ -328,6 +328,8 @@ static func _glb_problem(json: Dictionary, bin: PackedByteArray, has_bin: bool, 
 			return "Damaged .glb: image %d's size can't be read." % i
 		if maxi(size.x, size.y) > LARGEST_PICTURE:
 			return _too_big_picture("Texture %d" % i, size)
+		out.textures += 1
+		out.largest_texture = maxi(out.largest_texture, maxi(size.x, size.y))
 	var accessors: Array = lists.accessors
 	for i in accessors.size():
 		var problem := _accessor_problem(accessors[i], views)
@@ -432,6 +434,20 @@ static func _accessor_problem(a: Dictionary, views: Array) -> String:
 	return ""
 
 ## Checks a model file: {error, warning, triangles, bytes}.
+## What the checks found in an accepted file, in a few words.
+static func summary(checked: Dictionary) -> String:
+	if checked.has("triangles") and not checked.has("image"):
+		var textures := int(checked.get("textures", 0))
+		var largest := int(checked.get("largest_texture", 0))
+		var text := "Checked: %s triangles, " % number(int(checked.triangles))
+		if textures == 0:
+			return text + "no textures."
+		text += "%d %s, largest %s px" % [textures, "texture" if textures == 1 else "textures", number(largest)]
+		return text + (", scaled to %s px." % number(TEXTURE_SIDE) if largest > TEXTURE_SIDE else ".")
+	var size: Vector2i = checked.size
+	var shown: Vector2i = checked.image.get_size()
+	return "Checked: %s × %s px%s." % [number(size.x), number(size.y), ", shown at %s × %s px" % [number(shown.x), number(shown.y)] if shown != size else ""]
+
 static func check_model_file(path: String) -> Dictionary:
 	if not path.get_extension().to_lower() == "glb":
 		return {"error": "Choose a .glb file (glTF 2.0 binary).", "warning": "", "triangles": 0}
@@ -566,9 +582,9 @@ static func display_mesh(image: Image, display: String, height: float) -> ArrayM
 	wood.albedo_color = Color(0.42, 0.29, 0.18)
 	wood.roughness = 0.85
 	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color(0.33, 0.34, 0.36)
-	metal.metallic = 0.6
-	metal.roughness = 0.45
+	metal.albedo_color = Color(0.7, 0.71, 0.73)
+	metal.metallic = 0.2
+	metal.roughness = 0.5
 	var painted := Image.create(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	painted.fill(Color.WHITE)
 	var source := image.duplicate() as Image

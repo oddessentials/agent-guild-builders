@@ -6,6 +6,7 @@ signal added(kind: String)
 
 const FIGURE_HEIGHT := 1.8
 const PREVIEW := Vector2(420, 320)
+const FORM_WIDTH := 380
 
 var type := "model"
 var file_path := ""
@@ -39,7 +40,7 @@ func _init() -> void:
 	body.add_theme_constant_override("separation", 16)
 	add_child(body)
 	var form := VBoxContainer.new()
-	form.custom_minimum_size = Vector2(380, 0)
+	form.custom_minimum_size = Vector2(FORM_WIDTH, 0)
 	form.add_theme_constant_override("separation", 6)
 	body.add_child(form)
 	var types := HBoxContainer.new()
@@ -55,17 +56,16 @@ func _init() -> void:
 		b.pressed.connect(func(): set_type(chosen))
 		types.add_child(b)
 		_type_buttons[chosen] = b
-	_rules = ProTheme.note("")
-	_rules.custom_minimum_size = Vector2(380, 0)
+	_rules = _note("", FORM_WIDTH)
 	form.add_child(_rules)
 	var pick := Button.new()
 	pick.name = "Choose"
 	pick.text = "Choose a file…"
 	pick.pressed.connect(_choose_file)
 	form.add_child(pick)
-	_file_label = ProTheme.note("No file chosen.")
+	_file_label = _note("No file chosen.", FORM_WIDTH)
 	form.add_child(_file_label)
-	_message = ProTheme.note("")
+	_message = _note("", FORM_WIDTH)
 	_message.visible = false
 	form.add_child(_message)
 	form.add_child(ProTheme.heading("Name", 13))
@@ -75,7 +75,7 @@ func _init() -> void:
 	_name.text_changed.connect(func(_t): _refresh_ok())
 	form.add_child(_name)
 	var height_row := HBoxContainer.new()
-	var height_label := ProTheme.note("Height in metres")
+	var height_label := _note("Height in metres")
 	height_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	height_row.add_child(height_label)
 	_height = SpinBox.new()
@@ -89,7 +89,7 @@ func _init() -> void:
 	_model_rows = VBoxContainer.new()
 	form.add_child(_model_rows)
 	var upright_row := HBoxContainer.new()
-	var upright_label := ProTheme.note("Upright fix")
+	var upright_label := _note("Upright fix")
 	upright_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	upright_row.add_child(upright_label)
 	_upright = OptionButton.new()
@@ -107,7 +107,7 @@ func _init() -> void:
 	_image_rows = VBoxContainer.new()
 	form.add_child(_image_rows)
 	var display_row := HBoxContainer.new()
-	var display_label := ProTheme.note("Show it on")
+	var display_label := _note("Show it on")
 	display_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	display_row.add_child(display_label)
 	_display = OptionButton.new()
@@ -122,7 +122,7 @@ func _init() -> void:
 	_rights.text = "I made this or have the rights to use it."
 	_rights.toggled.connect(func(_on): _refresh_ok())
 	form.add_child(_rights)
-	_why = ProTheme.note("")
+	_why = _note("", FORM_WIDTH)
 	form.add_child(_why)
 	var look := VBoxContainer.new()
 	body.add_child(look)
@@ -131,11 +131,19 @@ func _init() -> void:
 	frame.stretch = true
 	look.add_child(frame)
 	_stage = ThumbStage.make(frame)
-	_caption = ProTheme.note("")
+	_caption = _note("", int(PREVIEW.x))
 	look.add_child(_caption)
 	confirmed.connect(_add)
 	canceled.connect(queue_free)
 	set_type("model")
+
+func _note(text: String, width := 0) -> Label:
+	var label := ProTheme.note(text)
+	if width > 0:
+		label.custom_minimum_size = Vector2(width, 0)
+	else:
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	return label
 
 func display() -> String:
 	return CustomItems.DISPLAYS.keys()[maxi(_display.selected, 0)]
@@ -192,11 +200,13 @@ func use_file(chosen: String) -> void:
 			_natural = CustomItems.stand(_raw, upright()).get_aabb().size.y
 			_height.set_value_no_signal(clampf(snappedf(_natural, 0.05), CustomItems.LOWEST, CustomItems.TALLEST))
 			var unusual := "" if _natural >= CustomItems.LOWEST and _natural <= CustomItems.TALLEST else "As made it's %.2f m tall. Set its real height." % _natural
-			_say(_checked.warning + (" " if _checked.warning != "" and unusual != "" else "") + unusual, "warn")
+			var notes := " ".join([_checked.warning, unusual].filter(func(n): return n != ""))
+			_say(CustomItems.summary(_checked) + (" " + notes if notes != "" else ""), "warn" if notes != "" else "")
 	else:
 		_checked = CustomItems.check_image_file(chosen)
 		if _checked.error == "":
 			_image = _checked.image
+			_say(CustomItems.summary(_checked), "")
 	if _checked.error != "":
 		_say(_checked.error, "danger")
 	elif _name.text.strip_edges() == "":

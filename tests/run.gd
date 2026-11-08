@@ -1382,7 +1382,7 @@ func _custom() -> bool:
 	check(models.has("barrel") and models.size() > 100, "custom: the kit's own models stay")
 	check(is_equal_approx(WorldScene.mesh_of(kind).get_aabb().end.y, 6.0), "custom: the model is drawn at its height")
 	check(ProTheme.thumb(kind) != null, "custom: it has a picture")
-	check(not Placing.modular(kind) and not Placing.joins(kind) and Placing.sizes(kind) == Vector2(Placing.SMALLEST, Placing.LARGEST), "custom: uploads never join and aren't modular")
+	check(not Placing.modular(kind) and not Placing.joins(kind) and Placing.sizes(kind) == Vector2.ONE, "custom: uploads never join, aren't modular and place at their own height")
 	var slope := _sloped(0.05)
 	check(Placing.why_not_one(slope, kind, -60.0, -100.0, 0.0) == "" and Placing.why_not_one(slope, kind, 0.0, 0.0, 0.0) != "", "custom: placed like any item, kept off the crews' ground")
 	var placed := slope.add_thing(kind, -60.0, -100.0, 0.0, 1.0)
@@ -1400,6 +1400,7 @@ func _custom() -> bool:
 	check(CustomItems.rename(kind, "Big barrel") == "" and CustomItems.rename(kind, "A very long name for my company HQ").begins_with("Name too long"), "custom: renames, and refuses a name that won't fit")
 	WorldScene.refresh_custom()
 	check(WorldScene.load_kit().models[kind].label == "Big barrel", "custom: the new name shows")
+	await _custom_size(kind, 6.0)
 	var view: Control = load("res://src/ui/editor_view.gd").new()
 	root.size = Vector2i(1200, 800)
 	root.add_child(view)
@@ -1474,6 +1475,11 @@ func _custom() -> bool:
 	root.add_child(dialog)
 	dialog.use_file(_file(files, "broken.glb", magic))
 	check(dialog._message.text.begins_with("Not a .glb file") and dialog.get_ok_button().disabled, "dialog: a refused file says why and can't be added")
+	dialog.use_file(good)
+	var textures := int(CustomItems.check_glb(barrel).textures)
+	check(dialog._message.text.begins_with("Checked: %s triangles, %d %s, largest " % [CustomItems.number(int(models.barrel.triangles)), textures, "texture" if textures == 1 else "textures"]) and textures > 0, "dialog: says what the checks found: " + dialog._message.text)
+	check(CustomItems.summary(CustomItems.check_glb(textured)) == "Checked: 12 triangles, 1 texture, largest 3,000 px, scaled to 2,048 px.", "dialog: says when a texture will be scaled down: " + CustomItems.summary(CustomItems.check_glb(textured)))
+	dialog._name.text = ""
 	dialog.use_file(_file(files, "office_tower.glb", _scene_glb(_plane(200))))
 	check(dialog._message.text.contains("Heavy model") and dialog._name.text == "Office tower" and dialog.why_not().contains("rights"), "dialog: warns, names it from the file, and asks for the rights: %s / %s" % [dialog._message.text, dialog._name.text])
 	dialog._rights.button_pressed = true
@@ -1487,7 +1493,7 @@ func _custom() -> bool:
 	root.add_child(dialog)
 	dialog.set_type("image")
 	dialog.use_file(_file(files, "flag.png", picture.save_png_to_buffer()))
-	check(dialog._message.text == "" and dialog._shown != null and is_equal_approx(dialog._height.value, CustomItems.DISPLAY_HEIGHT.sign), "dialog: a picture previews on its sign")
+	check(dialog._message.text == "Checked: 400 × 200 px." and dialog._shown != null and is_equal_approx(dialog._height.value, CustomItems.DISPLAY_HEIGHT.sign), "dialog: a picture previews on its sign: " + dialog._message.text)
 	dialog.free()
 	for dir in [CustomItems.root_override, WorldLibrary.root_override, files]:
 		_remove_tree(dir)
@@ -1495,3 +1501,51 @@ func _custom() -> bool:
 	WorldLibrary.root_override = keep_worlds
 	WorldScene.refresh_custom()
 	return true
+
+func _custom_size(kind: String, height: float) -> void:
+	var doc := WorldDoc.create("guild", "Sizes", 3)
+	var view: Control = load("res://src/ui/editor_view.gd").new()
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(doc, "")
+	await process_frame
+	var top := func(t: Dictionary) -> float: return view._scene.transform_of(t).basis.get_scale().y * WorldScene.mesh_of(kind).get_aabb().end.y
+	view.place_mode = "one"
+	view._choose(kind)
+	check(view._next_scale == 1.0, "custom size: the next copy is set to its own height")
+	view._scatter_at(Vector3(100.0, 0.0, -100.0), true)
+	view._finish_stroke()
+	var one: Dictionary = doc.data.things[-1]
+	check(one.kind == kind and one.scale == 1.0 and is_equal_approx(top.call(one), height), "custom size: a placed copy is exactly the height entered: %.3f" % top.call(one))
+	view.place_mode = "paint"
+	view._choose(kind)
+	view.brush_radius = 4.0
+	for at in [Vector3(-120.0, 0.0, -120.0), Vector3(120.0, 0.0, -150.0), Vector3(-150.0, 0.0, -60.0)]:
+		view._scatter_at(at, true)
+	view._finish_stroke()
+	var painted: Array = doc.data.things.filter(func(t): return t.kind == kind and t.id != one.id)
+	check(not painted.is_empty() and painted.all(func(t): return t.scale == 1.0), "custom size: painted copies are their own height too")
+	var agrees := true
+	for x in range(-60, 61, 10):
+		var z := 50.0
+		var limit := Clearance.refuse(float(x), z, doc.height_at(x, z) + height) != ""
+		agrees = agrees and (Placing.why_not_one(doc, kind, float(x), z) != "") == limit
+		agrees = agrees and Placing.fitted_scale(doc, kind, float(x), z, Placing.LARGEST) == 1.0
+	check(agrees, "custom size: the limits near the Yard judge it at its own height, never shrunk to fit")
+	view._select_tool(view.Tool.ARRANGE)
+	view._select_thing(int(one.id))
+	view._preview_selected("scale", 1.5)
+	view._commit_selected("Resize", "scale", 1.0)
+	var resized: Dictionary = view._selected()
+	check(resized.scale == 1.5 and is_equal_approx(top.call(resized), height * 1.5), "custom size: a copy can still be resized on purpose")
+	var folder := OS.get_user_data_dir().path_join("custom-size-test")
+	WorldDoc.remove_folder(folder)
+	doc.save(folder)
+	var back := WorldDoc.open(folder)
+	check(back != null and back.data.things.filter(func(t): return t.id == one.id)[0].scale == 1.5, "custom size: a resized copy keeps its size when the world opens again")
+	WorldDoc.remove_folder(folder)
+	view._select_tool(view.Tool.SCATTER)
+	view.place_mode = "one"
+	view._choose(kind)
+	check(view._next_scale == 1.0, "custom size: resizing one copy doesn't change the next")
+	view.free()
