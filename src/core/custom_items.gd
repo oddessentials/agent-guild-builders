@@ -569,7 +569,12 @@ static func display_mesh(image: Image, display: String, height: float) -> ArrayM
 	metal.albedo_color = Color(0.33, 0.34, 0.36)
 	metal.metallic = 0.6
 	metal.roughness = 0.45
-	var painted := image.duplicate() as Image
+	var painted := Image.create(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	painted.fill(Color.WHITE)
+	var source := image.duplicate() as Image
+	source.convert(Image.FORMAT_RGBA8)
+	painted.blend_rect(source, Rect2i(Vector2i.ZERO, source.get_size()), Vector2i.ZERO)
+	painted.convert(Image.FORMAT_RGB8)
 	painted.generate_mipmaps()
 	var picture := StandardMaterial3D.new()
 	picture.albedo_texture = ImageTexture.create_from_image(painted)

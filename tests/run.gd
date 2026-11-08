@@ -1475,7 +1475,7 @@ func _custom() -> bool:
 	dialog.use_file(_file(files, "broken.glb", magic))
 	check(dialog._message.text.begins_with("Not a .glb file") and dialog.get_ok_button().disabled, "dialog: a refused file says why and can't be added")
 	dialog.use_file(_file(files, "office_tower.glb", _scene_glb(_plane(200))))
-	check(dialog._message.text.contains("Heavy model") and dialog._name.text == "Office Tower" and dialog.why_not().contains("rights"), "dialog: warns, names it from the file, and asks for the rights: %s / %s" % [dialog._message.text, dialog._name.text])
+	check(dialog._message.text.contains("Heavy model") and dialog._name.text == "Office tower" and dialog.why_not().contains("rights"), "dialog: warns, names it from the file, and asks for the rights: %s / %s" % [dialog._message.text, dialog._name.text])
 	dialog._rights.button_pressed = true
 	dialog._refresh_ok()
 	check(not dialog.get_ok_button().disabled and dialog._shown != null, "dialog: ready to add, with a preview")

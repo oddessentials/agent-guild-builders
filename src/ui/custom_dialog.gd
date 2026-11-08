@@ -56,6 +56,7 @@ func _init() -> void:
 		types.add_child(b)
 		_type_buttons[chosen] = b
 	_rules = ProTheme.note("")
+	_rules.custom_minimum_size = Vector2(380, 0)
 	form.add_child(_rules)
 	var pick := Button.new()
 	pick.name = "Choose"
@@ -199,7 +200,8 @@ func use_file(chosen: String) -> void:
 	if _checked.error != "":
 		_say(_checked.error, "danger")
 	elif _name.text.strip_edges() == "":
-		_name.text = _fitted_name(chosen.get_file().get_basename().replace("_", " ").replace("-", " ").strip_edges().capitalize())
+		var plain := chosen.get_file().get_basename().replace("_", " ").replace("-", " ").strip_edges()
+		_name.text = _fitted_name(plain.left(1).to_upper() + plain.substr(1))
 	_refresh_preview()
 	_refresh_ok()
 

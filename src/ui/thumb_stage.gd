@@ -68,8 +68,11 @@ static func frame(stage: SubViewport, box: AABB, picture := ITEM) -> void:
 static func shoot(stage: SubViewport, meshes: Array) -> Image:
 	var holder := arrange(stage, meshes)
 	frame(stage, bounds(holder))
+	var idle := OS.low_processor_usage_mode
+	OS.low_processor_usage_mode = false
 	for i in 4:
 		await RenderingServer.frame_post_draw
+	OS.low_processor_usage_mode = idle
 	var img := stage.get_texture().get_image()
 	holder.free()
 	if img == null or img.is_empty():

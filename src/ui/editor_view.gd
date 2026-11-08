@@ -861,7 +861,7 @@ func _open_custom_dialog() -> void:
 	var d := CustomDialog.new()
 	add_child(d)
 	d.added.connect(_on_custom_added)
-	d.popup_centered()
+	d.popup_centered(Vector2i(860, 560))
 
 func _on_custom_added(kind: String) -> void:
 	_uploads_changed()
