@@ -1745,3 +1745,107 @@ func _custom_integrity(files: String) -> void:
 				plain_roots = plain_roots and (not root is Node3D or (root as Node3D).transform == Transform3D.IDENTITY)
 				root.free()
 	check(plain_roots, "geometry: every kit model's root is untransformed, so applying the root changes no kit model")
+	_custom_mirrors()
+
+func _outward(arrays: Array) -> Array:
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var order: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(v.size()))
+	var right := 0
+	var wrong := 0
+	for t in range(0, order.size(), 3):
+		var a := v[order[t]]
+		if (v[order[t + 1]] - a).cross(v[order[t + 2]] - a).dot(n[order[t]]) < 0.0:
+			right += 1
+		else:
+			wrong += 1
+	return [right, wrong]
+
+func _mesh_outward(mesh: Mesh) -> Array:
+	var total := [0, 0]
+	for s in mesh.get_surface_count():
+		var f := _outward(mesh.surface_get_arrays(s))
+		total = [total[0] + f[0], total[1] + f[1]]
+	return total
+
+func _mirrored_glb(top_scale: Vector3, child_scale: Vector3, wrap: bool) -> PackedByteArray:
+	var top := MeshInstance3D.new() if not wrap else Node3D.new()
+	top.scale = top_scale
+	if top is MeshInstance3D:
+		top.mesh = BoxMesh.new()
+	var child := MeshInstance3D.new()
+	child.mesh = BoxMesh.new()
+	child.scale = child_scale
+	child.position = Vector3(1.5, 0.0, 0.0)
+	top.add_child(child)
+	child.owner = top
+	var g := GLTFDocument.new()
+	g.root_node_mode = GLTFDocument.ROOT_NODE_MODE_SINGLE_ROOT
+	var state := GLTFState.new()
+	g.append_from_scene(top, state)
+	var bytes := g.generate_buffer(state)
+	top.free()
+	return bytes
+
+func _custom_mirrors() -> void:
+	var cases := {
+		"a mirrored mesh as the root": _mirrored_glb(Vector3(-1, 1, 1), Vector3.ONE, false),
+		"a mirrored child in a holder": _mirrored_glb(Vector3.ONE, Vector3(-1, 1, 1), true),
+		"a mirrored parent with a plain child": _mirrored_glb(Vector3(-1, 1, 1), Vector3.ONE, true),
+		"two mirrors that cancel": _mirrored_glb(Vector3(-1, 1, 1), Vector3(1, 1, -1), true),
+		"no mirror at all": _mirrored_glb(Vector3.ONE, Vector3.ONE, false),
+	}
+	for name in cases:
+		var faces := _mesh_outward(WorldScene.glb_mesh(cases[name], true))
+		check(faces[0] > 0 and faces[1] == 0, "mirrors: every face points outward for %s: %s" % [name, faces])
+	var root_box := WorldScene.glb_mesh(cases["a mirrored mesh as the root"], true).get_aabb()
+	var flip := Transform3D(Basis.from_scale(Vector3(-1, 1, 1)), Vector3.ZERO)
+	var reference := (flip * AABB(Vector3(-0.5, -0.5, -0.5), Vector3.ONE)).merge(flip * Transform3D(Basis(), Vector3(1.5, 0, 0)) * AABB(Vector3(-0.5, -0.5, -0.5), Vector3.ONE))
+	check(root_box.position.is_equal_approx(reference.position) and root_box.size.is_equal_approx(reference.size), "mirrors: a mirrored model keeps its true bounds: %s vs %s" % [root_box, reference])
+	var box_arrays := BoxMesh.new().get_mesh_arrays()
+	var lean := Transform3D(Basis(Vector3.UP, 0.4).scaled(Vector3(-2, 1, 1.5)), Vector3(3, 0, 1))
+	for xf in [lean, Transform3D(Basis.from_scale(Vector3(2, 1, 1)), Vector3.ZERO)]:
+		var mirrored: bool = xf.basis.determinant() < 0.0
+		var arrays := box_arrays.duplicate(true)
+		var before_order: PackedInt32Array = arrays[Mesh.ARRAY_INDEX].duplicate()
+		var n0: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL].duplicate()
+		var t0: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT].duplicate()
+		WorldScene._transform_arrays(arrays, xf)
+		var n1: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var t1: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT]
+		var handed := true
+		for i in n0.size():
+			var bitangent := n0[i].cross(Vector3(t0[i * 4], t0[i * 4 + 1], t0[i * 4 + 2])) * t0[i * 4 + 3]
+			var rebuilt := n1[i].cross(Vector3(t1[i * 4], t1[i * 4 + 1], t1[i * 4 + 2])) * t1[i * 4 + 3]
+			handed = handed and rebuilt.dot(xf.basis * bitangent) > 0.0
+		var faces := _outward(arrays)
+		check(faces[1] == 0 and handed, "mirrors: an indexed mesh keeps outward faces and tangent handedness, mirrored=%s: %s" % [mirrored, faces])
+		if not mirrored:
+			check(arrays[Mesh.ARRAY_INDEX] == before_order, "mirrors: an unmirrored mesh keeps its triangles exactly as they were")
+		var st := SurfaceTool.new()
+		st.create_from_arrays(box_arrays.duplicate(true))
+		st.deindex()
+		var loose := st.commit_to_arrays()
+		var loose_count: int = loose[Mesh.ARRAY_VERTEX].size()
+		WorldScene._transform_arrays(loose, xf)
+		var loose_faces := _outward(loose)
+		check(loose_faces[1] == 0 and loose[Mesh.ARRAY_VERTEX].size() == loose_count and (loose[Mesh.ARRAY_INDEX] != null) == mirrored, "mirrors: a mesh without an index list keeps outward faces, mirrored=%s: %s" % [mirrored, loose_faces])
+	var kit_dir := WorldScene.kit_file("models")
+	var kit_mirrored := []
+	for name in DirAccess.get_files_at(kit_dir):
+		if name.ends_with(".glb"):
+			var g := GLTFDocument.new()
+			var state := GLTFState.new()
+			if g.append_from_file(kit_dir.path_join(name), state) == OK:
+				var root: Node = g.generate_scene(state)
+				var found: Array = root.find_children("*", "MeshInstance3D", true, false)
+				if root is MeshInstance3D:
+					found.push_front(root)
+				for mi in found:
+					var xf: Transform3D = WorldScene._to_root(mi, root)
+					if root is Node3D:
+						xf = (root as Node3D).transform * xf
+					if xf.basis.determinant() < 0.0:
+						kit_mirrored.append(name)
+				root.free()
+	check(kit_mirrored.is_empty(), "mirrors: no kit model contains a mirrored mesh, so the kit is unchanged: %s" % [kit_mirrored])

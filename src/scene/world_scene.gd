@@ -252,6 +252,7 @@ static func _transform_arrays(arrays: Array, xf: Transform3D) -> void:
 		for i in nn.size():
 			nn[i] = (basis * nn[i]).normalized()
 		arrays[Mesh.ARRAY_NORMAL] = nn
+	var mirrored := xf.basis.determinant() < 0.0
 	var t = arrays[Mesh.ARRAY_TANGENT]
 	if t != null:
 		var tt: PackedFloat32Array = t
@@ -260,7 +261,16 @@ static func _transform_arrays(arrays: Array, xf: Transform3D) -> void:
 			tt[i * 4] = d.x
 			tt[i * 4 + 1] = d.y
 			tt[i * 4 + 2] = d.z
+			if mirrored:
+				tt[i * 4 + 3] = -tt[i * 4 + 3]
 		arrays[Mesh.ARRAY_TANGENT] = tt
+	if mirrored:
+		var order: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(v.size()))
+		for i in range(0, order.size() - 2, 3):
+			var second := order[i + 1]
+			order[i + 1] = order[i + 2]
+			order[i + 2] = second
+		arrays[Mesh.ARRAY_INDEX] = order
 
 func build(document: WorldDoc) -> void:
 	doc = document
