@@ -50,7 +50,7 @@ static func _too_steep(doc: WorldDoc, kind: String, x: float, z: float, turn: fl
 	return STEEP if span.y - span.x > STEEPEST else ""
 
 static func sizes(kind: String) -> Vector2:
-	return Vector2.ONE if modular(kind) else Vector2(SMALLEST, LARGEST)
+	return Vector2.ONE if modular(kind) or CustomItems.is_custom(kind) else Vector2(SMALLEST, LARGEST)
 
 static func placement(doc: WorldDoc, kind: String, at: Vector3, turn: float, ignore_id := -1) -> Dictionary:
 	if not joins(kind):

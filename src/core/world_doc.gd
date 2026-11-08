@@ -254,6 +254,9 @@ static func _read_snapshot(dir_path: String) -> WorldDoc:
 	doc.data.water_level = doc.safe_water_level()
 	return doc
 
+static func valid_kind(kind: String) -> bool:
+	return kind.is_valid_identifier() or (kind.begins_with(CustomItems.PREFIX) and CustomItems.valid_id(kind.trim_prefix(CustomItems.PREFIX)))
+
 static func _number(value: Variant) -> bool:
 	return (value is int or value is float) and is_finite(float(value))
 
@@ -286,7 +289,7 @@ static func _valid_data(d: Dictionary) -> bool:
 		if not thing is Dictionary or not _integer(thing.get("id")) or thing.id < 1 or ids.has(int(thing.id)):
 			return false
 		ids[int(thing.id)] = true
-		if not thing.get("kind") is String or not thing.kind.is_valid_identifier():
+		if not thing.get("kind") is String or not valid_kind(thing.kind):
 			return false
 		for key in ["x", "z", "turn", "scale"]:
 			if not _number(thing.get(key)):
