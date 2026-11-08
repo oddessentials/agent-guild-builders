@@ -19,6 +19,8 @@ const NO_POINTER := Vector2(-1, -1)
 const DRAG_PIXELS := 6.0
 const PICK_PIXELS := 10.0
 const TURN_STEP := PI / 12.0
+const NUDGE := 0.05
+const NUDGES := {KEY_RIGHT: Vector2(1, 0), KEY_LEFT: Vector2(-1, 0), KEY_UP: Vector2(0, 1), KEY_DOWN: Vector2(0, -1)}
 const SMALLEST_SIZE := 0.5
 const LARGEST_SIZE := 2.0
 const WATER_LOWEST := -20.0
@@ -1133,7 +1135,7 @@ func _update_cursor(pos: Vector2) -> void:
 						_on_stage_left()
 						return
 					_placed_pointer = NO_POINTER
-				text = _why_not_place(hit)
+				text = _why_not_place(hit, turn)
 				var fitted := Placing.fitted_scale(doc, place_kind, hit.x, hit.z, _next_scale)
 				_brush.scale = Vector3.ONE * _footprint(place_kind, fitted)
 				_ghost.visible = text == "" and WorldScene.mesh_ready(place_kind)
@@ -1165,8 +1167,8 @@ func _update_cursor(pos: Vector2) -> void:
 	_brush_material.albedo_color = colour
 	_show_hint(text, pos)
 
-func _why_not_place(hit: Vector3) -> String:
-	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z)
+func _why_not_place(hit: Vector3, turn: float) -> String:
+	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z, turn)
 	if why == "" and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
 		return "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(place_kind)
 	return why
@@ -1188,7 +1190,7 @@ func _load_chosen() -> void:
 
 func _build_arrange_options() -> void:
 	_options.add_child(ProTheme.heading("Move things"))
-	_options.add_child(ProTheme.note("Click something to choose it, then drag it somewhere new. Q and E turn it. Delete removes it."))
+	_options.add_child(ProTheme.note("Click something to choose it, then drag it somewhere new. Q and E turn it, arrow keys nudge it. Delete removes it."))
 	var thing := _selected()
 	if thing.is_empty():
 		return
@@ -1196,7 +1198,8 @@ func _build_arrange_options() -> void:
 	var exact_turn: float = thing.turn
 	var shown_turn := rad_to_deg(wrapf(exact_turn, 0.0, TAU))
 	var modular := Placing.modular(thing.kind)
-	_slider("Turn", 0.0, 270.0 if modular else 360.0, 90.0 if modular else 1.0, shown_turn, "%.0f°",
+	var quarters := Placing.joins(thing.kind)
+	_slider("Turn", 0.0, 270.0 if quarters else 360.0, 90.0 if quarters else 1.0, shown_turn, "%.0f°",
 		func(v): _preview_selected("turn", exact_turn if v == shown_turn else deg_to_rad(v)),
 		func(_v, was): _commit_selected("Turn", "turn", exact_turn if was == shown_turn else deg_to_rad(was)))
 	if not modular:
@@ -1269,8 +1272,29 @@ func _turn_next(direction: float) -> void:
 	_next_turn = wrapf(_next_turn + direction * _turn_step(place_kind), 0.0, TAU)
 	_update_cursor(_stage.get_local_mouse_position())
 
+func _nudge_selected(on_screen: Vector2) -> void:
+	_finish_edits()
+	var thing := _selected()
+	if thing.is_empty():
+		return
+	var basis := _camera.global_transform.basis
+	var right := Vector2(basis.x.x, basis.x.z).normalized()
+	var up := Vector2(-basis.z.x, -basis.z.z).normalized()
+	var step := (right * on_screen.x + up * on_screen.y) * NUDGE
+	var x := float(thing.x) + step.x
+	var z := float(thing.z) + step.y
+	var why := Placing.why_not_moved(doc, thing, x, z)
+	if why != "":
+		_set_status(why)
+		return
+	var moved: Dictionary = thing.duplicate()
+	moved.x = x
+	moved.z = z
+	history.things_edit("Nudge " + _thing_name(thing.kind), [moved], [thing])
+	_set_status("Nudged %s." % _thing_name(thing.kind))
+
 func _turn_step(kind: String) -> float:
-	return PI / 2.0 if Placing.modular(kind) else TURN_STEP
+	return PI / 2.0 if Placing.joins(kind) else TURN_STEP
 
 func _turn_selected(by: float) -> void:
 	_finish_edits()
@@ -1343,7 +1367,7 @@ func _drag_thing(pos: Vector2) -> void:
 		hit = spot.at
 		_drag.turn = spot.turn
 		_drag.hit = hit
-		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z)
+		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z, spot.turn)
 
 func _arrange_cursor(pos: Vector2) -> void:
 	var colour := ProTheme.color("accent")
@@ -1479,7 +1503,7 @@ func _scatter_at(hit: Vector3, first: bool) -> void:
 		var spot := Placing.placement(doc, place_kind, hit, _next_turn)
 		hit = spot.at
 		_next_turn = spot.turn
-		var why := _why_not_place(hit)
+		var why := _why_not_place(hit, _next_turn)
 		if why != "":
 			_set_status(why)
 			_update_cursor(_click_pointer)
@@ -1789,6 +1813,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_turn_next(signf(by))
 		else:
 			return
+	elif tool == Tool.ARRANGE and _selected_id >= 0 and NUDGES.has(event.keycode):
+		_nudge_selected(NUDGES[event.keycode])
 	elif tool == Tool.ARRANGE and (event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE):
 		_remove_selected()
 	elif tool == Tool.ARRANGE and event.keycode == KEY_ESCAPE:

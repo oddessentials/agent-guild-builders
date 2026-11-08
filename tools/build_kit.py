@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Matrix, Vector
 ROOT = Path(__file__).resolve().parent.parent
 KIT = ROOT / 'kits' / 'meadow'
 LICENCE = 'CC0-1.0 (Poly Haven)'
@@ -136,6 +136,7 @@ MODELS = {
     'fort_tower_round': ('modular_fort_01:tower_round', None, 'Round tower', 'medieval', 16),
 }
 MODULAR = {key for key in MODELS if key.startswith('fort_')} | {'castle_door'}
+JOINS = MODULAR - {'castle_door', 'fort_thick_corner_b', 'fort_walkway_corner_b'}
 MADE_HERE = {
     'xmas_tree': ('Christmas tree', 8), 'gift_red': ('Red gift', 2), 'gift_green': ('Green gift', 2), 'gift_pile': ('Pile of gifts', 4),
     'snowman': ('Snowman', 3), 'candy_cane': ('Candy cane', 2), 'sleigh': ('Sleigh', 5), 'wreath_arch': ('Wreath arch', 6),
@@ -342,6 +343,10 @@ def blend_parts(kit_id, name, lod):
 
 
 JOINT_WIDTHS = (2.55, 3.12, 3.54, 4.17)
+# In the piece's own Blender frame: its wall side is x = 0 and it runs to y = -length.
+AUTHORED_JOINTS = {
+    'fort_stairs_straight': [((0, 0), (-1, 0), 1), ((0, -14.819), (-1, 0), 1), ((0, -14.819), (0, -1), 0)],
+}
 TOWER_REACH = 7.0
 
 
@@ -352,6 +357,14 @@ def joints_of(kit_id, parts):
     at the 7.08 m ledge is where a walkway stands behind a wall."""
     if kit_id == 'fort_tower_round':
         return [[x * TOWER_REACH, z * TOWER_REACH, x, z, 0] for x, z in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+    if kit_id in AUTHORED_JOINTS:
+        to_world = parts[0].matrix_world
+        out = []
+        for (x, y), (fx, fy), ledge in AUTHORED_JOINTS[kit_id]:
+            at = to_world @ Vector((x, y, 0))
+            facing = (to_world.to_3x3() @ Vector((fx, fy, 0))).normalized()
+            out.append([round(at.x, 4), round(-at.y, 4), round(facing.x, 4), round(-facing.y, 4), ledge])
+        return sorted(out)
     faces = {}
     for o in parts:
         to_world = o.matrix_world
@@ -393,13 +406,13 @@ def joints_of(kit_id, parts):
             continue
         for c in corners:
             at = n * offset + t * c
-            joints.append([round(at.x, 3), round(-at.y, 3), round(n.x, 3), round(-n.y, 3), ledge])
+            joints.append([round(at.x, 4), round(-at.y, 4), round(n.x, 4), round(-n.y, 4), ledge])
     return sorted(joints)
 
 
 def described(entry, kit_id, spec):
     entry.update({'label': spec[2], 'group': spec[3], 'spacing': spec[4]})
-    for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR)):
+    for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR), ('joins', kit_id in JOINS)):
         entry.pop(key, None)
         if on:
             entry[key] = LIGHTS[kit_id] if key == 'light' else True
@@ -414,12 +427,18 @@ def export_model(kit_id, spec):
         return None
     if kit_id not in LEGACY:
         stand_at_origin(parts, kit_id not in MODULAR)
+    if kit_id in MODULAR:
+        top = max((o.matrix_world @ v.co).z for o in parts for v in o.data.vertices)
+        factor = TARGET.get(kit_id, round(top, 4)) / top
+        for o in parts:
+            o.matrix_world = Matrix.Scale(factor, 4) @ o.matrix_world
+        bpy.context.view_layer.update()
     low, high = Vector((1e9, 1e9, 1e9)), Vector((-1e9, -1e9, -1e9))
     tris = 0
     for o in parts:
         tris += sum(len(p.vertices) - 2 for p in o.data.polygons)
-        for corner in o.bound_box:
-            c = o.matrix_world @ Vector(corner)
+        for v in o.data.vertices:
+            c = o.matrix_world @ v.co
             low = Vector(map(min, low, c))
             high = Vector(map(max, high, c))
     for material in {m for o in parts for m in o.data.materials}:
@@ -431,14 +450,16 @@ def export_model(kit_id, spec):
     bpy.ops.export_scene.gltf(filepath=str(out), use_selection=True, export_format='GLB', export_image_format='WEBP',
                               export_image_quality=85, export_animations=False, export_cameras=False, export_lights=False)
     size = max(high.z if kit_id in MODULAR else high.z - min(low.z, 0), .001)
-    target = TARGET.get(kit_id, round(size, 2))
+    target = TARGET.get(kit_id, round(size, 4 if kit_id in MODULAR else 2))
     licence = MADE_LICENCE if kit_id in MADE_HERE else GUILD_LICENCE if kit_id in GUILD else LICENCE
     entry = {'label': label, 'group': group, 'spacing': spacing, 'height': target,
              'radius': round(max(high.x - low.x, high.y - low.y) / 2 * target / size, 2), 'triangles': tris,
              'source': f'{name} {lod}' if kit_id in GUILD and lod else name, 'licence': licence, 'bytes': out.stat().st_size}
     described(entry, kit_id, spec)
-    if kit_id in MODULAR:
+    if kit_id in JOINS:
         entry['joints'] = joints_of(kit_id, parts)
+        if not entry['joints']:
+            raise RuntimeError(f'{kit_id} is marked as joining but has no joints')
     print('KIT', kit_id, tris, 'tris', entry['height'], 'm', entry['bytes'] // 1024, 'KiB', flush=True)
     return entry
 
