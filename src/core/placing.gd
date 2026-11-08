@@ -13,6 +13,18 @@ const MIXES := {
 	"camp": {"label": "Camp clutter", "kinds": ["crate", "crate_long", "barrel_rusty", "bucket", "basket"]},
 }
 
+const GRID := 0.5
+
+static func modular(kind: String) -> bool:
+	return bool(WorldScene.load_kit().get("models", {}).get(kind, {}).get("modular", false))
+
+static func snapped(doc: WorldDoc, kind: String, at: Vector3) -> Vector3:
+	if not modular(kind):
+		return at
+	var x := snappedf(at.x, GRID)
+	var z := snappedf(at.z, GRID)
+	return Vector3(x, doc.height_at(x, z), z)
+
 static func kinds_of(choice: String) -> Array:
 	if choice.begins_with("mix:"):
 		return MIXES[choice.trim_prefix("mix:")].kinds
@@ -43,7 +55,7 @@ static func why_not(doc: WorldDoc, kind: String, x: float, z: float, scale: floa
 ## only an item standing on the same spot gets in the way.
 static func why_not_one(doc: WorldDoc, kind: String, x: float, z: float) -> String:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
-	var why := _why_not_here(doc, models.get(kind, {}), x, z, SMALLEST)
+	var why := _why_not_here(doc, models.get(kind, {}), x, z, 1.0 if modular(kind) else SMALLEST)
 	if why != "":
 		return why
 	return _too_close(models, _standing_on(doc, models, kind, x, z))
@@ -63,6 +75,8 @@ static func largest_scale(doc: WorldDoc, kind: String, x: float, z: float) -> fl
 
 ## `rolled`, capped to the largest size that keeps the Yard clear at this spot.
 static func fitted_scale(doc: WorldDoc, kind: String, x: float, z: float, rolled: float) -> float:
+	if modular(kind):
+		return 1.0
 	return maxf(SMALLEST, minf(rolled, largest_scale(doc, kind, x, z)))
 
 ## What would mostly hide this item on screen, or "" if nothing would.
@@ -103,7 +117,7 @@ static func _why_not_here(doc: WorldDoc, info: Dictionary, x: float, z: float, s
 static func _standing_on(doc: WorldDoc, models: Dictionary, kind: String, x: float, z: float, ignore_id := -1) -> String:
 	var own := float(models.get(kind, {}).get("radius", 0.5))
 	for t in doc.data.things:
-		if int(t.id) == ignore_id or WorldScene.gone_in(t.kind, doc.season()):
+		if int(t.id) == ignore_id or WorldScene.gone_in(t.kind, doc.season()) or (modular(kind) and modular(t.kind)):
 			continue
 		var limit := minf(own, float(models.get(t.kind, {}).get("radius", 0.5)))
 		var dx: float = float(t.x) - x

@@ -770,6 +770,15 @@ func _place_panel() -> bool:
 	view._place_group = "goblins"
 	view._fill_place_items()
 	check(view._item_buttons.has("goblin_factory") and view._item_buttons.has("hall_goblinville_docker") and not view._item_buttons.has("gnome_mill"), "panel: a theme's buildings and halls share its group")
+	view.place_mode = "one"
+	view._choose("fort_thick_straight")
+	check(view._next_scale == 1.0 and (is_equal_approx(fposmod(view._next_turn, PI / 2.0), 0.0) or is_equal_approx(fposmod(view._next_turn, PI / 2.0), PI / 2.0)), "panel: a castle piece starts at full size and square")
+	check(view._turn_step("fort_thick_straight") == PI / 2.0 and view._turn_step("barrel") == view.TURN_STEP, "panel: castle pieces turn a quarter at a time")
+	var spot := Placing.snapped(doc, "fort_thick_straight", Vector3(-60.13, 0.0, -80.38))
+	check(spot.x == -60.0 and spot.z == -80.5 and Placing.snapped(doc, "barrel", Vector3(1.13, 0.0, 2.38)) == Vector3(1.13, 0.0, 2.38), "panel: castle pieces snap to the grid and other things don't")
+	check(Placing.fitted_scale(doc, "fort_tower_round", spot.x, spot.z, 0.9) == 1.0, "panel: castle pieces keep their size")
+	doc.add_thing("fort_thick_straight", spot.x, spot.z, 0.0, 1.0)
+	check(Placing.why_not_one(doc, "fort_walkway_straight", spot.x + 0.2, spot.z) == "" and Placing.why_not_one(doc, "barrel", spot.x + 0.2, spot.z) != "", "panel: castle pieces may meet, other things keep clear")
 	view.free()
 	var opened := WorldDoc.create("guild", "T", 3)
 	opened.add_thing("stone", 40.0, 40.0, 0.0, 1.0)

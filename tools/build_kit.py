@@ -43,8 +43,8 @@ MODELS = {
     'trunk': ('dead_tree_trunk', None, 'Fallen trunk', 'rocks', 10),
     'lantern': ('Lantern_01', None, 'Lantern', 'lights', 8),
     'barrel': ('Barrel_01', None, 'Barrel', 'props', 2),
-    'table': ('WoodenTable_01', None, 'Table', 'props', 3),
-    'bench': ('painted_wooden_bench', None, 'Bench', 'props', 3),
+    'table': ('WoodenTable_01', None, 'Table', 'furniture', 3),
+    'bench': ('painted_wooden_bench', None, 'Bench', 'furniture', 3),
     'snag': ('dead_quiver_trunk', 1, 'Dead snag', 'trees', 3),
     'gazania': ('flower_gazania', 1, 'Gazanias', 'plants', 1.2),
     'ursinia': ('flower_ursinia', 1, 'Ursinias', 'plants', 1.2),
@@ -79,17 +79,17 @@ MODELS = {
     'basket_tall': ('wicker_basket_02', None, 'Tall basket', 'props', 1),
     'bucket': ('wooden_bucket_01', None, 'Bucket', 'props', 1),
     'watering_can': ('watering_can_metal_01', None, 'Watering can', 'props', 1),
-    'trash_can': ('metal_trash_can', None, 'Bins', 'props', 3),
+    'trash_can': ('metal_trash_can', None, 'Bins', 'city', 3),
     'cardboard_box': ('cardboard_box_01', None, 'Cardboard box', 'props', 1),
     'tool_cart': ('tool_cart', None, 'Tool cart', 'props', 3),
     'tool_chest': ('metal_tool_chest', None, 'Tool chest', 'props', 2),
     'ladder': ('ladder_sectioned_01', None, 'Ladder', 'props', 2),
     'spinning_wheel': ('spinning_wheel_01', None, 'Spinning wheel', 'props', 2),
-    'big_pot': ('ceramic_pot', None, 'Big pot', 'props', 1.5),
-    'brass_pot': ('brass_pot_01', None, 'Brass pot', 'props', 1),
-    'hydrant': ('fire_hydrant', None, 'Fire hydrant', 'props', 2),
-    'gnome': ('garden_gnome', None, 'Garden gnome', 'props', 1),
-    'road_barrier': ('concrete_road_barrier', 1, 'Road barrier', 'props', 3),
+    'big_pot': ('ceramic_pot', None, 'Big pot', 'plants', 1.5),
+    'brass_pot': ('brass_pot_01', None, 'Brass pot', 'plants', 1),
+    'hydrant': ('fire_hydrant', None, 'Fire hydrant', 'city', 2),
+    'gnome': ('garden_gnome', None, 'Garden gnome', 'gnomes', 1),
+    'road_barrier': ('concrete_road_barrier', 1, 'Road barrier', 'city', 3),
     'patio_set': ('outdoor_table_chair_set_01', None, 'Patio set', 'furniture', 4),
     'chair': ('painted_wooden_chair_01', None, 'Painted chair', 'furniture', 1.5),
     'stool': ('painted_wooden_stool', None, 'Painted stool', 'furniture', 1),
@@ -97,7 +97,7 @@ MODELS = {
     'camp_stool': ('folding_wooden_stool', None, 'Camp stool', 'furniture', 1),
     'old_chair': ('gallinera_chair', None, 'Old chair', 'furniture', 1.5),
     'lounge_chair': ('mid_century_lounge_chair', None, 'Lounge chair', 'furniture', 2),
-    'street_seat': ('modular_street_seating', None, 'Street seating', 'furniture', 5),
+    'street_seat': ('modular_street_seating', None, 'Street seating', 'city', 5),
     'plastic_chair': ('plastic_monobloc_chair_01', None, 'Plastic chair', 'furniture', 1.5),
     'statue_gothic': ('gothic_statue', None, 'Gothic statue', 'statues', 4),
     'statue_horse': ('horse_statue_01', None, 'Horse statue', 'statues', 4),
@@ -110,9 +110,32 @@ MODELS = {
     'giant_chess': ('chess_set', None, 'Giant chess set', 'statues', 6),
     'ship': ('dutch_ship_medium', None, 'Tall ship', 'landmarks', 28),
     'pier': ('modular_wooden_pier', None, 'Wooden pier', 'landmarks', 12),
-    'castle_door': ('large_castle_door', None, 'Castle door', 'landmarks', 4),
-    'chain_fence': ('modular_chainlink_fence', None, 'Chain fence', 'landmarks', 6),
+    'castle_door': ('large_castle_door', None, 'Castle door', 'medieval', 4),
+    'chain_fence': ('modular_chainlink_fence', None, 'Chain fence', 'city', 6),
+    'fort_thick_straight': ('modular_fort_01:wall_thick_straight_01', None, 'Thick wall', 'medieval', 15),
+    'fort_thick_straight_b': ('modular_fort_01:wall_thick_straight_02', None, 'Gun-port wall', 'medieval', 15),
+    'fort_thick_corner': ('modular_fort_01:wall_thick_corner_01', None, 'Thick corner', 'medieval', 6),
+    'fort_thick_corner_b': ('modular_fort_01:wall_thick_corner_02', None, 'Inner corner', 'medieval', 7),
+    'fort_thick_end': ('modular_fort_01:wall_thick_end_01', None, 'Plain wall end', 'medieval', 5),
+    'fort_thick_end_b': ('modular_fort_01:wall_thick_end_02', None, 'Battlement end', 'medieval', 5),
+    'fort_thick_thin_transition': ('modular_fort_01:wall_thick_thin_transition_01', None, 'Wall join', 'medieval', 4),
+    'fort_thin_straight': ('modular_fort_01:wall_thin_straight_01', None, 'Thin wall', 'medieval', 15),
+    'fort_thin_straight_b': ('modular_fort_01:wall_thin_straight_02', None, 'Arrow-slit wall', 'medieval', 15),
+    'fort_thin_straight_c': ('modular_fort_01:wall_thin_straight_03', None, 'Short plain wall', 'medieval', 8),
+    'fort_thin_straight_d': ('modular_fort_01:wall_thin_straight_04', None, 'Short thin wall', 'medieval', 8),
+    'fort_thin_corner': ('modular_fort_01:wall_thin_corner_01', None, 'Thin corner', 'medieval', 5),
+    'fort_thin_corner_b': ('modular_fort_01:wall_thin_corner_02', None, 'Rounded corner', 'medieval', 5),
+    'fort_thin_corner_c': ('modular_fort_01:wall_thin_corner_03', None, 'Angled corner', 'medieval', 6),
+    'fort_thin_gate': ('modular_fort_01:wall_thin_gate_01', None, 'Gate wall', 'medieval', 8),
+    'fort_walkway_straight': ('modular_fort_01:wall_walkway_straight_01', None, 'Walkway', 'medieval', 15),
+    'fort_walkway_straight_b': ('modular_fort_01:wall_walkway_straight_02', None, 'Plain walkway', 'medieval', 15),
+    'fort_walkway_corner': ('modular_fort_01:wall_walkway_corner_01', None, 'Walkway corner', 'medieval', 8),
+    'fort_walkway_corner_b': ('modular_fort_01:wall_walkway_corner_02', None, 'Walkway post', 'medieval', 3),
+    'fort_walkway_end': ('modular_fort_01:wall_walkway_end_01', None, 'Walkway end', 'medieval', 5),
+    'fort_stairs_straight': ('modular_fort_01:wall_stairs_straight_01', None, 'Wall stairs', 'medieval', 15),
+    'fort_tower_round': ('modular_fort_01:tower_round', None, 'Round tower', 'medieval', 16),
 }
+MODULAR = {key for key in MODELS if key.startswith('fort_')} | {'castle_door'}
 MADE_HERE = {
     'xmas_tree': ('Christmas tree', 8), 'gift_red': ('Red gift', 2), 'gift_green': ('Green gift', 2), 'gift_pile': ('Pile of gifts', 4),
     'snowman': ('Snowman', 3), 'candy_cane': ('Candy cane', 2), 'sleigh': ('Sleigh', 5), 'wreath_arch': ('Wreath arch', 6),
@@ -150,7 +173,7 @@ GUILD = {
     'space_shuttle': ('orbital-yard/models/town_shuttle.glb', None, 'Shuttle', 'space', 11),
 }
 HALL_AGENTS = {'anthropic': 'Claude', 'openai': 'Codex', 'google': 'Antigravity', 'xai': 'Grok', 'docker': 'Docker', 'shell': 'Shell'}
-HALL_GROUPS = {'guild': 'guild', 'professional': 'city', 'gnomeland': 'gnomes', 'goblinville': 'goblins', 'grove': 'forest', 'orbital': 'space'}
+HALL_GROUPS = {'guild': 'medieval', 'professional': 'city', 'gnomeland': 'gnomes', 'goblinville': 'goblins', 'grove': 'forest', 'orbital': 'space'}
 GUILD.update({f'hall_{base}_{agent}': (f'halls/{base}.glb', f'hall_{agent}_mesh', f'{name} hall', group, 9 if agent == 'docker' else 7)
               for base, group in HALL_GROUPS.items() for agent, name in HALL_AGENTS.items()})
 GUILD_LICENCE = 'AGPL-3.0-only (Agent Guild)'
@@ -298,13 +321,17 @@ def guild_parts(name, keep):
 
 
 def blend_parts(kit_id, name, lod):
+    name, _, piece = name.partition(':')
     path = blend_of(name)
     if path is None:
         return None
     bpy.ops.wm.read_factory_settings(use_empty=True)
     with bpy.data.libraries.load(str(path), link=False) as (src, dst):
         dst.objects = list(src.objects)
-    parts = parts_at(dst.objects, lod, name)
+    if piece:
+        parts = [o for o in dst.objects if o is not None and o.type == 'MESH' and o.name == f'{name}_{piece}']
+    else:
+        parts = parts_at(dst.objects, lod, name)
     if kit_id in LEGACY:
         for o in parts:
             o.location = (0, 0, 0)
@@ -312,6 +339,15 @@ def blend_parts(kit_id, name, lod):
         bpy.context.scene.collection.objects.link(o)
     bpy.context.view_layer.update()
     return parts
+
+
+def described(entry, kit_id, spec):
+    entry.update({'label': spec[2], 'group': spec[3], 'spacing': spec[4]})
+    for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR)):
+        entry.pop(key, None)
+        if on:
+            entry[key] = LIGHTS[kit_id] if key == 'light' else True
+    return entry
 
 
 def export_model(kit_id, spec):
@@ -344,8 +380,7 @@ def export_model(kit_id, spec):
     entry = {'label': label, 'group': group, 'spacing': spacing, 'height': target,
              'radius': round(max(high.x - low.x, high.y - low.y) / 2 * target / size, 2), 'triangles': tris,
              'source': f'{name} {lod}' if kit_id in GUILD and lod else name, 'licence': licence, 'bytes': out.stat().st_size}
-    if kit_id in LIGHTS:
-        entry['light'] = LIGHTS[kit_id]
+    described(entry, kit_id, spec)
     print('KIT', kit_id, tris, 'tris', entry['height'], 'm', entry['bytes'] // 1024, 'KiB', flush=True)
     return entry
 
@@ -390,7 +425,7 @@ def main():
     made = {key: (key, None, label, 'holiday', spacing) for key, (label, spacing) in MADE_HERE.items()}
     for key, spec in {**MODELS, **made, **GUILD}.items():
         if key in built.get('models', {}) and (KIT / 'models' / f'{key}.glb').exists():
-            kit['models'][key] = built['models'][key]
+            kit['models'][key] = described(built['models'][key], key, spec)
             continue
         entry = export_model(key, spec)
         if entry:

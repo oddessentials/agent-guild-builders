@@ -22,7 +22,7 @@ def save(url, path):
 tree = ast.parse((ROOT / 'tools' / 'build_kit.py').read_text(encoding='utf-8'))
 models = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign) and n.targets[0].id == 'MODELS')
 for spec in models.values():
-    name = spec[0]
+    name = spec[0].partition(':')[0]
     if any(sorted((folder / name).rglob('*.blend')) for folder in HAVE):
         continue
     blend = json.load(fetch(f'https://api.polyhaven.com/files/{name}'))['blend']['1k']['blend']

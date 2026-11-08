@@ -22,7 +22,7 @@ const TURN_STEP := PI / 12.0
 const SMALLEST_SIZE := 0.5
 const LARGEST_SIZE := 2.0
 const WATER_LOWEST := -20.0
-const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["holiday", "Holiday"], ["city", "City"], ["gnomes", "Gnomes"], ["goblins", "Goblins"], ["forest", "Forest folk"], ["space", "Space"], ["guild", "Guild"]]
+const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks & logs"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["city", "City"], ["medieval", "Medieval"], ["gnomes", "Gnomes"], ["goblins", "Goblins"], ["forest", "Forest folk"], ["space", "Space"], ["holiday", "Holiday"]]
 const TOOL_KEYS := {KEY_M: Tool.ARRANGE, KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
 var doc: WorldDoc
@@ -1100,6 +1100,8 @@ func _update_cursor(pos: Vector2) -> void:
 	if hit == null or not shows_brush:
 		_on_stage_left()
 		return
+	if tool == Tool.SCATTER and place_mode == "one":
+		hit = Placing.snapped(doc, place_kind, hit)
 	_brush.visible = true
 	_brush.mesh = _spot_ring if tool == Tool.SCATTER and place_mode == "one" else _wide_ring
 	_brush.position = hit + Vector3.UP * 0.1
@@ -1174,17 +1176,22 @@ func _build_arrange_options() -> void:
 	_options.add_child(ProTheme.heading(_thing_name(thing.kind), 13))
 	var exact_turn: float = thing.turn
 	var shown_turn := rad_to_deg(wrapf(exact_turn, 0.0, TAU))
-	_slider("Turn", 0.0, 360.0, 1.0, shown_turn, "%.0f°",
+	var modular := Placing.modular(thing.kind)
+	_slider("Turn", 0.0, 270.0 if modular else 360.0, 90.0 if modular else 1.0, shown_turn, "%.0f°",
 		func(v): _preview_selected("turn", exact_turn if v == shown_turn else deg_to_rad(v)),
 		func(_v, was): _commit_selected("Turn", "turn", exact_turn if was == shown_turn else deg_to_rad(was)))
-	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
-	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
-		func(v): _preview_selected("scale", v),
-		func(_v, was): _commit_selected("Resize", "scale", was))
+	if not modular:
+		_size_slider(thing)
 	var remove := Button.new()
 	remove.text = "Remove"
 	remove.pressed.connect(_remove_selected)
 	_options.add_child(remove)
+
+func _size_slider(thing: Dictionary) -> void:
+	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
+	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
+		func(v): _preview_selected("scale", v),
+		func(_v, was): _commit_selected("Resize", "scale", was))
 
 func _selected() -> Dictionary:
 	if _selected_id >= 0:
@@ -1238,6 +1245,9 @@ func _commit_selected(label: String, field: String, was: Variant) -> void:
 	var before: Dictionary = thing.duplicate()
 	before[field] = was
 	history.things_edit("%s %s" % [label, _thing_name(thing.kind)], [thing], [before], true)
+
+func _turn_step(kind: String) -> float:
+	return PI / 2.0 if Placing.modular(kind) else TURN_STEP
 
 func _turn_selected(by: float) -> void:
 	_finish_edits()
@@ -1306,6 +1316,7 @@ func _drag_thing(pos: Vector2) -> void:
 		_selected_ring.visible = false
 	var hit = _ground_at(pos + _drag.grip * float(_viewport.size.y) / _camera.size)
 	if hit != null:
+		hit = Placing.snapped(doc, thing.kind, hit)
 		_drag.hit = hit
 		_drag.why = Placing.why_not_moved(doc, thing, hit.x, hit.z)
 
@@ -1370,8 +1381,12 @@ func _footprint(kind: String, scale: float) -> float:
 	return maxf(float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("radius", 0.5)) * scale, 0.8)
 
 func _roll_next() -> void:
-	_next_scale = _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
-	_next_turn = _rng.range_f(0.0, TAU)
+	if Placing.modular(place_kind):
+		_next_scale = 1.0
+		_next_turn = wrapf(snappedf(_next_turn, PI / 2.0), 0.0, TAU)
+	else:
+		_next_scale = _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
+		_next_turn = _rng.range_f(0.0, TAU)
 	_update_zones()
 
 func _begin_stroke(pos: Vector2) -> void:
@@ -1431,6 +1446,7 @@ func _apply_brush(hit: Vector3, first: bool) -> void:
 
 func _scatter_at(hit: Vector3, first: bool) -> void:
 	if place_mode == "one":
+		hit = Placing.snapped(doc, place_kind, hit)
 		var why := _why_not_place(hit)
 		if why != "":
 			_set_status(why)
@@ -1451,12 +1467,14 @@ func _scatter_at(hit: Vector3, first: bool) -> void:
 		var s := _rng.range_f(Placing.SMALLEST, Placing.LARGEST)
 		var a := _rng.range_f(0.0, TAU)
 		var r: float = sqrt(_rng.next()) * brush_radius
-		var x := hit.x + cos(a) * r
-		var z := hit.z + sin(a) * r
-		if Placing.why_not(doc, kind, x, z, s) != "":
+		var spot := Placing.snapped(doc, kind, Vector3(hit.x + cos(a) * r, 0.0, hit.z + sin(a) * r))
+		if Placing.modular(kind):
+			s = 1.0
+		if Placing.why_not(doc, kind, spot.x, spot.z, s) != "":
 			_stroke_skipped += 1
 			continue
-		_add_stroke_thing(kind, x, z, _rng.range_f(0.0, TAU), s)
+		var turn := _rng.range_f(0.0, TAU)
+		_add_stroke_thing(kind, spot.x, spot.z, snappedf(turn, PI / 2.0) if Placing.modular(kind) else turn, s)
 
 func _show_placed_ring(hit: Vector3, scale: float) -> void:
 	_placed_ring.position = hit + Vector3.UP * 0.1
@@ -1732,7 +1750,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if TOOL_KEYS.has(event.keycode):
 		_select_tool(TOOL_KEYS[event.keycode])
 	elif event.keycode == KEY_Q or event.keycode == KEY_E:
-		var by := TURN_STEP if event.keycode == KEY_E else -TURN_STEP
+		var step := _turn_step(_selected().get("kind", "") if tool == Tool.ARRANGE else place_kind)
+		var by := step if event.keycode == KEY_E else -step
 		if tool == Tool.ARRANGE:
 			_turn_selected(by)
 		elif tool == Tool.SCATTER and place_mode == "one":
