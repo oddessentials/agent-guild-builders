@@ -15,7 +15,10 @@ foreach ($name in @('day', 'dusk', 'overcast', 'moon')) {
 $files = @('kits/meadow/kit.json', 'LICENSE', 'data/agx_mhc.lut', 'data/yard_layout.json')
 $thumbs = @('mix_wildflowers', 'mix_undergrowth', 'mix_woodland', 'mix_rocks', 'mix_garden', 'mix_camp')
 $presets = [regex]::Match((Get-Content -LiteralPath (Join-Path $project 'src/core/templates.gd') -Raw), '(?ms)^const LIST := \{(.*?)^\}').Groups[1].Value
-$presets = @([regex]::Matches($presets, '(?m)^\t"(\w+)":') | ForEach-Object { $_.Groups[1].Value })
+$presets = @($presets -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object {
+    if ($_ -notmatch '^\t"(\w+)": \{.*\},?$') { throw "Could not read the preset line in src/core/templates.gd: $($_.Trim())" }
+    $Matches[1]
+})
 if ($presets -notcontains 'blank') { throw 'Could not read the presets from src/core/templates.gd.' }
 foreach ($preset in $presets) { $thumbs += "template_$preset" }
 if (-not $kit.lands.meadow) { throw 'The Meadow kit has no meadow ground set.' }
