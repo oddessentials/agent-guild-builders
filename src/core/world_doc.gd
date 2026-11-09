@@ -282,6 +282,10 @@ static func _valid_data(d: Dictionary) -> bool:
 		return false
 	if d.has("season") and d.season not in SEASONS:
 		return false
+	if d.has("land") and not (d.land is String and d.land.is_valid_identifier()):
+		return false
+	if d.has("plaza") and not (d.plaza is Dictionary and (not d.plaza.has("ground") or (d.plaza.ground is String and d.plaza.ground.is_valid_identifier()))):
+		return false
 	if d.has("next_id") and (not _integer(d.next_id) or d.next_id < 1):
 		return false
 	for time in ["light", "dark"]:

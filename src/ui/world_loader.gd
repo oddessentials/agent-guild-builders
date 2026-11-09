@@ -46,7 +46,7 @@ func _work(make: Callable, path: String) -> Dictionary:
 		if not models.has(thing.kind) and not CustomItems.is_custom(thing.kind):
 			return {"error": "This world uses an unavailable item: %s." % thing.kind}
 	_say("Loading ground textures…", 0.15)
-	for name in WorldScene.GROUND_ORDER + ["cobble"]:
+	for name in WorldScene.surface_textures(doc):
 		for suffix in ["_diff", "_nor_gl", "_rough"]:
 			if WorldScene._texture(name + suffix, false) == null:
 				return {"error": "A ground texture is missing or damaged: %s. Extract the complete app ZIP, including its kits folder." % name}

@@ -16,12 +16,19 @@ def fetch(url):
 def save(url, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     with fetch(url) as reply:
-        path.write_bytes(reply.read())
+        data = reply.read()
+    path.with_name(path.name + '.part').write_bytes(data)
+    path.with_name(path.name + '.part').replace(path)
+
+
+def have(rel):
+    return any((folder / rel).is_file() for folder in HAVE)
 
 
 tree = ast.parse((ROOT / 'tools' / 'build_kit.py').read_text(encoding='utf-8'))
-models = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign) and n.targets[0].id == 'MODELS')
-for spec in models.values():
+specs = {n.targets[0].id: ast.literal_eval(n.value) for n in tree.body
+         if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name) and n.targets[0].id in ('MODELS', 'GROUNDS', 'SKIES')}
+for spec in specs['MODELS'].values():
     name = spec[0].partition(':')[0]
     if any(sorted((folder / name).rglob('*.blend')) for folder in HAVE):
         continue
@@ -30,5 +37,23 @@ for spec in models.values():
     for rel, item in blend.get('include', {}).items():
         save(item['url'], folder / rel)
     save(blend['url'], folder / f'{name}_1k.blend')
+    print('fetched', name, flush=True)
+made = ast.parse((ROOT / 'tools' / 'make_sources.py').read_text(encoding='utf-8'))
+graded = next(ast.literal_eval(n.value) for n in made.body if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name) and n.targets[0].id == 'GRADED')
+for name in [spec[0] for spec in specs['GROUNDS'].values()] + [spec[0] for spec in graded.values()]:
+    if name.startswith('made_'):
+        continue
+    maps = {'diff': 'Diffuse', 'nor_gl': 'nor_gl', 'rough': 'Rough'}
+    if all(have(f'{name}/{name}_{m}_2k.jpg') for m in maps):
+        continue
+    files = json.load(fetch(f'https://api.polyhaven.com/files/{name}'))
+    for m, key in maps.items():
+        save(files[key]['2k']['jpg']['url'], OUT / name / f'{name}_{m}_2k.jpg')
+    print('fetched', name, flush=True)
+for spec in specs['SKIES'].values():
+    name = spec[0]
+    if name.startswith('made_') or '/' in name or have(f'{name}/{name}_1k.hdr'):
+        continue
+    save(json.load(fetch(f'https://api.polyhaven.com/files/{name}'))['hdri']['1k']['hdr']['url'], OUT / name / f'{name}_1k.hdr')
     print('fetched', name, flush=True)
 print('SOURCES DONE')

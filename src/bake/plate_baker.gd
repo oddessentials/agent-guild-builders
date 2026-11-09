@@ -157,7 +157,8 @@ func _collect_glow() -> void:
 			for s in n.multimesh.mesh.get_surface_count():
 				mats.append(n.multimesh.mesh.surface_get_material(s))
 		for m in mats:
-			if m is StandardMaterial3D and m.emission_enabled and not seen.has(m):
+			var glows: bool = (m is StandardMaterial3D and m.emission_enabled) or (m is ShaderMaterial and m.get_shader_parameter("glow_on") != null)
+			if glows and not seen.has(m):
 				seen[m] = true
 				_glow_materials.append(m)
 
@@ -214,7 +215,10 @@ func _draw_and_sum() -> void:
 
 func _glow(on: bool) -> void:
 	for m in _glow_materials:
-		m.emission_enabled = on
+		if m is ShaderMaterial:
+			m.set_shader_parameter("glow_on", 1.0 if on else 0.0)
+		else:
+			m.emission_enabled = on
 
 func _chunk() -> void:
 	_sum.render_target_clear_mode = SubViewport.CLEAR_MODE_ONCE

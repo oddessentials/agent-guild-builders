@@ -160,7 +160,7 @@ func _definitions() -> Array:
 				"preview_yard": {"type": "string", "enum": WorldDoc.BASES}, "seed": {"type": "integer", "minimum": 0, "maximum": 2147483647}}, ["template", "title"]), "annotations": edit},
 		{"name": "open_world", "title": "Open a world", "description": "Saves the open world, then opens this one in the window.",
 			"inputSchema": _object({"world": _world()}, ["world"]), "annotations": edit},
-		{"name": "describe_world", "title": "Describe the open world", "description": "Title, season, sky and sun by day and at dusk, water, item counts, undo state and anything that would stop an export. With `items_near`, also lists the items in that circle with their ids.",
+		{"name": "describe_world", "title": "Describe the open world", "description": "Title, season, ground set and how its four grounds look, sky and sun by day and at dusk, water, item counts, undo state and anything that would stop an export. With `items_near`, also lists the items in that circle with their ids.",
 			"inputSchema": _object({"world": _world(), "items_near": _object({"x": _point().properties.x, "z": _point().properties.z, "radius": {"type": "number", "minimum": 1, "maximum": 400}}, ["x", "z", "radius"])}, ["world"]), "annotations": read},
 		{"name": "list_items", "title": "List placeable items", "description": "Kinds you can place, with their size and whether they're tall (only fit further out), join into walls, or can be resized. Also lists the mixes paint_area can use.",
 			"inputSchema": _object({"group": {"type": "string", "enum": groups}, "search": {"type": "string", "maxLength": 64}}, []), "annotations": read},
@@ -178,10 +178,10 @@ func _definitions() -> Array:
 			"inputSchema": _object({"world": _world(), "ids": {"type": "array", "minItems": 1, "maxItems": 2000, "items": {"type": "integer", "minimum": 1}}, "points": _points(), "radius": _radius()}, ["world"]), "annotations": removes},
 		{"name": "shape_land", "title": "Shape land", "description": "Raises, lowers or smooths the ground along the points. `strength` repeats the stroke, like holding the brush longer. The ground where crews stand stays flat and nothing may rise to hide the Yard. One undo step.",
 			"inputSchema": _object({"world": _world(), "mode": {"type": "string", "enum": ["raise", "lower", "smooth"]}, "points": _points(), "radius": _radius(), "strength": {"type": "integer", "minimum": 1, "maximum": 10}}, ["world", "mode", "points", "radius"]), "annotations": edit},
-		{"name": "paint_ground", "title": "Paint ground", "description": "Paints a ground along the points. One undo step.",
+		{"name": "paint_ground", "title": "Paint ground", "description": "Paints one of the world's four grounds along the points. One undo step. describe_world says how each ground looks in this world's ground set.",
 			"inputSchema": _object({"world": _world(), "ground": {"type": "string", "enum": WorldScene.GROUND_ORDER}, "points": _points(), "radius": _radius()}, ["world", "ground", "points", "radius"]), "annotations": edit},
-		{"name": "set_look", "title": "Set the look", "description": "Season, water, and the sky and sun by day and at dusk. The sun's direction is fixed to match the Yard. Choosing a sky resets its strength unless you give one. One undo step.",
-			"inputSchema": _object({"world": _world(), "season": {"type": "string", "enum": WorldDoc.SEASONS},
+		{"name": "set_look", "title": "Set the look", "description": "Season, ground set, water, and the sky and sun by day and at dusk. A ground set changes how the four grounds and the plaza look. The sun's direction is fixed to match the Yard. Choosing a sky resets its strength unless you give one. One undo step.",
+			"inputSchema": _object({"world": _world(), "season": {"type": "string", "enum": WorldDoc.SEASONS}, "ground_set": {"type": "string", "enum": WorldScene.load_kit().get("lands", {}).keys()},
 				"water": _object({"on": {"type": "boolean"}, "level": {"type": "number", "minimum": EditorView.WATER_LOWEST, "maximum": WorldDoc.MAX_WATER_LEVEL}}, ["on"]),
 				"day": _time(), "dusk": _time()}, ["world"]), "annotations": edit},
 		{"name": "undo", "title": "Undo", "description": "Undoes the last change in this world, whoever made it.", "inputSchema": _object({"world": _world()}, ["world"]), "annotations": edit},
@@ -312,7 +312,12 @@ func _tool_describe_world(_ctx: Dictionary, args: Dictionary) -> Dictionary:
 	var problems := []
 	for issue in checked.get("issues", []):
 		problems.append({"kind": issue.kind, "message": issue.get("message", ""), "x": snappedf(issue.position.x, 0.1), "z": snappedf(issue.position.y, 0.1)})
+	var grounds := {}
+	var slots: Array = WorldScene.land_of(doc).grounds
+	for i in WorldScene.GROUND_ORDER.size():
+		grounds[WorldScene.GROUND_ORDER[i]] = str(WorldScene.load_kit().get("grounds", {}).get(slots[i], {}).get("label", slots[i]))
 	var out := {"world": view.path, "title": doc.data.title, "template": doc.data.get("template", ""), "preview_yard": doc.data.base, "season": doc.season(),
+		"ground_set": str(doc.data.get("land", "meadow")), "grounds": grounds,
 		"day": looks.day, "dusk": looks.dusk, "water": {"on": float(doc.data.water_level) > WorldDoc.NO_WATER_BELOW, "level": snappedf(doc.safe_water_level(), 0.01)},
 		"land": {"lowest": snappedf(low, 0.01), "highest": snappedf(high, 0.01)}, "items": doc.data.things.size(), "groups": groups, "kinds": kinds,
 		"can_export": checked.get("valid", false), "problems": problems, "problem_summary": checked.get("summary", checked.get("problem", "")),
@@ -467,6 +472,8 @@ func _tool_set_look(_ctx: Dictionary, args: Dictionary) -> Dictionary:
 	var look := {}
 	if args.has("season"):
 		look["season"] = args.season
+	if args.has("ground_set"):
+		look["land"] = args.ground_set
 	if args.has("water"):
 		if not args.water.on:
 			look["water_level"] = -100.0
@@ -485,7 +492,7 @@ func _tool_set_look(_ctx: Dictionary, args: Dictionary) -> Dictionary:
 		if not values.is_empty():
 			look[time[1]] = values
 	if look.is_empty():
-		return failure("Nothing to change: give season, water, or a day or dusk sky, sky_strength or sun_strength.")
+		return failure("Nothing to change: give season, ground_set, water, or a day or dusk sky, sky_strength or sun_strength.")
 	if not view.agent_set_look(look):
 		return _done("Nothing changed: the look already matches.")
 	return _done("Changed the look as one undo step.")
