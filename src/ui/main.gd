@@ -232,7 +232,7 @@ func _add_new_world(col: VBoxContainer) -> void:
 	var name_box := LineEdit.new()
 	name_box.text = WorldLibrary.unique_title(DEFAULT_TITLE)
 	name_box.placeholder_text = "Name your world"
-	name_box.max_length = 128
+	name_box.max_length = WorldDoc.MAX_TITLE
 	name_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	form.add_child(name_box)
 	var base_label := ProTheme.note("Preview with halls and crews from")
@@ -354,7 +354,7 @@ func _rename_dialog(w: Dictionary) -> void:
 	ask.ok_button_text = "Rename"
 	var box := LineEdit.new()
 	box.text = w.title
-	box.max_length = 128
+	box.max_length = WorldDoc.MAX_TITLE
 	ask.add_child(box)
 	ask.register_text_enter(box)
 	add_child(ask)

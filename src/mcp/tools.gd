@@ -156,7 +156,7 @@ func _definitions() -> Array:
 		{"name": "list_worlds", "title": "List worlds", "description": "The worlds saved on this computer, newest first, and which one is open in the window.",
 			"inputSchema": _object({}, []), "annotations": read},
 		{"name": "create_world", "title": "Create a world", "description": "Saves the open world, then creates a new one from a template and opens it in the window. `preview_yard` chooses whose halls and crews show while building; in Agent Guild a world shows the halls of the Yard it replaces.",
-			"inputSchema": _object({"template": {"type": "string", "enum": Templates.LIST.keys()}, "title": {"type": "string", "minLength": 1, "maxLength": 128},
+			"inputSchema": _object({"template": {"type": "string", "enum": Templates.LIST.keys()}, "title": {"type": "string", "minLength": 1, "maxLength": WorldDoc.MAX_TITLE},
 				"preview_yard": {"type": "string", "enum": WorldDoc.BASES}, "seed": {"type": "integer", "minimum": 0, "maximum": 2147483647}}, ["template", "title"]), "annotations": edit},
 		{"name": "open_world", "title": "Open a world", "description": "Saves the open world, then opens this one in the window.",
 			"inputSchema": _object({"world": _world()}, ["world"]), "annotations": edit},
@@ -500,6 +500,8 @@ func _step(args: Dictionary, redo: bool) -> Dictionary:
 	var view = _editing(args)
 	if view is String:
 		return failure(view)
+	if view._title_box.text != str(view.doc.data.title):
+		return failure("The person is typing a title in Builders. Try again in a moment.")
 	var label: String = view.agent_undo(redo)
 	if label == "":
 		return failure("Nothing to %s." % ("redo" if redo else "undo"))

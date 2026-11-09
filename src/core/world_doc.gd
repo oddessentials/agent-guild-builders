@@ -11,6 +11,7 @@ const TERRAIN_RES := 257
 const TERRAIN_SIZE := 520.0
 const MAX_WATER_LEVEL := -0.1
 const NO_WATER_BELOW := -50.0
+const MAX_TITLE := 128
 ## Each entry takes a document of format N to N+1. Append only.
 const MIGRATIONS: Array[Callable] = []
 const THUMB := "thumb.webp"
@@ -275,7 +276,7 @@ static func _integer(value: Variant) -> bool:
 	return _number(value) and float(value) == floorf(float(value)) and absf(float(value)) < 9007199254740991.0
 
 static func _valid_data(d: Dictionary) -> bool:
-	if d.get("base") not in BASES or not d.get("title") is String or d.title.strip_edges().is_empty() or d.title.length() > 128:
+	if d.get("base") not in BASES or not d.get("title") is String or d.title.strip_edges().is_empty() or d.title.length() > MAX_TITLE:
 		return false
 	if not _number(d.get("water_level")) or not d.get("mood") is Dictionary or not d.get("things") is Array:
 		return false

@@ -189,7 +189,7 @@ func _build_ui() -> void:
 	_title_box = LineEdit.new()
 	_title_box.text = str(doc.data.title)
 	_title_box.custom_minimum_size = Vector2(220, 0)
-	_title_box.max_length = 128
+	_title_box.max_length = WorldDoc.MAX_TITLE
 	_title_box.tooltip_text = "Previewing with halls and crews from " + str(Yard.data().worlds[doc.data.base].title)
 	_title_box.text_submitted.connect(func(_t):
 		_commit_title()

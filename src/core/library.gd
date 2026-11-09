@@ -55,10 +55,12 @@ static func unique_title(title: String) -> String:
 	var taken := {}
 	for w in list():
 		taken[w.title.to_lower()] = true
-	var candidate := title
+	var whole := title.left(WorldDoc.MAX_TITLE).strip_edges()
+	var candidate := whole
 	var n := 2
 	while taken.has(candidate.to_lower()):
-		candidate = "%s %d" % [title, n]
+		var suffix := " %d" % n
+		candidate = whole.left(WorldDoc.MAX_TITLE - suffix.length()).strip_edges() + suffix
 		n += 1
 	return candidate
 

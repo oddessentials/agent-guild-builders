@@ -494,6 +494,17 @@ func _library() -> bool:
 	check(WorldLibrary.rename(a, "Renamed") == OK and WorldDoc.open(a).data.title == "Renamed", "library: renames")
 	var copy := WorldLibrary.duplicate_world(a)
 	check(copy != "" and WorldDoc.open(copy).data.things.size() == 1 and WorldDoc.open(copy).data.title == "Renamed copy", "library: duplicates")
+	var longest := "L".repeat(WorldDoc.MAX_TITLE - 3) + " ab"
+	var long_folder := WorldLibrary.folder_for(longest)
+	WorldDoc.create("guild", longest, 3).save(long_folder)
+	var suggested := WorldLibrary.unique_title(longest)
+	check(suggested.length() <= WorldDoc.MAX_TITLE and suggested.to_lower() != longest.to_lower() and suggested.ends_with(" 2"), "library: a free name for a full-length title stays within the limit")
+	var long_copy := WorldLibrary.duplicate_world(long_folder)
+	check(long_copy != "" and WorldDoc.open(long_copy).data.title.length() <= WorldDoc.MAX_TITLE and WorldDoc.open(long_copy).data.title != longest, "library: duplicating a full-length title stays within the limit")
+	check(WorldLibrary.unique_title("x".repeat(WorldDoc.MAX_TITLE + 20)).length() == WorldDoc.MAX_TITLE, "library: an over-long title is cut to the limit")
+	WorldDoc.remove_folder(long_folder)
+	if long_copy != "":
+		WorldDoc.remove_folder(long_copy)
 	DirAccess.make_dir_recursive_absolute(root.path_join("not-a-world"))
 	check(WorldLibrary.list().size() == 3, "library: ignores other folders")
 	DirAccess.remove_absolute(root.path_join("not-a-world"))
@@ -675,7 +686,34 @@ func _loader() -> bool:
 	while not bad.has("doc"):
 		await process_frame
 	check(bad.doc == null, "loader: reports a world that can't be opened")
+	Clearance._terrain_limits = PackedFloat32Array()
+	var warmed := {}
+	made.done.connect(func(doc): warmed.doc = doc, CONNECT_ONE_SHOT)
+	made.start(func(): return Templates.create("blank", "guild", "T", 1))
+	check(not Clearance._terrain_limits.is_empty(), "loader: shared land limits are ready before the thread starts")
+	while not warmed.has("doc"):
+		await process_frame
 	made.free()
+	var kind: String = WorldScene.load_kit().models.keys()[0]
+	var kept: Variant = WorldScene._meshes.get(kind)
+	WorldScene._meshes.erase(kind)
+	var placed_first := ArrayMesh.new()
+	var got := []
+	var reader := Thread.new()
+	WorldScene._cache_lock.lock()
+	reader.start(func(): got.append(WorldScene.mesh_of(kind)))
+	WorldScene._meshes[kind] = placed_first
+	WorldScene._cache_lock.unlock()
+	reader.wait_to_finish()
+	check(got.size() == 1 and got[0] == placed_first, "loader: a thread reads the mesh cache only under its lock")
+	WorldScene._meshes.erase(kind)
+	if kept != null:
+		WorldScene._meshes[kind] = kept
+	var snapshot := WorldScene.load_kit()
+	var snapshot_models: Dictionary = snapshot.models
+	var snapshot_json := JSON.stringify(snapshot_models)
+	WorldScene.refresh_custom()
+	check(not is_same(WorldScene.load_kit(), snapshot) and is_same(snapshot.models, snapshot_models) and JSON.stringify(snapshot_models) == snapshot_json, "loader: refreshing uploads replaces the kit and leaves a loading thread's copy unchanged")
 	return true
 
 func _arrange_view(doc: WorldDoc) -> Control:
@@ -2081,6 +2119,17 @@ func _mcp_editor() -> bool:
 	check(look.get("isError") == false and doc.season() == "winter" and doc.data.mood.light.sky == "overcast" and is_equal_approx(float(doc.data.mood.light.sun_energy), 2.0) and is_equal_approx(doc.safe_water_level(), -2.0), "mcp: set_look changes season, water and sky")
 	await _call_tool(server, lines, 17, "undo", {"world": world})
 	check(doc.season() == "summer" and doc.data.mood.light.sky == "day" and float(doc.data.water_level) < WorldDoc.NO_WATER_BELOW, "mcp: one undo puts the whole look back")
+	var titled := str(doc.data.title)
+	view.history.set_value("Rename", doc.data, "title", "Renamed by the person")
+	view._title_box.text = "Half typed"
+	var steps := [view.history.undo_label(), view.history.redo_label()]
+	var typing_undo := await _call_tool(server, lines, 171, "undo", {"world": world})
+	var typing_redo := await _call_tool(server, lines, 172, "redo", {"world": world})
+	check(typing_undo.get("isError") == true and _text(typing_undo).contains("typing") and typing_redo.get("isError") == true and _text(typing_redo).contains("typing"), "mcp: undo and redo wait while the person is typing a title")
+	check(view._title_box.text == "Half typed" and doc.data.title == "Renamed by the person" and [view.history.undo_label(), view.history.redo_label()] == steps, "mcp: and the typing, the title and the undo history stay")
+	view._title_box.text = str(doc.data.title)
+	view.history.undo()
+	check(doc.data.title == titled and view._title_box.text == titled, "mcp: the rename undoes once the typing is done")
 	var preview := await _call_tool(server, lines, 18, "render_preview", {"world": world})
 	check(preview.get("isError") == true and _text(preview) == BakeJob.NEEDS_WINDOW, "mcp: render_preview says it needs a window when headless")
 	view._painting = true

@@ -15,6 +15,7 @@ func start(make: Callable, path := "") -> void:
 	_generation += 1
 	WorldScene.refresh_custom()
 	Yard.data()
+	Clearance.terrain_limits()
 	_thread = Thread.new()
 	var started := _thread.start(_work.bind(make, path))
 	if started != OK:
