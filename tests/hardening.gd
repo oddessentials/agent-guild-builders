@@ -137,13 +137,21 @@ func _documents() -> bool:
 	check(loaded.add_thing("fern", 50, 50, 0, 1).id == 2, "loaded IDs stay unique")
 	check(loaded.save(path) == OK and not WorldDoc.open(path).water_adjusted, "corrected water survives saving")
 	doc.heights[5] = NAN
-	doc.save(path)
+	check(doc.save(path) == ERR_INVALID_DATA and WorldDoc.open(path) != null, "saving refuses non-finite terrain and keeps the last save")
+	_write_terrain(path.path_join("terrain.bin"), doc.heights, doc.ground)
 	check(WorldDoc.open(path) == null, "non-finite terrain is refused")
 	doc.heights[5] = 0
 	doc.ground[5] = 4
-	doc.save(path)
+	check(doc.save(path) == ERR_INVALID_DATA, "saving refuses unknown ground")
+	_write_terrain(path.path_join("terrain.bin"), doc.heights, doc.ground)
 	check(WorldDoc.open(path) == null, "unknown ground is refused")
 	return true
+
+func _write_terrain(file: String, heights: PackedFloat32Array, ground: PackedByteArray) -> void:
+	var f := FileAccess.open(file, FileAccess.WRITE)
+	f.store_buffer(heights.to_byte_array())
+	f.store_buffer(ground)
+	f.close()
 
 func _fixture_kit() -> void:
 	var dir := work.path_join("kit")

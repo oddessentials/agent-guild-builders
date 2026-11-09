@@ -11,6 +11,7 @@ const TERRAIN_RES := 257
 const TERRAIN_SIZE := 520.0
 const MAX_WATER_LEVEL := -0.1
 const NO_WATER_BELOW := -50.0
+const MAX_TITLE := 128
 ## Each entry takes a document of format N to N+1. Append only.
 const MIGRATIONS: Array[Callable] = []
 const THUMB := "thumb.webp"
@@ -83,6 +84,12 @@ func remove_things(things: Array) -> void:
 func save(dir_path: String) -> Error:
 	save_error = ""
 	notice = ""
+	var out := data.duplicate(true)
+	out.water_level = safe_water_level()
+	out["next_id"] = _next_id
+	if not _valid_data(out) or not _valid_terrain(heights, ground):
+		save_error = "Couldn't save: this world's data is inconsistent and couldn't be opened again, so the last good save was kept."
+		return ERR_INVALID_DATA
 	var tmp := dir_path + ".saving"
 	var old := dir_path + ".old"
 	var report := {}
@@ -96,9 +103,6 @@ func save(dir_path: String) -> Error:
 	var made := DirAccess.make_dir_recursive_absolute(tmp)
 	if made != OK:
 		return _save_failed(made, "create the staging folder", tmp)
-	var out := data.duplicate(true)
-	out.water_level = safe_water_level()
-	out["next_id"] = _next_id
 	var f := FileAccess.open(tmp.path_join("world.json"), FileAccess.WRITE)
 	if f == null:
 		return _save_failed(FileAccess.get_open_error(), "write", tmp.path_join("world.json"))
@@ -247,12 +251,20 @@ static func _read_snapshot(dir_path: String) -> WorldDoc:
 		return null
 	doc.heights = raw.slice(0, count * 4).to_float32_array()
 	doc.ground = raw.slice(count * 4)
-	for i in count:
-		if not is_finite(doc.heights[i]) or doc.ground[i] > 3:
-			return null
+	if not _valid_terrain(doc.heights, doc.ground):
+		return null
 	doc.water_adjusted = float(doc.data.water_level) > MAX_WATER_LEVEL
 	doc.data.water_level = doc.safe_water_level()
 	return doc
+
+static func _valid_terrain(h: PackedFloat32Array, g: PackedByteArray) -> bool:
+	var count := TERRAIN_RES * TERRAIN_RES
+	if h.size() != count or g.size() != count:
+		return false
+	for i in count:
+		if not is_finite(h[i]) or g[i] > 3:
+			return false
+	return true
 
 static func valid_kind(kind: String) -> bool:
 	return kind.is_valid_identifier() or (kind.begins_with(CustomItems.PREFIX) and CustomItems.valid_id(kind.trim_prefix(CustomItems.PREFIX)))
@@ -264,7 +276,7 @@ static func _integer(value: Variant) -> bool:
 	return _number(value) and float(value) == floorf(float(value)) and absf(float(value)) < 9007199254740991.0
 
 static func _valid_data(d: Dictionary) -> bool:
-	if d.get("base") not in BASES or not d.get("title") is String or d.title.strip_edges().is_empty() or d.title.length() > 128:
+	if d.get("base") not in BASES or not d.get("title") is String or d.title.strip_edges().is_empty() or d.title.length() > MAX_TITLE:
 		return false
 	if not _number(d.get("water_level")) or not d.get("mood") is Dictionary or not d.get("things") is Array:
 		return false

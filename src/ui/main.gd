@@ -4,6 +4,7 @@ extends Control
 ##   --export=folder --to=file.agworld
 ##   --check=file.agworld
 ##   --shot=picture.png [--open=folder] [--dark]
+##   --mcp: also serve MCP on stdin and stdout, so an agent can build here
 
 const EditorView := preload("res://src/ui/editor_view.gd")
 const CONTENT_WIDTH := 960.0
@@ -15,12 +16,18 @@ const HERO_CREW_STARTS := 0.51
 const STAMP_TURN := -8.0
 const STAMP_GAP := 22.0
 
+const CONNECT_WIDTH := 760.0
+const CONNECT_CHROME := 150.0
+const CONNECT_LEAST := 120.0
+
 var _args := {}
 var _gui := false
 var _view: Control
 var _loader: WorldLoader
 var _quit_after_load := false
 var _notice := ""
+var _mcp: McpServer
+var _agent_loader: WorldLoader
 
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
@@ -40,6 +47,10 @@ func _ready() -> void:
 		get_tree().auto_accept_quit = false
 		get_window().min_size = Vector2i(1120, 640)
 		OS.low_processor_usage_mode = not _args.has("shot")
+		if OS.get_cmdline_user_args().has("--mcp"):
+			_mcp = McpServer.new()
+			_mcp.host = self
+			add_child(_mcp)
 		if _args.has("open"):
 			_load_world(func(): return WorldDoc.open(_args.open), _args.open, "Opening your world")
 		else:
@@ -100,7 +111,8 @@ func _cli_export() -> void:
 
 func _clear() -> void:
 	for c in get_children():
-		c.queue_free()
+		if c != _mcp and c != _agent_loader:
+			c.queue_free()
 
 func _start_screen() -> void:
 	_clear()
@@ -143,6 +155,10 @@ func _start_screen() -> void:
 		var missing := ProTheme.note("The Meadow kit is missing. Extract the complete app ZIP, including its kits folder, before opening a world.")
 		missing.add_theme_color_override("font_color", ProTheme.color("warn"))
 		col.add_child(missing)
+	if _mcp:
+		var agent := ProTheme.note("An agent is connected. It can create and open worlds in this window, and you'll see everything it does.")
+		agent.add_theme_color_override("font_color", ProTheme.color("accent"))
+		col.add_child(agent)
 	_add_new_world(col)
 	_add_your_worlds(col)
 	var open := Button.new()
@@ -150,6 +166,13 @@ func _start_screen() -> void:
 	open.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	open.pressed.connect(_open_dialog)
 	col.add_child(open)
+	var connect := Button.new()
+	connect.name = "ConnectAgent"
+	connect.text = "Connect an agent…"
+	connect.tooltip_text = "Let Claude Code, Codex CLI, Antigravity CLI, Grok Build or Docker Agent build worlds here over MCP"
+	connect.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	connect.pressed.connect(_connect_dialog)
+	col.add_child(connect)
 
 func _hero() -> Control:
 	var hero := Control.new()
@@ -209,7 +232,7 @@ func _add_new_world(col: VBoxContainer) -> void:
 	var name_box := LineEdit.new()
 	name_box.text = WorldLibrary.unique_title(DEFAULT_TITLE)
 	name_box.placeholder_text = "Name your world"
-	name_box.max_length = 128
+	name_box.max_length = WorldDoc.MAX_TITLE
 	name_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	form.add_child(name_box)
 	var base_label := ProTheme.note("Preview with halls and crews from")
@@ -331,7 +354,7 @@ func _rename_dialog(w: Dictionary) -> void:
 	ask.ok_button_text = "Rename"
 	var box := LineEdit.new()
 	box.text = w.title
-	box.max_length = 128
+	box.max_length = WorldDoc.MAX_TITLE
 	ask.add_child(box)
 	ask.register_text_enter(box)
 	add_child(ask)
@@ -415,11 +438,194 @@ func _on_world_ready(doc: WorldDoc, path: String, loading_page: Control) -> void
 	move_child(loading_page, get_child_count() - 1)
 	for i in 3:
 		await get_tree().process_frame
-	loading_page.queue_free()
+	if is_instance_valid(loading_page):
+		loading_page.queue_free()
 
 func _edit(doc: WorldDoc, path: String) -> void:
 	_view = EditorView.new()
 	_view.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_view)
 	_view.open(doc, path)
+	_view.show_agent_connected(_mcp != null)
 	_view.closed.connect(_start_screen)
+
+func agent_editor() -> Control:
+	return _view if _view and is_instance_valid(_view) and not _loader else null
+
+func agent_loading() -> bool:
+	return _loader != null
+
+## Loads and checks the new world with the usual loader while the current
+## editor stays open, then switches only if nothing has changed meanwhile; any
+## failure leaves the current world and its undo history as they were.
+func agent_open(make: Callable, path: String, still_wanted := Callable()) -> String:
+	var refused := _agent_switch_refused()
+	if refused != "":
+		return refused
+	var started := _switch_state(path)
+	_agent_loader = WorldLoader.new()
+	add_child(_agent_loader)
+	_agent_loader.start(make, path)
+	var doc: WorldDoc = await _agent_loader.done
+	var error := _agent_loader.error
+	_agent_loader.queue_free()
+	_agent_loader = null
+	if doc == null:
+		return error if error != "" else "That world couldn't be opened."
+	if still_wanted.is_valid() and not still_wanted.call():
+		return "The request was cancelled, so nothing was switched."
+	if _switch_state(path) != started:
+		return "The person changed worlds or edited while it loaded, so nothing was switched. Try again."
+	refused = _agent_switch_refused()
+	if refused != "":
+		return refused
+	if _view and is_instance_valid(_view):
+		_view._on_stage_left()
+		if not _view._save_now():
+			return "The open world couldn't be saved, so Builders stayed on it. " + _view._save_failure
+		_view._capture_thumbnail()
+	_clear()
+	_edit(doc, path)
+	return ""
+
+## What a pending switch depends on: which editor is open, its undo history
+## version, and the target world's saved files.
+func _switch_state(path: String) -> Array:
+	var view: Control = _view if _view and is_instance_valid(_view) else null
+	var files := []
+	if path != "":
+		for name in ["world.json", "terrain.bin"]:
+			var file := path.path_join(name)
+			files.append(FileAccess.get_sha256(file) if FileAccess.file_exists(file) else "")
+	return [view.get_instance_id() if view else 0, view.history.revision if view else -1, files]
+
+func _agent_switch_refused() -> String:
+	if _loader:
+		return "Builders is already opening a world."
+	var unfinished := person_unfinished_input()
+	if unfinished != "":
+		return unfinished
+	if _view and is_instance_valid(_view):
+		return _view.agent_busy()
+	return ""
+
+## What the person is still in the middle of, which switching worlds or
+## closing would throw away: an open dialog or menu, or a text field being typed in.
+func person_unfinished_input(include_typing := true) -> String:
+	for w in find_children("*", "Window", true, false):
+		if w.visible or w is FileDialog:
+			return "The person has a dialog open in Builders. Try again once they've closed it."
+	var focus := get_viewport().gui_get_focus_owner()
+	if include_typing and (focus is LineEdit or focus is TextEdit) and focus.is_visible_in_tree():
+		return "The person is typing in Builders. Try again in a moment."
+	return ""
+
+## Waits until no dialog is open and no render is running. False if the
+## person chose to stay at a leave question, which ends automatic closing.
+func until_free_to_close() -> bool:
+	while true:
+		var view: Control = _view if _view and is_instance_valid(_view) else null
+		if view and view.stayed_open:
+			return false
+		if person_unfinished_input(false) == "" and not (view and view._exporting):
+			return true
+		await get_tree().create_timer(0.25).timeout
+	return false
+
+## The agent has gone: once the person is done, close as the window's close
+## button does, once. A failed save leaves the decision to the person.
+func agent_disconnected() -> void:
+	if _view and is_instance_valid(_view):
+		_view.stayed_open = false
+	if not await until_free_to_close():
+		return
+	if _loader:
+		_quit_after_load = true
+	elif _view and is_instance_valid(_view):
+		_view.request_leave(func(): get_tree().quit())
+	else:
+		get_tree().quit()
+
+static func connect_commands(exe: String, before: Array) -> Array:
+	var args := before + ["--no-header", "--", "--mcp"]
+	var shell_args := " ".join(args.map(func(a): return _shell_quote(str(a))))
+	var line := "%s %s" % [_shell_quote(exe), shell_args]
+	var yaml_args := ", ".join(args.map(func(a): return "'%s'" % str(a).replace("'", "''")))
+	return [
+		["Claude Code", "claude mcp add -s user agent-guild-builders \"--\" " + line],
+		["Codex CLI", "codex mcp add agent-guild-builders \"--\" " + line],
+		["Antigravity CLI", "agy mcp add agent-guild-builders \"--\" " + line],
+		["Grok Build", "grok mcp add agent-guild-builders \"--\" " + line],
+		["Docker Agent", "toolsets:\n  - type: mcp\n    command: '%s'\n    args: [%s]" % [exe.replace("'", "''"), yaml_args]],
+	]
+
+## Quoted for PowerShell: paths always in single quotes, which PowerShell
+## takes literally. A bare -- would be dropped by PowerShell when the agent's
+## command is an npm .ps1 wrapper, so it's always quoted.
+static func _shell_quote(text: String) -> String:
+	if text == "--":
+		return "\"--\""
+	if text.begins_with("--") and text.substr(2).replace("-", "").is_valid_identifier():
+		return text
+	return "'%s'" % text.replace("'", "''")
+
+func _connect_dialog(exe := OS.get_executable_path()) -> void:
+	var ask := AcceptDialog.new()
+	ask.name = "ConnectAgentDialog"
+	ask.title = "Connect an agent"
+	ask.ok_button_text = "Done"
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	ask.add_child(box)
+	var intro := ProTheme.note("Run one of these once in PowerShell. Afterwards your agent opens its own Builders window whenever it needs one, and you can watch and undo everything it does. If you move this app to another folder, run the command again.")
+	intro.custom_minimum_size = Vector2(CONNECT_WIDTH, 0)
+	box.add_child(intro)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Commands"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 6)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+	var before := [] if OS.has_feature("template") else ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/")]
+	for entry in connect_commands(exe, before):
+		list.add_child(ProTheme.heading(entry[0], 13))
+		var row := HBoxContainer.new()
+		list.add_child(row)
+		var text := RichTextLabel.new()
+		text.bbcode_enabled = false
+		text.text = entry[1]
+		text.selection_enabled = true
+		text.fit_content = true
+		text.scroll_active = false
+		text.custom_minimum_size = Vector2(CONNECT_WIDTH - 90, 0)
+		text.add_theme_font_size_override("normal_font_size", 13)
+		text.add_theme_stylebox_override("normal", ProTheme.box(ProTheme.color("surface"), ProTheme.color("border"), 6, 8, 6))
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text)
+		var copy := Button.new()
+		copy.text = "Copy"
+		copy.tooltip_text = "Copy the %s command" % entry[0]
+		var command: String = entry[1]
+		copy.pressed.connect(func():
+			DisplayServer.clipboard_set(command)
+			copy.text = "Copied")
+		row.add_child(copy)
+	var docker := ProTheme.note("Docker Agent: add the toolset to your agent's YAML file.")
+	docker.custom_minimum_size = Vector2(CONNECT_WIDTH, 0)
+	box.add_child(docker)
+	add_child(ask)
+	var fit := func():
+		var others := intro.get_combined_minimum_size().y + docker.get_combined_minimum_size().y + CONNECT_CHROME
+		var room := maxf(CONNECT_LEAST, get_viewport_rect().size.y - others)
+		scroll.custom_minimum_size = Vector2(CONNECT_WIDTH + 12, minf(list.get_combined_minimum_size().y, room))
+		ask.reset_size()
+		if ask.visible:
+			ask.move_to_center()
+	fit.call()
+	get_viewport().size_changed.connect(fit)
+	ask.tree_exiting.connect(func(): get_viewport().size_changed.disconnect(fit))
+	ask.confirmed.connect(ask.queue_free)
+	ask.canceled.connect(ask.queue_free)
+	ask.popup_centered()

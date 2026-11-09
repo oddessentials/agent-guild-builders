@@ -27,6 +27,8 @@ static var _textures: Dictionary = {}
 static var _skies: Dictionary = {}
 static var _halls: Dictionary = {}
 static var _season_meshes: Dictionary = {}
+static var _cache_lock := Mutex.new()
+static var _custom_generation := 0
 
 static func kits_dir() -> String:
 	if _kits == "":
@@ -65,32 +67,53 @@ var _pool: StandardMaterial3D
 var _drawn_season := ""
 
 static func load_kit() -> Dictionary:
+	_cache_lock.lock()
+	var current := kit
+	_cache_lock.unlock()
+	if not current.is_empty():
+		return current
+	if not FileAccess.file_exists(kit_file("kit.json")):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(kit_file("kit.json")))
+	var loaded: Dictionary = parsed if parsed is Dictionary else {}
+	if loaded.get("models") is Dictionary:
+		loaded.models.merge(CustomItems.models())
+	_cache_lock.lock()
 	if kit.is_empty():
-		if not FileAccess.file_exists(kit_file("kit.json")):
-			return {}
-		var parsed = JSON.parse_string(FileAccess.get_file_as_string(kit_file("kit.json")))
-		kit = parsed if parsed is Dictionary else {}
-		if kit.get("models") is Dictionary:
-			kit.models.merge(CustomItems.models())
-	return kit
+		kit = loaded
+	current = kit
+	_cache_lock.unlock()
+	return current
 
-## Picks up uploads added, renamed or deleted since the kit was read.
+## Picks up uploads added, renamed or deleted since the kit was read. The kit is
+## replaced, never changed in place, because a loading thread may be reading it.
 static func refresh_custom() -> void:
-	if not load_kit().get("models") is Dictionary:
+	var old := load_kit()
+	if not old.get("models") is Dictionary:
 		return
-	for kind in kit.models.keys():
-		if CustomItems.is_custom(kind):
-			kit.models.erase(kind)
-	kit.models.merge(CustomItems.models())
+	var models: Dictionary = {}
+	for kind in old.models:
+		if not CustomItems.is_custom(kind):
+			models[kind] = old.models[kind]
+	models.merge(CustomItems.models())
+	var fresh := old.duplicate()
+	fresh.models = models
+	_cache_lock.lock()
+	kit = fresh
+	_custom_generation += 1
 	for cache in [_meshes, _season_meshes]:
 		for key in cache.keys():
 			if CustomItems.is_custom(key):
 				cache.erase(key)
+	_cache_lock.unlock()
 
 ## The kit's mesh for a kind, loaded once. Cutout leaves are solid to shadows and
 ## two-sided, as a path tracer sees them.
 static func mesh_ready(kind: String) -> bool:
-	return _meshes.has(kind)
+	_cache_lock.lock()
+	var ready := _meshes.has(kind)
+	_cache_lock.unlock()
+	return ready
 
 ## Whether a kind has gone for the season, or its upload is missing: still in the world, but not drawn, and
 ## nothing can touch it or be stopped by it until it returns.
@@ -137,8 +160,12 @@ static func _dress_for(kind: String, season: String, plain: Mesh) -> ArrayMesh:
 	return dressed
 
 static func mesh_of(kind: String) -> Mesh:
-	if _meshes.has(kind):
-		return _meshes[kind]
+	_cache_lock.lock()
+	var cached: Mesh = _meshes.get(kind)
+	var generation := _custom_generation
+	_cache_lock.unlock()
+	if cached:
+		return cached
 	var combined := ArrayMesh.new()
 	if CustomItems.is_custom(kind):
 		if load_kit().get("models", {}).has(kind):
@@ -148,9 +175,14 @@ static func mesh_of(kind: String) -> Mesh:
 		var state := GLTFState.new()
 		if doc_gltf.append_from_file(kit_file("models/%s.glb" % kind), state) == OK:
 			combined = _combined(doc_gltf, state, load_kit().get("models", {}).get(kind, {}).get("group") == "trees", false)
-	var mesh := _scaled_to_height(combined, kind)
+	var mesh: Mesh = _scaled_to_height(combined, kind)
 	if mesh.get_surface_count() > 0:
-		_meshes[kind] = mesh
+		_cache_lock.lock()
+		if _meshes.has(kind):
+			mesh = _meshes[kind]
+		elif generation == _custom_generation:
+			_meshes[kind] = mesh
+		_cache_lock.unlock()
 	return mesh
 
 ## An uploaded .glb as one mesh, read only from memory, with large textures
@@ -397,35 +429,51 @@ func _build_land() -> void:
 			_draw_chunk(cx, cy)
 
 static func _texture(name: String, _srgb: bool) -> Texture2D:
-	if _textures.has(name):
-		return _textures[name]
+	var cached = _cached(_textures, name)
+	if cached:
+		return cached
 	var file := kit_file("textures/%s.jpg" % name)
 	var img := Image.load_from_file(file) if FileAccess.file_exists(file) else null
-	if img:
-		img.generate_mipmaps()
-		_textures[name] = ImageTexture.create_from_image(img)
-	return _textures.get(name)
+	if img == null:
+		return null
+	img.generate_mipmaps()
+	return _keep(_textures, name, ImageTexture.create_from_image(img))
 
 static func sky_texture(name: String) -> Texture2D:
-	if _skies.has(name):
-		return _skies[name]
+	var cached = _cached(_skies, name)
+	if cached:
+		return cached
 	var file := kit_file("skies/%s.hdr" % name)
 	var img := Image.load_from_file(file) if FileAccess.file_exists(file) else null
-	if img:
-		_skies[name] = ImageTexture.create_from_image(img)
-	return _skies.get(name)
+	if img == null:
+		return null
+	return _keep(_skies, name, ImageTexture.create_from_image(img))
 
 ## Reads a base's halls once, so opening a world needn't read them again.
 static func load_halls(base: String) -> Dictionary:
-	if _halls.has(base):
-		return _halls[base]
+	var cached = _cached(_halls, base)
+	if cached:
+		return cached
 	var state := GLTFState.new()
 	var importer := GLTFDocument.new()
 	var path := kits_dir().path_join("halls/%s.glb" % base)
 	if not FileAccess.file_exists(path) or importer.append_from_file(path, state) != OK or state.get_meshes().is_empty():
 		return {}
-	_halls[base] = {"importer": importer, "state": state}
-	return _halls[base]
+	return _keep(_halls, base, {"importer": importer, "state": state})
+
+static func _cached(cache: Dictionary, key: String) -> Variant:
+	_cache_lock.lock()
+	var found = cache.get(key)
+	_cache_lock.unlock()
+	return found
+
+static func _keep(cache: Dictionary, key: String, value: Variant) -> Variant:
+	_cache_lock.lock()
+	if not cache.has(key):
+		cache[key] = value
+	var kept = cache[key]
+	_cache_lock.unlock()
+	return kept
 
 static func halls_scene(base: String) -> Node3D:
 	var loaded := load_halls(base)

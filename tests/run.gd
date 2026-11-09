@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -494,6 +494,17 @@ func _library() -> bool:
 	check(WorldLibrary.rename(a, "Renamed") == OK and WorldDoc.open(a).data.title == "Renamed", "library: renames")
 	var copy := WorldLibrary.duplicate_world(a)
 	check(copy != "" and WorldDoc.open(copy).data.things.size() == 1 and WorldDoc.open(copy).data.title == "Renamed copy", "library: duplicates")
+	var longest := "L".repeat(WorldDoc.MAX_TITLE - 3) + " ab"
+	var long_folder := WorldLibrary.folder_for(longest)
+	WorldDoc.create("guild", longest, 3).save(long_folder)
+	var suggested := WorldLibrary.unique_title(longest)
+	check(suggested.length() <= WorldDoc.MAX_TITLE and suggested.to_lower() != longest.to_lower() and suggested.ends_with(" 2"), "library: a free name for a full-length title stays within the limit")
+	var long_copy := WorldLibrary.duplicate_world(long_folder)
+	check(long_copy != "" and WorldDoc.open(long_copy).data.title.length() <= WorldDoc.MAX_TITLE and WorldDoc.open(long_copy).data.title != longest, "library: duplicating a full-length title stays within the limit")
+	check(WorldLibrary.unique_title("x".repeat(WorldDoc.MAX_TITLE + 20)).length() == WorldDoc.MAX_TITLE, "library: an over-long title is cut to the limit")
+	WorldDoc.remove_folder(long_folder)
+	if long_copy != "":
+		WorldDoc.remove_folder(long_copy)
 	DirAccess.make_dir_recursive_absolute(root.path_join("not-a-world"))
 	check(WorldLibrary.list().size() == 3, "library: ignores other folders")
 	DirAccess.remove_absolute(root.path_join("not-a-world"))
@@ -675,7 +686,34 @@ func _loader() -> bool:
 	while not bad.has("doc"):
 		await process_frame
 	check(bad.doc == null, "loader: reports a world that can't be opened")
+	Clearance._terrain_limits = PackedFloat32Array()
+	var warmed := {}
+	made.done.connect(func(doc): warmed.doc = doc, CONNECT_ONE_SHOT)
+	made.start(func(): return Templates.create("blank", "guild", "T", 1))
+	check(not Clearance._terrain_limits.is_empty(), "loader: shared land limits are ready before the thread starts")
+	while not warmed.has("doc"):
+		await process_frame
 	made.free()
+	var kind: String = WorldScene.load_kit().models.keys()[0]
+	var kept: Variant = WorldScene._meshes.get(kind)
+	WorldScene._meshes.erase(kind)
+	var placed_first := ArrayMesh.new()
+	var got := []
+	var reader := Thread.new()
+	WorldScene._cache_lock.lock()
+	reader.start(func(): got.append(WorldScene.mesh_of(kind)))
+	WorldScene._meshes[kind] = placed_first
+	WorldScene._cache_lock.unlock()
+	reader.wait_to_finish()
+	check(got.size() == 1 and got[0] == placed_first, "loader: a thread reads the mesh cache only under its lock")
+	WorldScene._meshes.erase(kind)
+	if kept != null:
+		WorldScene._meshes[kind] = kept
+	var snapshot := WorldScene.load_kit()
+	var snapshot_models: Dictionary = snapshot.models
+	var snapshot_json := JSON.stringify(snapshot_models)
+	WorldScene.refresh_custom()
+	check(not is_same(WorldScene.load_kit(), snapshot) and is_same(snapshot.models, snapshot_models) and JSON.stringify(snapshot_models) == snapshot_json, "loader: refreshing uploads replaces the kit and leaves a loading thread's copy unchanged")
 	return true
 
 func _arrange_view(doc: WorldDoc) -> Control:
@@ -1849,3 +1887,922 @@ func _custom_mirrors() -> void:
 						kit_mirrored.append(name)
 				root.free()
 	check(kit_mirrored.is_empty(), "mirrors: no kit model contains a mirrored mesh, so the kit is unchanged: %s" % [kit_mirrored])
+
+class McpStubHost:
+	extends Node
+	var disconnected := 0
+	func agent_editor() -> Control:
+		return null
+	func agent_loading() -> bool:
+		return false
+	func agent_disconnected() -> void:
+		disconnected += 1
+
+func _mcp_server(host: Node, lines: Array) -> McpServer:
+	var server := McpServer.new()
+	server.read_stdin = false
+	server.host = host
+	server.write_line = func(line: String): lines.append(line)
+	host.add_child(server)
+	return server
+
+const REPLY_WAIT_MS := 60000
+
+func _rpc(server: McpServer, lines: Array, msg: Dictionary) -> Dictionary:
+	lines.clear()
+	server.receive(JSON.stringify(msg))
+	var deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while Time.get_ticks_msec() < deadline:
+		for line in lines:
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary and parsed.has("id") and _same_id(parsed.id, msg.get("id")):
+				return parsed
+		await process_frame
+	return {}
+
+static func _same_id(a: Variant, b: Variant) -> bool:
+	if (a is float or a is int) and (b is float or b is int):
+		return float(a) == float(b)
+	return typeof(a) == typeof(b) and a == b
+
+func _call_tool(server: McpServer, lines: Array, id: int, name: String, args: Dictionary) -> Dictionary:
+	var reply := await _rpc(server, lines, {"jsonrpc": "2.0", "id": id, "method": "tools/call", "params": {"name": name, "arguments": args}})
+	return reply.get("result", {})
+
+static func _data(result: Dictionary) -> Dictionary:
+	return result.get("structuredContent", {})
+
+static func _text(result: Dictionary) -> String:
+	return str(result.get("content", [{}])[0].get("text", ""))
+
+func _mcp() -> bool:
+	var lines := []
+	var stub := McpStubHost.new()
+	root.add_child(stub)
+	var server := _mcp_server(stub, lines)
+	var bad := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+	check(bad.get("error", {}).get("code") == McpServer.INVALID_REQUEST, "mcp: refuses tools before initialize")
+	lines.clear()
+	server.receive("{not json")
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).error.code == McpServer.PARSE_ERROR and JSON.parse_string(lines[0]).id == null, "mcp: malformed JSON gets a parse error")
+	lines.clear()
+	server.receive("[{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}]")
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).error.code == McpServer.INVALID_REQUEST, "mcp: refuses batches")
+	lines.clear()
+	server.receive("{\"jsonrpc\":\"2.0\",\"id\":null,\"method\":\"ping\"}")
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).error.code == McpServer.INVALID_REQUEST, "mcp: refuses a null id")
+	var init := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 7, "method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}})
+	check(init.get("result", {}).get("protocolVersion") == "2025-11-25" and init.result.serverInfo.name == "agent-guild-builders" and init.result.has("instructions"), "mcp: initialize answers with the asked version")
+	check(lines.size() == 1 and lines[0].contains("\"id\":7,") and not lines[0].contains("7.0"), "mcp: integer ids come back as integers")
+	check(not init.result.has("resultType"), "mcp: legacy results carry no resultType")
+	var old := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 8, "method": "initialize", "params": {"protocolVersion": "1999-01-01"}})
+	check(old.result.protocolVersion == McpServer.LEGACY[0], "mcp: an unknown version gets the newest legacy one")
+	lines.clear()
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/initialized"}))
+	check(lines.is_empty(), "mcp: notifications get no reply")
+	var meta := {McpServer.META_VERSION: McpServer.MODERN, McpServer.META_CAPABILITIES: {}, "io.modelcontextprotocol/clientInfo": {"name": "t", "version": "1"}}
+	var discover := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "d1", "method": "server/discover", "params": {"_meta": meta}})
+	check(discover.get("result", {}).get("resultType") == "complete" and McpServer.MODERN in discover.result.supportedVersions and discover.result._meta[McpServer.META_SERVER].name == "agent-guild-builders", "mcp: server/discover answers a 2026-07-28 request")
+	var future := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "d2", "method": "server/discover", "params": {"_meta": {McpServer.META_VERSION: "2099-01-01", McpServer.META_CAPABILITIES: {}}}})
+	check(future.get("error", {}).get("code") == McpServer.UNSUPPORTED_VERSION and future.error.data.requested == "2099-01-01" and McpServer.MODERN in future.error.data.supported, "mcp: an unsupported version gets -32022 with the supported list")
+	var no_caps := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "d3", "method": "tools/list", "params": {"_meta": {McpServer.META_VERSION: McpServer.MODERN}}})
+	check(no_caps.get("error", {}).get("code") == McpServer.INVALID_PARAMS, "mcp: a 2026-07-28 request without client capabilities is refused")
+	var bare := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "d4", "method": "server/discover"})
+	check(bare.get("error", {}).get("code") == McpServer.INVALID_PARAMS, "mcp: server/discover needs its metadata")
+	var modern_init := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "d5", "method": "initialize", "params": {"_meta": meta, "protocolVersion": "2025-11-25"}})
+	check(modern_init.get("error", {}).get("code") == McpServer.METHOD_NOT_FOUND, "mcp: initialize isn't part of 2026-07-28")
+	var listed := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "d6", "method": "tools/list", "params": {"_meta": meta}})
+	var names: Array = listed.get("result", {}).get("tools", []).map(func(t): return t.name)
+	check(names == ["list_worlds", "create_world", "open_world", "describe_world", "list_items", "place_items", "paint_area", "move_items", "remove_items", "shape_land", "paint_ground", "set_look", "undo", "redo", "render_preview", "export_world"], "mcp: lists the planned tools")
+	check(listed.result.tools.all(func(t): return t.inputSchema.type == "object" and t.annotations.has("readOnlyHint") and t.has("description")), "mcp: every tool has a schema, hints and a description")
+	check(listed.result.resultType == "complete", "mcp: 2026-07-28 results carry resultType")
+	var unknown := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "fly", "arguments": {}}})
+	check(unknown.get("error", {}).get("code") == McpServer.INVALID_PARAMS, "mcp: an unknown tool is a protocol error")
+	var nothing := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 10, "method": "resources/list"})
+	check(nothing.get("error", {}).get("code") == McpServer.METHOD_NOT_FOUND, "mcp: unknown methods are refused")
+	var wrong := await _call_tool(server, lines, 11, "place_items", {"world": "x"})
+	check(wrong.get("isError") == true and _text(wrong).contains("items"), "mcp: bad arguments come back as a tool error naming the problem")
+	var closed := await _call_tool(server, lines, 12, "describe_world", {"world": "x"})
+	check(closed.get("isError") == true and _text(closed).contains("No world is open"), "mcp: world tools say when nothing is open")
+	server._active = {"ctx": {"id": 99, "cancelled": false}, "long": false}
+	lines.clear()
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": 13, "method": "ping"}))
+	check(lines.is_empty(), "mcp: requests wait while a world is opening")
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 13}}))
+	server._active = {}
+	server._pump()
+	check(lines.is_empty(), "mcp: a cancelled request is never answered")
+	server._active = {"ctx": {"id": 99, "cancelled": false}, "long": false}
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": "text", "method": "ping"}))
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": 13, "method": "ping"}))
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 13}}))
+	server._active = {}
+	server._pump()
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == "text", "mcp: a number id is cancelled while a text id waits ahead of it")
+	lines.clear()
+	server._active = {"ctx": {"id": 98, "cancelled": false}, "long": true}
+	var busy := await _call_tool(server, lines, 14, "place_items", {"world": "x", "items": [{"kind": "stone", "x": 100, "z": -100}]})
+	check(busy.get("isError") == true and _text(busy).contains("rendering"), "mcp: edits are refused while rendering")
+	var reading := await _call_tool(server, lines, 15, "list_items", {"search": "stone"})
+	check(reading.get("isError") == false and _data(reading).items.size() > 0, "mcp: reading tools still answer while rendering")
+	server._active = {}
+	check(lines.all(func(l): return not l.contains("\n") and JSON.parse_string(l) is Dictionary), "mcp: every line written is one JSON message")
+	server._stdin_closed()
+	check(stub.disconnected == 1, "mcp: the end of stdin closes the app")
+	lines.clear()
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": 16, "method": "ping"}))
+	check(lines.is_empty(), "mcp: nothing is answered after stdin closes")
+	stub.free()
+
+	var outside := OS.get_user_data_dir().path_join("mcp-export-test")
+	DirAccess.make_dir_recursive_absolute(outside)
+	var docs := ProjectSettings.globalize_path("res://").path_join(".godot/mcp-export-test")
+	DirAccess.make_dir_recursive_absolute(docs)
+	check(McpTools.export_problem("world.agworld", false) != "", "mcp: export needs a full path")
+	check(McpTools.export_problem(docs + "/../x.agworld", false).contains(".."), "mcp: export refuses ..")
+	check(McpTools.export_problem(docs + "/x.zip", false).contains(".agworld"), "mcp: export needs the .agworld extension")
+	check(McpTools.export_problem(docs + "/missing/x.agworld", false).contains("doesn't exist"), "mcp: export needs an existing folder")
+	check(McpTools.export_problem(outside + "/x.agworld", false).contains("own files"), "mcp: export stays out of the app's data")
+	check(McpTools.export_problem(docs + "/x.agworld", false) == "", "mcp: export accepts a writable folder")
+	var existing := FileAccess.open(docs + "/x.agworld", FileAccess.WRITE)
+	existing.store_8(1)
+	existing.close()
+	check(McpTools.export_problem(docs + "/x.agworld", false).contains("replace"), "mcp: export won't replace a file unless asked")
+	check(McpTools.export_problem(docs + "/x.agworld", true) == "", "mcp: export replaces when asked")
+	DirAccess.remove_absolute(docs + "/x.agworld")
+	DirAccess.remove_absolute(docs)
+	DirAccess.remove_absolute(outside)
+
+	var commands: Array = load("res://src/ui/main.gd").connect_commands("C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe", [])
+	check(commands.map(func(c): return c[0]) == ["Claude Code", "Codex CLI", "Antigravity CLI", "Grok Build", "Docker Agent"], "mcp: connect commands cover every Agent Guild provider")
+	check(commands[0][1] == "claude mcp add -s user agent-guild-builders \"--\" 'C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe' --no-header \"--\" --mcp", "mcp: the Claude Code command quotes the path and every --")
+	var brackets: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps(Builders)/AgentGuildBuilders.exe", [])
+	check(brackets[0][1].contains(" 'C:/Apps(Builders)/AgentGuildBuilders.exe' "), "mcp: a path PowerShell would read as an expression is single-quoted")
+	check(commands[2][1].begins_with("agy mcp add agent-guild-builders \"--\" "), "mcp: Antigravity flags come before the name")
+	check(commands[4][1].contains("type: mcp") and commands[4][1].contains("'--no-header', '--', '--mcp'"), "mcp: the Docker Agent toolset has the server's arguments")
+	var dollar: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps $x/it's/AgentGuildBuilders.exe", [])
+	check(dollar[1][1].contains("'C:/Apps $x/it''s/AgentGuildBuilders.exe'"), "mcp: paths PowerShell would expand are single-quoted")
+	var job := BakeJob.new()
+	root.add_child(job)
+	var ended := []
+	job.finished.connect(func(e): ended.append(e))
+	job.run(WorldDoc.create("guild", "T", 1), OS.get_user_data_dir().path_join("mcp-never.agworld"), "draft")
+	for i in 10:
+		await process_frame
+	check(ended == [BakeJob.NEEDS_WINDOW], "mcp: exporting without a window fails at once")
+	check(await job.preview(WorldDoc.create("guild", "T", 1), "light") == null and job.error == BakeJob.NEEDS_WINDOW, "mcp: previewing without a window fails at once")
+	job.free()
+	return await _mcp_editor()
+
+## The tools against the real app and editor, as an agent would use them.
+func _mcp_editor() -> bool:
+	var library := OS.get_user_data_dir().path_join("mcp-test-worlds")
+	WorldLibrary.root_override = library
+	var app: Control = load("res://src/ui/main.gd").new()
+	root.size = Vector2i(1440, 900)
+	root.add_child(app)
+	var lines := []
+	var server := _mcp_server(app, lines)
+	app._mcp = server
+	await _rpc(server, lines, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
+	var made := await _call_tool(server, lines, 2, "create_world", {"template": "blank", "title": "Agent test", "seed": 5})
+	check(made.get("isError") == false and FileAccess.file_exists(str(_data(made).get("world", "")).path_join("world.json")), "mcp: create_world makes, opens and saves a world")
+	var world := str(_data(made).get("world", ""))
+	var view: Control = app.agent_editor()
+	check(view != null and view.path == world and view._agent_label.visible, "mcp: the window shows the new world and that an agent is connected")
+	var worlds := await _call_tool(server, lines, 3, "list_worlds", {})
+	check(_data(worlds).worlds.any(func(w): return w.world == world and w.open), "mcp: list_worlds marks the open world")
+	var elsewhere := await _call_tool(server, lines, 4, "describe_world", {"world": library.path_join("other")})
+	check(elsewhere.get("isError") == true and _text(elsewhere).contains(world), "mcp: a different world's id is refused, naming the open one")
+	var doc: WorldDoc = view.doc
+	var spots := []
+	for x in range(60, 200, 6):
+		var z := -100.0
+		if Placing.why_not_one(doc, "stone", x, z) == "" and spots.size() < 3:
+			spots.append(Vector2(x, z))
+	var before: int = doc.data.things.size()
+	var plaza_why := Placing.why_not_one(doc, "stone", 0, 0)
+	var placed := await _call_tool(server, lines, 5, "place_items", {"world": world, "items": [
+		{"kind": "stone", "x": spots[0].x, "z": spots[0].y, "turn": 90}, {"kind": "stone", "x": 0, "z": 0}, {"kind": "unicorn", "x": spots[1].x, "z": spots[1].y},
+		{"kind": "stone", "x": spots[2].x, "z": spots[2].y}]})
+	var results: Array = _data(placed).get("results", [])
+	check(results.size() == 4 and results[0].has("id") and results[3].has("id"), "mcp: place_items places the items that fit")
+	check(results.size() == 4 and results[1].get("refused") == plaza_why and plaza_why != "", "mcp: a refusal carries the editor's own reason")
+	check(results.size() == 4 and results[2].get("refused", "").contains("unicorn"), "mcp: an unknown kind is refused alone")
+	check(doc.data.things.size() == before + 2 and view.history.undo_label() == "Place 2 things", "mcp: the placed items are one undo step")
+	check(results.size() == 4 and is_equal_approx(float(results[0].turn), 90.0), "mcp: turns are in degrees")
+	var moved := await _call_tool(server, lines, 6, "move_items", {"world": world, "moves": [{"id": results[0].id, "x": spots[0].x + 3, "z": spots[0].y}, {"id": results[3].id, "x": 0, "z": 0}, {"id": 999999}]})
+	var moves: Array = _data(moved).get("results", [])
+	check(moves.size() == 3 and moves[0].has("x") and moves[1].has("refused") and moves[2].get("refused", "").contains("999999"), "mcp: move_items moves what the rules allow and explains the rest")
+	check(view.history.undo_label().begins_with("Move "), "mcp: the moves are one undo step")
+	var undone := await _call_tool(server, lines, 7, "undo", {"world": world})
+	check(undone.get("isError") == false and view.history.undo_label() == "Place 2 things", "mcp: undo steps back through the shared history")
+	var redone := await _call_tool(server, lines, 8, "redo", {"world": world})
+	check(redone.get("isError") == false and view.history.undo_label().begins_with("Move "), "mcp: redo steps forward again")
+	var near := await _call_tool(server, lines, 9, "describe_world", {"world": world, "items_near": {"x": spots[0].x, "z": spots[0].y, "radius": 8}})
+	check(_data(near).get("items_near", []).any(func(t): return int(t.id) == int(results[0].id)), "mcp: describe_world lists nearby items by id")
+	var gone := await _call_tool(server, lines, 10, "remove_items", {"world": world, "ids": [results[0].id, 424242]})
+	check(_data(gone).get("removed") == 1 and _data(gone).get("not_found", []).map(func(n): return int(n)) == [424242], "mcp: remove_items removes by id and lists ids it didn't find")
+	var both := await _call_tool(server, lines, 11, "remove_items", {"world": world, "ids": [1], "radius": 3})
+	check(both.get("isError") == true, "mcp: remove_items takes ids or an area, not both")
+	var steps_before: String = view.history.undo_label()
+	var painted := await _call_tool(server, lines, 12, "paint_area", {"world": world, "choice": "mix:rocks", "points": [{"x": 120, "z": -140}, {"x": 150, "z": -140}], "radius": 8})
+	check(_data(painted).get("added", 0) > 0 and _data(painted).added_ids.size() == _data(painted).added and view.history.undo_label().begins_with("Paint "), "mcp: paint_area scatters a mix as one undo step")
+	check(view.tool == view.Tool.SCATTER and view.place_mode == "one", "mcp: the person's own tool and options are left as they were")
+	var raised := await _call_tool(server, lines, 13, "shape_land", {"world": world, "mode": "raise", "points": [{"x": 150, "z": -150}], "radius": 6, "strength": 3})
+	check(_data(raised).get("cells", 0) > 0 and view.history.undo_label() == "Shape land" and doc.height_at(150, -150) > 0.0, "mcp: shape_land raises land as one undo step")
+	var flat := await _call_tool(server, lines, 14, "shape_land", {"world": world, "mode": "raise", "points": [{"x": 0, "z": 0}], "radius": 4})
+	check(_data(flat).get("cells") == 0 and _data(flat).get("limited") == true and doc.height_at(0, 0) == 0.0, "mcp: the crews' ground stays flat")
+	var grounded := await _call_tool(server, lines, 15, "paint_ground", {"world": world, "ground": "gravel", "points": [{"x": 100, "z": -160}], "radius": 5})
+	check(_data(grounded).get("cells", 0) > 0 and view.history.undo_label() == "Paint ground", "mcp: paint_ground paints as one undo step")
+	var look := await _call_tool(server, lines, 16, "set_look", {"world": world, "season": "winter", "water": {"on": true, "level": -2.0}, "day": {"sky": "overcast", "sun_strength": 2.0}})
+	check(look.get("isError") == false and doc.season() == "winter" and doc.data.mood.light.sky == "overcast" and is_equal_approx(float(doc.data.mood.light.sun_energy), 2.0) and is_equal_approx(doc.safe_water_level(), -2.0), "mcp: set_look changes season, water and sky")
+	await _call_tool(server, lines, 17, "undo", {"world": world})
+	check(doc.season() == "summer" and doc.data.mood.light.sky == "day" and float(doc.data.water_level) < WorldDoc.NO_WATER_BELOW, "mcp: one undo puts the whole look back")
+	var titled := str(doc.data.title)
+	view.history.set_value("Rename", doc.data, "title", "Renamed by the person")
+	view._title_box.text = "Half typed"
+	var steps := [view.history.undo_label(), view.history.redo_label()]
+	var typing_undo := await _call_tool(server, lines, 171, "undo", {"world": world})
+	var typing_redo := await _call_tool(server, lines, 172, "redo", {"world": world})
+	check(typing_undo.get("isError") == true and _text(typing_undo).contains("typing") and typing_redo.get("isError") == true and _text(typing_redo).contains("typing"), "mcp: undo and redo wait while the person is typing a title")
+	check(view._title_box.text == "Half typed" and doc.data.title == "Renamed by the person" and [view.history.undo_label(), view.history.redo_label()] == steps, "mcp: and the typing, the title and the undo history stay")
+	view._title_box.text = str(doc.data.title)
+	view.history.undo()
+	check(doc.data.title == titled and view._title_box.text == titled, "mcp: the rename undoes once the typing is done")
+	var preview := await _call_tool(server, lines, 18, "render_preview", {"world": world})
+	check(preview.get("isError") == true and _text(preview) == BakeJob.NEEDS_WINDOW, "mcp: render_preview says it needs a window when headless")
+	view._painting = true
+	lines.clear()
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": 19, "method": "tools/call", "params": {"name": "undo", "arguments": {"world": world}}}))
+	for i in 5:
+		await process_frame
+	check(lines.is_empty(), "mcp: an edit waits while the person is mid-stroke")
+	view._painting = false
+	for i in 5:
+		await process_frame
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 19, "mcp: the edit runs once the person lets go")
+	view._painting = true
+	lines.clear()
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": "held", "method": "tools/call", "params": {"name": "set_look", "arguments": {"world": world}}}))
+	var was_waiting: bool = server._waiting_since >= 0
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": "held"}}))
+	check(was_waiting and server._waiting_since == -1, "mcp: cancelling a waiting edit doesn't use up the next one's wait")
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": "next", "method": "tools/call", "params": {"name": "set_look", "arguments": {"world": world}}}))
+	check(lines.is_empty(), "mcp: and the next edit waits for the person")
+	view._painting = false
+	for i in 5:
+		await process_frame
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == "next" and not lines[0].contains("for a while"), "mcp: and that edit runs once the person lets go")
+	view._exporting = true
+	var rendering := await _call_tool(server, lines, 20, "place_items", {"world": world, "items": [{"kind": "stone", "x": spots[1].x, "z": spots[1].y}]})
+	check(rendering.get("isError") == true and _text(rendering).contains("rendering"), "mcp: edits wait their turn behind the window's own render")
+	view._exporting = false
+	var renamed_path: String = view.path
+	view.path = library.path_join("switched")
+	var stale := await _call_tool(server, lines, 21, "place_items", {"world": world, "items": [{"kind": "stone", "x": spots[1].x, "z": spots[1].y}]})
+	check(stale.get("isError") == true and doc.data.things.size() > 0, "mcp: an edit for a world that's no longer open is refused")
+	view.path = renamed_path
+	var reopened := await _call_tool(server, lines, 22, "create_world", {"template": "island", "title": "Agent test two", "seed": 6})
+	var first := WorldDoc.open(world)
+	check(reopened.get("isError") == false and first != null and first.season() == "summer" and first.data.mood.light.sky == "day", "mcp: switching worlds saves the one that was open")
+	check(app.agent_editor() != null and app.agent_editor().path == str(_data(reopened).get("world")), "mcp: the window shows the newly created world")
+	var back := await _call_tool(server, lines, 23, "open_world", {"world": world})
+	check(back.get("isError") == false and app.agent_editor().path == world, "mcp: open_world opens a saved world")
+	var missing := await _call_tool(server, lines, 24, "open_world", {"world": library.path_join("nowhere")})
+	check(missing.get("isError") == true, "mcp: open_world refuses a folder with no world")
+	await _mcp_edit_rules(server, lines, app.agent_editor(), world)
+	await _mcp_review(server, lines, app.agent_editor(), world, library)
+	await _mcp_races(server, lines, app, world, library)
+	await _mcp_ux(server, lines, app, world)
+	app.free()
+	WorldLibrary.root_override = ""
+	for w in DirAccess.get_directories_at(library):
+		WorldDoc.remove_folder(library.path_join(w))
+	DirAccess.remove_absolute(library)
+	return await _mcp_integrity()
+
+static func _things_key(doc: WorldDoc) -> String:
+	var rows := []
+	for t in doc.data.things:
+		rows.append("%d:%s:%.4f:%.4f:%.4f:%.4f" % [int(t.id), t.kind, float(t.x), float(t.z), wrapf(float(t.turn), 0.0, TAU), float(t.scale)])
+	rows.sort()
+	return "|".join(rows)
+
+static func _ids_unique(doc: WorldDoc) -> bool:
+	var seen := {}
+	for t in doc.data.things:
+		if seen.has(int(t.id)):
+			return false
+		seen[int(t.id)] = true
+	return true
+
+## The world as it stands keeps unique ids, saves, and reopens with the same items.
+func _round_trip(doc: WorldDoc, what: String) -> void:
+	var dir := OS.get_user_data_dir().path_join("mcp-round-trip")
+	var saved := doc.save(dir) == OK
+	var back := WorldDoc.open(dir)
+	check(_ids_unique(doc) and saved and back != null and _things_key(back) == _things_key(doc), "mcp: %s keeps unique ids and survives save and reopen" % what)
+	WorldDoc.remove_folder(dir)
+
+static func _item(doc: WorldDoc, id: int) -> Dictionary:
+	var found: Array = doc.data.things.filter(func(t): return int(t.id) == id)
+	return found[0] if found.size() == 1 else {}
+
+## move_items and remove_items against the editor's drag, turn and resize rules,
+## checked by the items' actual values through undo, redo, save and reopen.
+func _mcp_edit_rules(server: McpServer, lines: Array, view: Control, world: String) -> void:
+	var doc: WorldDoc = view.doc
+	var id := 100
+	var placed := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "stone", "x": 170, "z": -60}]})
+	var stone: Dictionary = _item(doc, int(_data(placed).results[0].get("id", -1)))
+	check(not stone.is_empty(), "mcp: a stone to move")
+	var before := _things_key(doc)
+	var undo_before: String = view.history.undo_label()
+	id += 1
+	var twice := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": stone.id, "x": 173, "z": -60}, {"id": stone.id, "x": 176, "z": -60}]})
+	check(twice.get("isError") == true and _text(twice).contains(str(stone.id)) and _things_key(doc) == before and view.history.undo_label() == undo_before, "mcp: a move naming an id twice is refused and changes nothing")
+	id += 1
+	var original: Dictionary = stone.duplicate()
+	var gone := await _call_tool(server, lines, id, "remove_items", {"world": world, "ids": [stone.id, stone.id]})
+	check(_data(gone).get("removed") == 1 and _item(doc, stone.id).is_empty(), "mcp: removing an id twice removes it once")
+	_round_trip(doc, "a repeated remove")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	var back: Dictionary = _item(doc, stone.id)
+	check(doc.data.things.filter(func(t): return int(t.id) == int(stone.id)).size() == 1 and back.x == original.x and back.z == original.z and back.scale == original.scale, "mcp: undoing it restores exactly one copy, unchanged")
+	_round_trip(doc, "undoing a repeated remove")
+	id += 1
+	await _call_tool(server, lines, id, "redo", {"world": world})
+	check(_item(doc, stone.id).is_empty(), "mcp: redo removes it again")
+	_round_trip(doc, "redoing a repeated remove")
+
+	id += 1
+	var oak := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": -150, "z": -150, "scale": 1.0}]})
+	var tree: Dictionary = _item(doc, int(_data(oak).results[0].get("id", -1)))
+	check(not tree.is_empty() and is_equal_approx(float(tree.scale), 1.0), "mcp: a full-size oak far back")
+	var tree_was: Dictionary = tree.duplicate()
+	id += 1
+	var tall := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 41}]})
+	check(_data(tall).results[0].has("refused") and _item(doc, tree.id).x == tree_was.x, "mcp: a full-size oak can't move in front of the Yard")
+	id += 1
+	var small := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 41, "scale": 0.5}]})
+	var shrunk: Dictionary = _item(doc, tree.id)
+	check(_data(small).results[0].has("id") and is_equal_approx(float(shrunk.x), -12.0) and is_equal_approx(float(shrunk.z), 41.0) and is_equal_approx(float(shrunk.scale), 0.5), "mcp: moving and shrinking is judged at the new size")
+	_round_trip(doc, "a move with a resize")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	var undone: Dictionary = _item(doc, tree.id)
+	check(undone.x == tree_was.x and undone.z == tree_was.z and undone.scale == tree_was.scale, "mcp: undo puts the oak back at its old place and size")
+	_round_trip(doc, "undoing a move with a resize")
+	id += 1
+	await _call_tool(server, lines, id, "redo", {"world": world})
+	var redone: Dictionary = _item(doc, tree.id)
+	check(is_equal_approx(float(redone.x), -12.0) and is_equal_approx(float(redone.scale), 0.5), "mcp: redo moves and shrinks it again")
+	_round_trip(doc, "redoing a move with a resize")
+	id += 1
+	var too_big := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "scale": 2.0}]})
+	check(_data(too_big).results[0].has("refused") and is_equal_approx(float(_item(doc, tree.id).scale), 0.5), "mcp: a resize in place follows the size slider's limit")
+	id += 1
+	var pebble_placed := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "stone", "x": 170, "z": -40, "scale": 1.0}]})
+	var pebble: Dictionary = _item(doc, int(_data(pebble_placed).results[0].get("id", -1)))
+	id += 1
+	var turned := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": pebble.id, "turn": 30, "scale": 1.5}]})
+	var t_after: Dictionary = _item(doc, pebble.id)
+	check(_data(turned).results[0].has("id") and t_after.x == pebble.x and t_after.z == pebble.z and is_equal_approx(rad_to_deg(float(t_after.turn)), 30.0) and is_equal_approx(float(t_after.scale), 1.5), "mcp: a turn with a resize keeps the position")
+	_round_trip(doc, "a turn with a resize")
+
+	id += 1
+	var wall_placed := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "fort_thick_straight", "x": 100, "z": -180}]})
+	var wall: Dictionary = _item(doc, int(_data(wall_placed).results[0].get("id", -1)))
+	var pointer := Vector2.ZERO
+	for joint in WorldScene.load_kit().models.fort_thick_straight.joints:
+		var at := Vector2(float(wall.get("x", 0)) + joint[0], float(wall.get("z", 0)) + joint[1])
+		if Placing.placement(doc, "fort_thick_thin_transition", Vector3(at.x, 0, at.y), 0.0).joins != "":
+			pointer = at
+			break
+	id += 1
+	var join_placed := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "fort_thick_thin_transition", "x": pointer.x, "z": pointer.y}]})
+	var piece: Dictionary = _item(doc, int(_data(join_placed).results[0].get("id", -1)))
+	check(not piece.is_empty() and _data(join_placed).results[0].get("joined") == "fort_thick_straight", "mcp: a transition piece joined to a wall")
+	var piece_was: Dictionary = piece.duplicate()
+	var quarter := wrapf(rad_to_deg(float(piece.turn)) + 90.0, 0.0, 360.0)
+	id += 1
+	var q := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": piece.id, "turn": quarter}]})
+	var p_after: Dictionary = _item(doc, piece.id)
+	check(_data(q).results[0].has("id") and p_after.x == piece_was.x and p_after.z == piece_was.z and is_equal_approx(rad_to_deg(float(p_after.turn)), quarter), "mcp: turning a joined piece a quarter keeps its place and takes the turn")
+	_round_trip(doc, "turning a joined piece")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	check(is_equal_approx(float(_item(doc, piece.id).turn), float(piece_was.turn)), "mcp: undo turns it back")
+	var key := _things_key(doc)
+	id += 1
+	var odd := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": piece.id, "turn": 45}]})
+	check(_data(odd).results[0].get("refused", "").contains("90°") and _things_key(doc) == key, "mcp: a joined piece refuses a turn that isn't a quarter, unchanged")
+	id += 1
+	var conflict := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": piece.id, "x": pointer.x, "z": pointer.y, "turn": quarter}]})
+	check(_data(conflict).results[0].get("refused", "").contains("join") and _things_key(doc) == key, "mcp: a move whose join would override the asked turn is refused, unchanged")
+	id += 1
+	var resize_wall := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": wall.id, "scale": 1.5}]})
+	check(_data(resize_wall).results[0].get("refused", "").contains("own size") and _things_key(doc) == key, "mcp: a wall piece can't be resized")
+	id += 1
+	var nothing := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": wall.id}]})
+	check(_data(nothing).results[0].get("refused", "").contains("Nothing to change"), "mcp: a move with nothing to change says so")
+
+	var steps_before: String = view.history.undo_label()
+	id += 1
+	var mixed := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -14, "z": 41}, {"id": wall.id, "x": 0, "z": 0}, {"id": piece.id, "turn": quarter}]})
+	var results: Array = _data(mixed).results
+	check(results[0].has("id") and results[1].has("refused") and results[2].has("id") and _text(mixed).begins_with("Moved 2 of 3"), "mcp: a mixed batch reports exactly what it applied")
+	check(view.history.undo_label() == "Move 2 things" and view.history.undo_label() != steps_before and _item(doc, wall.id).x == wall.x, "mcp: the accepted moves are one undo step and the refused item is untouched")
+	_round_trip(doc, "a mixed batch")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	check(is_equal_approx(float(_item(doc, tree.id).x), -12.0) and is_equal_approx(float(_item(doc, piece.id).turn), float(piece_was.turn)), "mcp: one undo reverts the whole batch")
+	_round_trip(doc, "undoing a mixed batch")
+
+## The shared guards: history refuses an item twice, a failed history record
+## leaves nothing changed, and saving refuses a world that couldn't reopen.
+func _mcp_integrity() -> bool:
+	var library := OS.get_user_data_dir().path_join("mcp-integrity-worlds")
+	WorldLibrary.root_override = library
+	var doc := WorldDoc.create("guild", "Integrity", 4)
+	var view: Control = load("res://src/ui/editor_view.gd").new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	view.open(doc, "")
+	await process_frame
+	var t := doc.add_thing("stone", 100, -100, 0, 1)
+	var key := _things_key(doc)
+	check(view.history.things_edit("Twice", [t, t], []) == false and not view.history.can_undo() and _things_key(doc) == key, "mcp: history refuses an item listed twice and records nothing")
+	var r: Array = view.agent_move([{"id": t.id, "x": 103.0, "z": -100.0}, {"id": t.id, "x": 106.0, "z": -100.0}])
+	check(_things_key(doc) == key and not view.history.can_undo() and r.all(func(e): return e.get("why") == view.NOT_RECORDED), "mcp: an edit history refuses leaves the world unchanged and says so")
+	view._begin_job("Agent render")
+	var running: BakeJob = view._job
+	var told := []
+	view._export_to(OS.get_user_data_dir().path_join("mcp-never.agworld"), func(e, _notice): told.append(e))
+	check(view._job == running and view._exporting and not running._cancelled and told == [view.ALREADY_RENDERING] and view._status.text == view.ALREADY_RENDERING, "mcp: an export chosen while a render runs is refused and the running render is kept")
+	view._end_job()
+	var dir := OS.get_user_data_dir().path_join("mcp-integrity")
+	check(doc.save(dir) == OK, "mcp: a valid world saves")
+	doc.data.things.append(t.duplicate())
+	check(doc.save(dir) == ERR_INVALID_DATA and doc.save_error != "", "mcp: saving refuses a world with a repeated id")
+	var kept := WorldDoc.open(dir)
+	check(kept != null and _things_key(kept) == key, "mcp: the last good save is kept")
+	doc.data.things.pop_back()
+	doc.heights[10] = NAN
+	check(doc.save(dir) == ERR_INVALID_DATA and WorldDoc.open(dir) != null, "mcp: saving refuses broken land and keeps the last good save")
+	doc.heights[10] = 0.0
+	WorldDoc.remove_folder(dir)
+	view.free()
+	_remove_tree(library)
+	WorldLibrary.root_override = ""
+	return true
+
+func _mcp_review(server: McpServer, lines: Array, view: Control, world: String, library: String) -> void:
+	var doc: WorldDoc = view.doc
+	var id := 300
+	var count: int = doc.data.things.size()
+	var exact := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "stone", "x": 170, "z": -80, "scale": 0.5}, {"kind": "stone", "x": 176, "z": -80, "scale": 2.0}]})
+	var rs: Array = _data(exact).results
+	check(rs.size() == 2 and rs[0].has("id") and rs[1].has("id") and float(_item(doc, int(rs[0].id)).scale) == 0.5 and float(_item(doc, int(rs[1].id)).scale) == 2.0, "mcp: placing at an explicit scale keeps it exactly")
+	_round_trip(doc, "placing at explicit scales")
+	count = doc.data.things.size()
+	id += 1
+	var big := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": -12, "z": 41, "scale": 1.0}]})
+	check(_data(big).results[0].get("refused", "").contains("0.50×") and doc.data.things.size() == count, "mcp: a scale past the size slider's limit is refused with the range, and nothing is placed")
+	var snug := Vector2.INF
+	for x in range(-80, 81, 4):
+		for z in [30.0, 36.0, 42.0, 48.0]:
+			var room := Placing.largest_scale(doc, "tree_oak", x, z)
+			if snug == Vector2.INF and room >= 0.55 and room < 0.85 and Placing.why_not_one(doc, "tree_oak", x, z) != "" and Placing.why_not_moved(doc, {"id": -1, "kind": "tree_oak", "x": x, "z": z, "turn": 0.0, "scale": 0.5}, x, z, 0.0) == "":
+				snug = Vector2(x, z)
+	check(snug != Vector2.INF, "mcp: a spot where a placed oak's usual size won't fit but a smaller one will")
+	id += 1
+	var fits := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": snug.x, "z": snug.y, "scale": 0.5}]})
+	var small_oak: Dictionary = _item(doc, int(_data(fits).results[0].get("id", -1)))
+	check(not small_oak.is_empty() and float(small_oak.scale) == 0.5, "mcp: an explicit scale that fits is placed, judged at that size: %s" % _data(fits).results[0].get("refused", ""))
+	id += 1
+	await _call_tool(server, lines, id, "remove_items", {"world": world, "ids": [small_oak.get("id", -1)]})
+	count = doc.data.things.size()
+	id += 1
+	var wall_scaled := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "fort_thick_straight", "x": 100, "z": -220, "scale": 1.5}]})
+	check(_data(wall_scaled).results[0].get("refused", "").contains("own size") and doc.data.things.size() == count, "mcp: a wall piece given a scale is refused")
+	id += 1
+	var wall_placed := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "fort_thick_straight", "x": 100, "z": -220, "scale": 1.0}]})
+	var wall: Dictionary = _item(doc, int(_data(wall_placed).results[0].get("id", -1)))
+	check(not wall.is_empty() and float(wall.scale) == 1.0, "mcp: a wall piece given its own size is placed")
+	var pointer := Vector2.ZERO
+	var join_turn := 0.0
+	for joint in WorldScene.load_kit().models.fort_thick_straight.joints:
+		var at := Vector2(float(wall.x) + joint[0], float(wall.z) + joint[1])
+		var spot := Placing.placement(doc, "fort_thick_thin_transition", Vector3(at.x, 0, at.y), 0.0)
+		if spot.joins != "":
+			pointer = at
+			join_turn = rad_to_deg(float(spot.turn))
+			break
+	count = doc.data.things.size()
+	id += 1
+	var odd := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "fort_thick_thin_transition", "x": pointer.x, "z": pointer.y, "turn": 45}]})
+	check(_data(odd).results[0].get("refused", "").contains("90°") and doc.data.things.size() == count, "mcp: placing a joining piece at a turn that isn't a quarter is refused")
+	id += 1
+	var overridden := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "fort_thick_thin_transition", "x": pointer.x, "z": pointer.y, "turn": wrapf(join_turn + 90.0, 0.0, 360.0)}]})
+	check(_data(overridden).results[0].get("refused", "").contains("join") and doc.data.things.size() == count, "mcp: placing with a turn a join would override is refused")
+	id += 1
+	var joined := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "fort_thick_thin_transition", "x": pointer.x, "z": pointer.y}]})
+	check(_data(joined).results[0].get("joined") == "fort_thick_straight", "mcp: without a turn the join decides")
+	_round_trip(doc, "placing joined pieces")
+
+	var edge := Vector2.INF
+	var limit := 0.0
+	for x in range(-90, 91, 3):
+		for z in [28.0, 34.0, 40.0, 46.0, 52.0]:
+			var r: float = view.size_range("tree_oak", x, z)[1]
+			if edge == Vector2.INF and r > 0.5 and r < 0.99 and not is_equal_approx(r * 4.0, roundf(r * 4.0)) and Placing.why_not_moved(doc, {"id": -1, "kind": "tree_oak", "x": x, "z": z, "turn": 0.0, "scale": r}, x, z, 0.0) == "":
+				edge = Vector2(x, z)
+				limit = r
+	check(edge != Vector2.INF and limit == floorf(Placing.largest_scale(doc, "tree_oak", edge.x, edge.y) * 100.0) / 100.0, "mcp: the size limit is the slider's plain two-decimal value")
+	id += 1
+	var over := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": edge.x, "z": edge.y, "scale": limit + 0.01}]})
+	check(_data(over).results[0].has("refused"), "mcp: just past the size limit is refused")
+	id += 1
+	var at_limit := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": edge.x, "z": edge.y, "scale": limit}]})
+	var limit_oak: Dictionary = _item(doc, int(_data(at_limit).results[0].get("id", -1)))
+	check(not limit_oak.is_empty() and float(limit_oak.scale) == limit, "mcp: a scale exactly at the size limit is accepted: %s %s" % [limit, _data(at_limit).results[0].get("refused", "")])
+	id += 1
+	await _call_tool(server, lines, id, "remove_items", {"world": world, "ids": [limit_oak.get("id", -1)]})
+	for bounds in [[0.1, 0.5], [1.5, 5.0]]:
+		id += 1
+		var edges := await _call_tool(server, lines, id, "set_look", {"world": world, "day": {"sky_strength": bounds[0], "sun_strength": bounds[1]}})
+		check(edges.get("isError") == false and float(doc.data.mood.light.strength) == bounds[0] and float(doc.data.mood.light.sun_energy) == bounds[1], "mcp: sky %s and sun %s, exactly at the slider ends, are accepted" % bounds)
+	id += 1
+	var below := await _call_tool(server, lines, id, "set_look", {"world": world, "day": {"sky_strength": 0.09}})
+	check(below.get("isError") == true and float(doc.data.mood.light.strength) == 1.5, "mcp: a sky strength below the slider is refused")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+
+	var keep_custom := CustomItems.root_override
+	CustomItems.root_override = OS.get_user_data_dir().path_join("mcp-custom-test")
+	var files := OS.get_user_data_dir().path_join("mcp-custom-files")
+	_remove_tree(CustomItems.root_override)
+	_remove_tree(files)
+	DirAccess.make_dir_recursive_absolute(files)
+	var upload := _file(files, "barrel.glb", FileAccess.get_file_as_bytes(WorldScene.kit_file("models/barrel.glb")))
+	var kind: String = CustomItems.add(upload, {"type": "model", "label": "My barrel", "height": 2.0, "rights": true, "upright": "", "seated": false}).get("kind", "")
+	WorldScene.refresh_custom()
+	id += 1
+	var listed := await _call_tool(server, lines, id, "list_items", {"group": CustomItems.GROUP})
+	check(kind != "" and _data(listed).items.any(func(i): return i.kind == kind and i.resizable), "mcp: list_items says custom uploads can be resized")
+	id += 1
+	var custom := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": kind, "x": -150, "z": -170, "scale": 1.5}]})
+	var mine: Dictionary = _item(doc, int(_data(custom).results[0].get("id", -1)))
+	check(not mine.is_empty() and float(mine.scale) == 1.5, "mcp: a custom upload is placed at its explicit scale")
+	id += 1
+	var resized := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": mine.get("id", -1), "scale": 0.8}]})
+	check(_data(resized).results[0].has("id") and float(_item(doc, int(mine.get("id", -1))).scale) == 0.8, "mcp: a custom upload resizes like the editor's size slider allows")
+	_round_trip(doc, "resizing a custom upload")
+	id += 1
+	await _call_tool(server, lines, id, "remove_items", {"world": world, "ids": [mine.get("id", -1)]})
+	_remove_tree(CustomItems.root_override)
+	_remove_tree(files)
+	CustomItems.root_override = keep_custom
+	WorldScene.refresh_custom()
+
+	id += 1
+	await _call_tool(server, lines, id, "list_worlds", {})
+	var saved_key := _things_key(doc)
+	id += 1
+	var other := await _call_tool(server, lines, id, "create_world", {"template": "blank", "title": "Agent test three", "seed": 8})
+	check(other.get("isError") == false, "mcp: a second world to switch to")
+	DirAccess.rename_absolute(world, world + ".old")
+	id += 1
+	var recovered := await _call_tool(server, lines, id, "open_world", {"world": world})
+	var open_view: Control = server.host.agent_editor()
+	check(recovered.get("isError") == false and open_view != null and open_view.path == world and _things_key(open_view.doc) == saved_key, "mcp: open_world recovers an interrupted save with its items intact")
+	var missing_kind := WorldDoc.create("guild", "Uses a missing item", 2)
+	missing_kind.add_thing("not_in_any_kit", 120, -120, 0, 1)
+	var missing_path := library.path_join("uses-missing")
+	missing_kind.save(missing_path)
+	var staying: Control = server.host.agent_editor()
+	id += 1
+	await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "stone", "x": 188, "z": -80}]})
+	var staying_undo: String = staying.history.undo_label()
+	var staying_key := _things_key(staying.doc)
+	id += 1
+	var unavailable := await _call_tool(server, lines, id, "open_world", {"world": missing_path})
+	check(unavailable.get("isError") == true and _text(unavailable).contains("not_in_any_kit") and server.host.agent_editor() == staying and staying.path == world and staying_undo == "Place Stone" and staying.history.undo_label() == staying_undo and _things_key(staying.doc) == staying_key, "mcp: a world that fails to load leaves the open editor and its undo history in place")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	WorldDoc.remove_folder(missing_path)
+	var broken := library.path_join("broken")
+	DirAccess.make_dir_recursive_absolute(broken)
+	_store(broken.path_join("world.json"), "{not json".to_utf8_buffer())
+	_store(broken.path_join("terrain.bin"), PackedByteArray([1, 2, 3]))
+	var before_view: Control = server.host.agent_editor()
+	var before_doc: WorldDoc = before_view.doc
+	id += 1
+	var refused := await _call_tool(server, lines, id, "open_world", {"world": broken})
+	check(refused.get("isError") == true and server.host.agent_editor() == before_view and before_view.path == world and _things_key(before_doc) == saved_key, "mcp: a world that can't be opened leaves the open world as it was")
+	WorldDoc.remove_folder(broken)
+
+func _close_dialogs(under: Node) -> void:
+	for d in under.find_children("*", "AcceptDialog", true, false):
+		d.hide()
+		d.free()
+
+func _mcp_ux(server: McpServer, lines: Array, app: Control, world: String) -> void:
+	var view: Control = app.agent_editor()
+	var doc: WorldDoc = view.doc
+	var id := 500
+	var steps: String = view.history.undo_label()
+	var empty := await _call_tool(server, lines, id, "set_look", {"world": world, "day": {}})
+	check(empty.get("isError") == true and view.history.undo_label() == steps, "mcp: an empty set_look is refused and records nothing")
+	id += 1
+	var same := await _call_tool(server, lines, id, "set_look", {"world": world, "season": doc.season(), "day": {"sky": doc.data.mood.light.sky}})
+	check(same.get("isError") == false and _text(same).begins_with("Nothing changed") and view.history.undo_label() == steps, "mcp: values already set change nothing and add no undo step")
+	var original_strength := float(doc.data.mood.light.strength)
+	var sky: String = doc.data.mood.light.sky
+	id += 1
+	await _call_tool(server, lines, id, "set_look", {"world": world, "day": {"sky_strength": 0.7}})
+	var after_strength: String = view.history.undo_label()
+	check(float(doc.data.mood.light.strength) == 0.7 and after_strength == "Change the look", "mcp: a real look change is one undo step")
+	id += 1
+	var reselect := await _call_tool(server, lines, id, "set_look", {"world": world, "day": {"sky": sky}})
+	check(_text(reselect).begins_with("Nothing changed") and float(doc.data.mood.light.strength) == 0.7, "mcp: choosing the sky already set keeps its strength, as the sky menu does")
+	var other_sky := "overcast" if sky != "overcast" else "day"
+	id += 1
+	await _call_tool(server, lines, id, "set_look", {"world": world, "day": {"sky": other_sky}})
+	check(doc.data.mood.light.sky == other_sky and float(doc.data.mood.light.strength) == float(WorldScene.load_kit().skies[other_sky].strength), "mcp: choosing a different sky resets its strength, as the sky menu does")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	check(doc.data.mood.light.sky == sky and float(doc.data.mood.light.strength) == 0.7, "mcp: one undo puts the sky and its strength back")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	check(float(doc.data.mood.light.strength) == original_strength and view.history.undo_label() == steps, "mcp: undo returns to where it started")
+
+	view._open_custom_dialog()
+	await process_frame
+	var key := _things_key(doc)
+	id += 1
+	var refused := await _call_tool(server, lines, id, "create_world", {"template": "blank", "title": "Not now", "seed": 9})
+	check(refused.get("isError") == true and _text(refused).contains("dialog") and app.agent_editor() == view and view.path == world and view.find_children("*", "CustomDialog", true, false).size() == 1, "mcp: a world switch is refused while a dialog is open, and the dialog stays")
+	id += 1
+	var meanwhile := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "stone", "x": 182, "z": -80}]})
+	check(_data(meanwhile).results[0].has("id"), "mcp: other edits still work while a dialog is open")
+	id += 1
+	await _call_tool(server, lines, id, "undo", {"world": world})
+	check(_things_key(doc) == key, "mcp: and undo as usual")
+	_close_dialogs(view)
+	await process_frame
+	view._title_box.grab_focus()
+	view._title_box.text = "A name being typed"
+	id += 1
+	var typing := await _call_tool(server, lines, id, "open_world", {"world": world + "-nowhere"})
+	check(typing.get("isError") == true and view._title_box.text == "A name being typed", "mcp: a world switch is refused while the person types, and the text stays")
+	id += 1
+	var typing_new := await _call_tool(server, lines, id, "create_world", {"template": "blank", "title": "Not now", "seed": 9})
+	check(typing_new.get("isError") == true and _text(typing_new).contains("typing") and app.agent_editor() == view, "mcp: create_world waits for the person's typing too")
+	view._title_box.text = str(doc.data.title)
+	view._title_box.release_focus()
+
+	await _mcp_disconnect(app, view)
+
+	view._save_now()
+	app._start_screen()
+	await process_frame
+	app._rename_dialog(WorldLibrary.list()[0])
+	await process_frame
+	id += 1
+	var start := await _call_tool(server, lines, id, "create_world", {"template": "blank", "title": "Not now", "seed": 9})
+	check(start.get("isError") == true and app.agent_editor() == null and app.find_children("*", "ConfirmationDialog", true, false).size() == 1, "mcp: on the start screen, a world switch waits for the person's dialog")
+	_close_dialogs(app)
+
+	root.size = Vector2i(1440, 900)
+	app._connect_dialog("C:/" + "p".repeat(234) + "/AgentGuildBuilders.exe")
+	var listeners := root.size_changed.get_connections().size()
+	for size in [Vector2i(1440, 900), Vector2i(1120, 640), Vector2i(1440, 900)]:
+		root.size = size
+		await process_frame
+		await process_frame
+		var resized: AcceptDialog = app.get_node("ConnectAgentDialog")
+		var resized_box := Rect2(resized.position, resized.size)
+		var scroll_now: ScrollContainer = resized.find_child("Commands", true, false)
+		check(resized.size.y <= size.y and Rect2(Vector2.ZERO, Vector2(size)).encloses(resized_box) and Rect2(Vector2.ZERO, resized.size).encloses(resized.get_ok_button().get_global_rect()) and scroll_now.size.y > 0, "mcp: after resizing to %s the open Connect dialog still fits with Done visible" % size)
+	_close_dialogs(app)
+	await process_frame
+	check(root.size_changed.get_connections().size() == listeners - 1, "mcp: closing the Connect dialog removes its resize listener")
+	root.size = Vector2i(1120, 640)
+	for length in [151, 260]:
+		var exe := "C:/" + "p".repeat(length - 26) + "/AgentGuildBuilders.exe"
+		app._connect_dialog(exe)
+		await process_frame
+		await process_frame
+		var dialog: AcceptDialog = app.get_node("ConnectAgentDialog")
+		var done: Button = dialog.get_ok_button()
+		var box := Rect2(Vector2.ZERO, dialog.size)
+		var scroll: ScrollContainer = dialog.find_child("Commands", true, false)
+		check(exe.length() == length and dialog.size.y <= 640 and box.encloses(done.get_global_rect()), "mcp: with a %d-character path the Connect dialog fits a 1120×640 window with Done visible" % length)
+		check(scroll != null and scroll.get_child(0).get_combined_minimum_size().y > scroll.size.y, "mcp: and its commands scroll")
+		_close_dialogs(app)
+
+func _waiting(app: Control) -> Array:
+	var result := [null]
+	var wait := func():
+		result[0] = await app.until_free_to_close()
+	wait.call()
+	return result
+
+func _settle(result: Array) -> void:
+	var deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while result[0] == null and Time.get_ticks_msec() < deadline:
+		await create_timer(0.05).timeout
+
+## After the agent disconnects: Builders waits for dialogs and renders, and
+## the person's "Keep rendering" or "Keep editing" ends automatic closing.
+func _mcp_disconnect(app: Control, view: Control) -> void:
+	app._connect_dialog()
+	await process_frame
+	var r := _waiting(app)
+	for i in 20:
+		await process_frame
+	check(r[0] == null, "mcp: after a disconnect, Builders waits while a dialog is open")
+	_close_dialogs(app)
+	await _settle(r)
+	check(r[0] == true, "mcp: and closes once it's closed")
+	view._exporting = true
+	r = _waiting(app)
+	for i in 20:
+		await process_frame
+	check(r[0] == null, "mcp: a running render is waited for, never cancelled")
+	view._exporting = false
+	await _settle(r)
+	check(r[0] == true, "mcp: and closing follows once it finishes")
+	view._begin_job("Test render")
+	var job: BakeJob = view._job
+	view.request_leave(func(): pass)
+	r = _waiting(app)
+	for i in 20:
+		await process_frame
+	check(r[0] == null and view._leave_dialog != null, "mcp: the person's own leave question is waited for")
+	view._leave_dialog.get_cancel_button().pressed.emit()
+	await _settle(r)
+	check(r[0] == false and view._exporting and is_instance_valid(job) and not job._cancelled and view._leave_dialog == null, "mcp: Keep rendering ends automatic closing and the render carries on")
+	view._end_job()
+	view.stayed_open = false
+	view._show_save_error(func(): pass)
+	r = _waiting(app)
+	for i in 20:
+		await process_frame
+	check(r[0] == null, "mcp: the save-error question is waited for")
+	view._leave_dialog.get_cancel_button().pressed.emit()
+	await _settle(r)
+	for i in 10:
+		await process_frame
+	check(r[0] == false and view._leave_dialog == null and app.find_children("*", "ConfirmationDialog", true, false).is_empty(), "mcp: Keep editing ends automatic closing and the prompt doesn't return")
+	app._connect_dialog()
+	await process_frame
+	var ended := [null]
+	var disconnect := func():
+		await app.agent_disconnected()
+		ended[0] = true
+	disconnect.call()
+	check(ended[0] == null and not view.stayed_open, "mcp: a stay chosen before the agent disconnected doesn't stop automatic closing")
+	view._show_save_error(func(): pass)
+	view._leave_dialog.get_cancel_button().pressed.emit()
+	await _settle(ended)
+	_close_dialogs(app)
+	check(ended[0] == true and view.stayed_open and is_instance_valid(view) and app.agent_editor() == view, "mcp: only a stay chosen during this disconnect ends it")
+	view.stayed_open = false
+
+func _send_tool(server: McpServer, lines: Array, id: int, name: String, args: Dictionary) -> void:
+	lines.clear()
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": id, "method": "tools/call", "params": {"name": name, "arguments": args}}))
+
+func _reply_to(lines: Array, id: int) -> Dictionary:
+	var deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while Time.get_ticks_msec() < deadline:
+		for line in lines:
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary and _same_id(parsed.get("id"), id):
+				return parsed.get("result", {})
+		await process_frame
+	return {}
+
+func _has_stone_at(doc: WorldDoc, x: float) -> bool:
+	return doc.data.things.any(func(t): return t.kind == "stone" and is_equal_approx(float(t.x), x))
+
+func _mcp_races(server: McpServer, lines: Array, app: Control, world: String, library: String) -> void:
+	var target := library.path_join("race-target")
+	WorldDoc.create("guild", "Race target", 3).save(target)
+	var id := 700
+	var view: Control = app.agent_editor()
+	var doc: WorldDoc = view.doc
+	_send_tool(server, lines, id, "open_world", {"world": target})
+	view.history.place("stone", 190.0, -60.0, 0.0, 1.0)
+	var edited := await _reply_to(lines, id)
+	check(edited.get("isError") == true and app.agent_editor() == view and view.path == world and _has_stone_at(doc, 190.0) and view.history.undo_label() == "Place stone", "mcp: an edit made while a world loads keeps the editor, the edit and its undo step")
+	_round_trip(doc, "an edit made during a load")
+	view.history.undo()
+	view._save_now()
+
+	var counted := History.new(WorldDoc.create("guild", "Revisions", 1))
+	var seen := [counted.revision]
+	counted.place("stone", 1.0, 1.0, 0.0, 1.0)
+	seen.append(counted.revision)
+	var applied := counted.doc.add_thing("stone", 5.0, 5.0, 0.0, 1.0)
+	counted.things_edit("Already applied", [applied], [], true)
+	seen.append(counted.revision)
+	counted.set_value("Season", counted.doc.data, "season", "winter")
+	seen.append(counted.revision)
+	var version_before_undo := counted._undo.get_version()
+	counted.undo()
+	seen.append(counted.revision)
+	counted.place("stone", 9.0, 9.0, 0.0, 1.0)
+	seen.append(counted.revision)
+	var repeated := counted._undo.get_version() == version_before_undo
+	counted.undo()
+	seen.append(counted.revision)
+	counted.redo()
+	seen.append(counted.revision)
+	var rising := true
+	for i in range(1, seen.size()):
+		rising = rising and seen[i] > seen[i - 1]
+	check(repeated and rising, "mcp: the revision rises on every edit, undo and redo, even where UndoRedo's version repeats")
+	counted.dispose()
+
+	view.history.place("stone", 194.0, -60.0, 0.0, 1.0)
+	var version_at_start: int = view.history._undo.get_version()
+	id += 1
+	_send_tool(server, lines, id, "open_world", {"world": target})
+	view.history.undo()
+	view.history.place("stone", 196.0, -60.0, 0.0, 1.0)
+	var same_version: bool = view.history._undo.get_version() == version_at_start
+	var reworked := await _reply_to(lines, id)
+	check(same_version and reworked.get("isError") == true and app.agent_editor() == view and view.path == world, "mcp: an undo then a different edit during a load refuses the switch, though UndoRedo's version is back where it started")
+	check(_has_stone_at(doc, 196.0) and not _has_stone_at(doc, 194.0) and view.history.undo_label() == "Place stone" and view.history.can_redo() == false, "mcp: and the editor keeps the new edit and its undo history")
+	check(view._save_now() and _has_stone_at(WorldDoc.open(world), 196.0) and not _has_stone_at(WorldDoc.open(world), 194.0), "mcp: and the saved world matches it")
+	doc.data.things.append(doc.data.things[0].duplicate())
+	id += 1
+	_send_tool(server, lines, id, "open_world", {"world": target})
+	var unsaved := await _reply_to(lines, id)
+	check(unsaved.get("isError") == true and _text(unsaved).contains("couldn't be saved") and view._leave_dialog == null and app.find_children("*", "ConfirmationDialog", true, false).is_empty() and not view.stayed_open, "mcp: a failed save refuses the switch with the reason and asks the person nothing")
+	check(app.agent_editor() == view and view.path == world and view.history.undo_label() == "Place stone" and _has_stone_at(doc, 196.0), "mcp: and the person's world and undo history stay")
+	doc.data.things.pop_back()
+	view.history.undo()
+	view._save_now()
+
+	id += 1
+	_send_tool(server, lines, id, "open_world", {"world": target})
+	app._clear()
+	app._edit(WorldDoc.open(target), target)
+	var person: Control = app.agent_editor()
+	person.history.place("stone", 192.0, -60.0, 0.0, 1.0)
+	var navigated := await _reply_to(lines, id)
+	check(navigated.get("isError") == true and app.agent_editor() == person and person.path == target and _has_stone_at(person.doc, 192.0) and person.history.undo_label() == "Place stone", "mcp: when the person opens the target during the load, their editor, edit and undo step stay")
+	check(person._save_now() and _has_stone_at(WorldDoc.open(target), 192.0), "mcp: and their saved world keeps the edit")
+
+	var gone := library.path_join("race-gone")
+	WorldDoc.create("guild", "Race gone", 4).save(gone)
+	id += 1
+	_send_tool(server, lines, id, "open_world", {"world": gone})
+	WorldDoc.remove_folder(gone)
+	var vanished := await _reply_to(lines, id)
+	check(vanished.get("isError") == true and app.agent_editor() == person and not FileAccess.file_exists(gone.path_join("world.json")), "mcp: a target deleted during the load isn't opened or recreated")
+
+	id += 1
+	var cancel_id := id
+	_send_tool(server, lines, id, "open_world", {"world": world})
+	person._begin_job("Person export")
+	var theirs: BakeJob = person._job
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": cancel_id}}))
+	var deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while not server._active.is_empty() and Time.get_ticks_msec() < deadline:
+		await process_frame
+	check(server._active.is_empty() and not theirs._cancelled and person._exporting and person._job == theirs and app.agent_editor() == person, "mcp: cancelling a world switch leaves the person's export running and switches nothing")
+	check(lines.all(func(l): return not _same_id(JSON.parse_string(l).get("id"), cancel_id)), "mcp: and the cancelled request is never answered")
+	var stray := BakeJob.new()
+	server.tools.cancel({"job": stray})
+	server.tools.cancel({})
+	check(not theirs._cancelled, "mcp: cancelling another request's job, or none, never stops the person's render")
+	stray.free()
+	person._end_job()
+
+	var ctx := {}
+	server.tools._own_job(ctx, person)
+	person._begin_job("Agent render")
+	var mine: BakeJob = person._job
+	person._end_job()
+	person._begin_job("Later render")
+	var later: BakeJob = person._job
+	check(ctx.get("job") == mine and ctx.get("job") != later, "mcp: a request owns only the job its own call started")
+	server.tools.cancel({"job": later})
+	check(later._cancelled, "mcp: cancelling its own running job stops it")
+	person._end_job()
+
+	id += 1
+	var back := await _call_tool(server, lines, id, "open_world", {"world": world})
+	check(back.get("isError") == false and app.agent_editor().path == world, "mcp: switching back afterwards works")
+	WorldDoc.remove_folder(target)
