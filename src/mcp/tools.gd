@@ -559,5 +559,6 @@ func _tool_export_world(ctx: Dictionary, args: Dictionary) -> Dictionary:
 		return failure("The export was stopped in the window. Nothing was exported.")
 	if result[0] != "":
 		return failure("That didn't export: " + result[0])
-	var size := FileAccess.get_file_as_bytes(to).size()
+	var file := FileAccess.open(to, FileAccess.READ)
+	var size := file.get_length() if file else 0
 	return _done("Exported %s in %ds.%s" % [to.get_file(), (Time.get_ticks_msec() - started) / 1000, " " + result[1] if result[1] != "" else ""], {"path": to, "bytes": size})

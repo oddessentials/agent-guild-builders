@@ -1954,6 +1954,14 @@ func _mcp() -> bool:
 	server._active = {}
 	server._pump()
 	check(lines.is_empty(), "mcp: a cancelled request is never answered")
+	server._active = {"ctx": {"id": 99, "cancelled": false}, "long": false}
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": "text", "method": "ping"}))
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": 13, "method": "ping"}))
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 13}}))
+	server._active = {}
+	server._pump()
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == "text", "mcp: a number id is cancelled while a text id waits ahead of it")
+	lines.clear()
 	server._active = {"ctx": {"id": 98, "cancelled": false}, "long": true}
 	var busy := await _call_tool(server, lines, 14, "place_items", {"world": "x", "items": [{"kind": "stone", "x": 100, "z": -100}]})
 	check(busy.get("isError") == true and _text(busy).contains("rendering"), "mcp: edits are refused while rendering")
@@ -2085,6 +2093,18 @@ func _mcp_editor() -> bool:
 	for i in 5:
 		await process_frame
 	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 19, "mcp: the edit runs once the person lets go")
+	view._painting = true
+	lines.clear()
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": "held", "method": "tools/call", "params": {"name": "set_look", "arguments": {"world": world}}}))
+	var was_waiting: bool = server._waiting_since >= 0
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": "held"}}))
+	check(was_waiting and server._waiting_since == -1, "mcp: cancelling a waiting edit doesn't use up the next one's wait")
+	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": "next", "method": "tools/call", "params": {"name": "set_look", "arguments": {"world": world}}}))
+	check(lines.is_empty(), "mcp: and the next edit waits for the person")
+	view._painting = false
+	for i in 5:
+		await process_frame
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == "next" and not lines[0].contains("for a while"), "mcp: and that edit runs once the person lets go")
 	view._exporting = true
 	var rendering := await _call_tool(server, lines, 20, "place_items", {"world": world, "items": [{"kind": "stone", "x": spots[1].x, "z": spots[1].y}]})
 	check(rendering.get("isError") == true and _text(rendering).contains("rendering"), "mcp: edits wait their turn behind the window's own render")
@@ -2593,9 +2613,19 @@ func _mcp_disconnect(app: Control, view: Control) -> void:
 	for i in 10:
 		await process_frame
 	check(r[0] == false and view._leave_dialog == null and app.find_children("*", "ConfirmationDialog", true, false).is_empty(), "mcp: Keep editing ends automatic closing and the prompt doesn't return")
-	r = _waiting(app)
-	await _settle(r)
-	check(r[0] == false, "mcp: once the person has chosen to stay, a later disconnect doesn't close Builders")
+	app._connect_dialog()
+	await process_frame
+	var ended := [null]
+	var disconnect := func():
+		await app.agent_disconnected()
+		ended[0] = true
+	disconnect.call()
+	check(ended[0] == null and not view.stayed_open, "mcp: a stay chosen before the agent disconnected doesn't stop automatic closing")
+	view._show_save_error(func(): pass)
+	view._leave_dialog.get_cancel_button().pressed.emit()
+	await _settle(ended)
+	_close_dialogs(app)
+	check(ended[0] == true and view.stayed_open and is_instance_valid(view) and app.agent_editor() == view, "mcp: only a stay chosen during this disconnect ends it")
 	view.stayed_open = false
 
 func _send_tool(server: McpServer, lines: Array, id: int, name: String, args: Dictionary) -> void:
@@ -2665,6 +2695,13 @@ func _mcp_races(server: McpServer, lines: Array, app: Control, world: String, li
 	check(same_version and reworked.get("isError") == true and app.agent_editor() == view and view.path == world, "mcp: an undo then a different edit during a load refuses the switch, though UndoRedo's version is back where it started")
 	check(_has_stone_at(doc, 196.0) and not _has_stone_at(doc, 194.0) and view.history.undo_label() == "Place stone" and view.history.can_redo() == false, "mcp: and the editor keeps the new edit and its undo history")
 	check(view._save_now() and _has_stone_at(WorldDoc.open(world), 196.0) and not _has_stone_at(WorldDoc.open(world), 194.0), "mcp: and the saved world matches it")
+	doc.data.things.append(doc.data.things[0].duplicate())
+	id += 1
+	_send_tool(server, lines, id, "open_world", {"world": target})
+	var unsaved := await _reply_to(lines, id)
+	check(unsaved.get("isError") == true and _text(unsaved).contains("couldn't be saved") and view._leave_dialog == null and app.find_children("*", "ConfirmationDialog", true, false).is_empty() and not view.stayed_open, "mcp: a failed save refuses the switch with the reason and asks the person nothing")
+	check(app.agent_editor() == view and view.path == world and view.history.undo_label() == "Place stone" and _has_stone_at(doc, 196.0), "mcp: and the person's world and undo history stay")
+	doc.data.things.pop_back()
 	view.history.undo()
 	view._save_now()
 

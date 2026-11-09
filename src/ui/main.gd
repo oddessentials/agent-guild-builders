@@ -20,7 +20,6 @@ const CONNECT_WIDTH := 760.0
 const CONNECT_CHROME := 150.0
 const CONNECT_LEAST := 120.0
 
-
 var _args := {}
 var _gui := false
 var _view: Control
@@ -481,10 +480,10 @@ func agent_open(make: Callable, path: String, still_wanted := Callable()) -> Str
 	if refused != "":
 		return refused
 	if _view and is_instance_valid(_view):
-		var left := [false]
-		_view.request_leave(func(): left[0] = true)
-		if not left[0]:
-			return "The open world couldn't be saved, so Builders stayed on it. The person can retry or keep editing."
+		_view._on_stage_left()
+		if not _view._save_now():
+			return "The open world couldn't be saved, so Builders stayed on it. " + _view._save_failure
+		_view._capture_thumbnail()
 	_clear()
 	_edit(doc, path)
 	return ""
@@ -536,6 +535,8 @@ func until_free_to_close() -> bool:
 ## The agent has gone: once the person is done, close as the window's close
 ## button does, once. A failed save leaves the decision to the person.
 func agent_disconnected() -> void:
+	if _view and is_instance_valid(_view):
+		_view.stayed_open = false
 	if not await until_free_to_close():
 		return
 	if _loader:

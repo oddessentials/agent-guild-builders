@@ -124,10 +124,13 @@ func _notification_received(msg: Dictionary) -> void:
 	if id == null:
 		return
 	for i in _queue.size():
-		if _id_of(_queue[i]) == id:
+		var queued = _id_of(_queue[i])
+		if typeof(queued) == typeof(id) and queued == id:
 			_queue.remove_at(i)
+			if i == 0:
+				_waiting_since = -1
 			return
-	if not _active.is_empty() and _active.ctx.id == id:
+	if not _active.is_empty() and typeof(_active.ctx.id) == typeof(id) and _active.ctx.id == id:
 		_active.ctx.cancelled = true
 		tools.cancel(_active.ctx)
 

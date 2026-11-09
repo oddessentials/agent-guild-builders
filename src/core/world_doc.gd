@@ -102,7 +102,7 @@ func save(dir_path: String) -> Error:
 	var made := DirAccess.make_dir_recursive_absolute(tmp)
 	if made != OK:
 		return _save_failed(made, "create the staging folder", tmp)
-	var f :=FileAccess.open(tmp.path_join("world.json"), FileAccess.WRITE)
+	var f := FileAccess.open(tmp.path_join("world.json"), FileAccess.WRITE)
 	if f == null:
 		return _save_failed(FileAccess.get_open_error(), "write", tmp.path_join("world.json"))
 	f.store_string(JSON.stringify(out, " "))

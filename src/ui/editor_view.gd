@@ -1,7 +1,6 @@
 extends Control
 
 signal closed
-signal stayed
 signal job_started(job: BakeJob)
 
 enum Tool { LOOK, LAND, GROUND, SCATTER, ERASE, WATER, MOOD, ARRANGE }
@@ -2218,7 +2217,6 @@ func request_leave(then: Callable) -> void:
 func _stay() -> void:
 	_close_leave_dialog()
 	stayed_open = true
-	stayed.emit()
 
 func _close_leave_dialog() -> void:
 	if _leave_dialog:
