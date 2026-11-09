@@ -17,6 +17,7 @@ const MAX_RATIO := 20
 const RATIO_FROM := 8 * 1024 * 1024
 const MAX_SIDE := 4096
 const BLOCK := 512
+const PUBLISH_SCRIPT := "try { [System.IO.File]::Move($env:AGB_PUBLISH_FROM, $env:AGB_PUBLISH_TO); exit 0 } catch { exit 1 }"
 
 ## Every name a package may hold, besides the manifest. Anything else is refused.
 static func allowed_names() -> Array:
@@ -153,7 +154,7 @@ static func write(doc: WorldDoc, plates_dir: String, skies: Dictionary, preview:
 	entries.append_array(content)
 	return _write_package(tar_gz(entries), out_path, report)
 
-static func prepare_destination(out_path: String, report := {}) -> Error:
+static func prepare_destination(out_path: String, report := {}, replace := true) -> Error:
 	if out_path.is_empty() or DirAccess.dir_exists_absolute(out_path):
 		return _write_error(report, ERR_INVALID_PARAMETER, "write to a file", out_path)
 	var tmp := out_path + ".tmp"
@@ -166,6 +167,8 @@ static func prepare_destination(out_path: String, report := {}) -> Error:
 	for staging in [tmp, backup]:
 		if DirAccess.dir_exists_absolute(staging):
 			return _write_error(report, ERR_ALREADY_EXISTS, "prepare temporary export files", staging)
+	if not replace and FileAccess.file_exists(out_path):
+		return _occupied(report, out_path)
 	if FileAccess.file_exists(tmp):
 		var recovered := WorldDoc.recovery_path(tmp)
 		var moved := DirAccess.rename_absolute(tmp, recovered)
@@ -183,17 +186,17 @@ static func prepare_destination(out_path: String, report := {}) -> Error:
 		return _write_error(report, checked if checked != OK else removed, "prepare temporary export files", tmp)
 	return OK
 
-static func publish(source: String, out_path: String, report := {}) -> Error:
+static func publish(source: String, out_path: String, report := {}, replace := true) -> Error:
 	if ProjectSettings.globalize_path(source).simplify_path() == ProjectSettings.globalize_path(out_path).simplify_path():
 		return _write_error(report, ERR_INVALID_PARAMETER, "replace the recovery copy with itself", out_path)
 	var checked := check(source)
 	if not accepted(checked):
 		report.error = explanation(checked)
 		return ERR_FILE_CORRUPT
-	return _write_package(FileAccess.get_file_as_bytes(source), out_path, report)
+	return _write_package(FileAccess.get_file_as_bytes(source), out_path, report, replace)
 
-static func _write_package(bytes: PackedByteArray, out_path: String, report := {}) -> Error:
-	var prepared := prepare_destination(out_path, report)
+static func _write_package(bytes: PackedByteArray, out_path: String, report := {}, replace := true) -> Error:
+	var prepared := prepare_destination(out_path, report, replace)
 	if prepared != OK:
 		return prepared
 	var tmp := out_path + ".tmp"
@@ -211,6 +214,8 @@ static func _write_package(bytes: PackedByteArray, out_path: String, report := {
 	if not accepted(check(tmp)):
 		DirAccess.remove_absolute(tmp)
 		return _write_error(report, ERR_FILE_CORRUPT, "validate the temporary export", tmp)
+	if not replace:
+		return _publish_new(tmp, out_path, report)
 	var had_previous := FileAccess.file_exists(out_path)
 	if had_previous:
 		var moved := DirAccess.rename_absolute(out_path, backup)
@@ -232,6 +237,43 @@ static func _publish_staged(tmp: String, out_path: String, had_previous: bool, r
 	if cleaned != OK:
 		report.notice = "Exported successfully. The previous export remains at " + backup
 	return OK
+
+## Publishes without ever replacing, which a rename can't promise: Windows'
+## plain File.Move and a hard link both fail atomically if the name is taken.
+## Paths go through the environment, never through a shell or script text.
+static func _publish_new(tmp: String, out_path: String, report: Dictionary) -> Error:
+	var bytes := FileAccess.get_file_as_bytes(tmp)
+	var output := []
+	var moved: int
+	if OS.get_name() == "Windows":
+		OS.set_environment("AGB_PUBLISH_FROM", _extended_path(tmp))
+		OS.set_environment("AGB_PUBLISH_TO", _extended_path(out_path))
+		moved = OS.execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", PUBLISH_SCRIPT], output, true)
+		OS.unset_environment("AGB_PUBLISH_FROM")
+		OS.unset_environment("AGB_PUBLISH_TO")
+	else:
+		moved = OS.execute("ln", [tmp, out_path], output, true)
+	var published := moved == 0 and FileAccess.file_exists(out_path) and FileAccess.get_file_as_bytes(out_path) == bytes
+	if FileAccess.file_exists(tmp):
+		DirAccess.remove_absolute(tmp)
+	if published:
+		return OK
+	if FileAccess.file_exists(out_path) or DirAccess.dir_exists_absolute(out_path):
+		return _occupied(report, out_path)
+	return _write_error(report, FAILED, "publish the export without risking a replacement", out_path)
+
+## Windows' extended-length form: no 260-character limit, and taken literally.
+static func _extended_path(path: String) -> String:
+	var p := ProjectSettings.globalize_path(path).simplify_path().replace("/", "\\")
+	if p.begins_with("\\\\?\\"):
+		return p
+	if p.begins_with("\\\\"):
+		return "\\\\?\\UNC\\" + p.substr(2)
+	return "\\\\?\\" + p
+
+static func _occupied(report: Dictionary, out_path: String) -> Error:
+	report.error = "%s already exists, so it wasn't replaced." % out_path
+	return ERR_ALREADY_EXISTS
 
 static func _write_error(report: Dictionary, err: Error, operation: String, path: String) -> Error:
 	report.error = "Couldn't %s: %s (%s)." % [operation, path, error_string(err)]

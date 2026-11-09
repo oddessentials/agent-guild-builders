@@ -1,6 +1,8 @@
 extends Control
 
 signal closed
+signal stayed
+signal job_started(job: BakeJob)
 
 enum Tool { LOOK, LAND, GROUND, SCATTER, ERASE, WATER, MOOD, ARRANGE }
 const AUTOSAVE_SECONDS := 2.0
@@ -24,6 +26,8 @@ const NUDGES := {KEY_RIGHT: Vector2(1, 0), KEY_LEFT: Vector2(-1, 0), KEY_UP: Vec
 const SMALLEST_SIZE := 0.5
 const LARGEST_SIZE := 2.0
 const WATER_LOWEST := -20.0
+const SUN_STRENGTH := [0.5, 5.0]
+const SKY_STRENGTH := [0.1, 1.5]
 const PLACE_GROUPS := [["trees", "Trees"], ["plants", "Plants"], ["rocks", "Rocks & logs"], ["lights", "Lights"], ["props", "Props"], ["furniture", "Furniture"], ["statues", "Statues"], ["landmarks", "Landmarks"], ["city", "City"], ["medieval", "Medieval"], ["gnomes", "Gnomes"], ["goblins", "Goblins"], ["forest", "Forest folk"], ["space", "Space"], ["holiday", "Holiday"], [CustomItems.GROUP, "Custom"]]
 const TOOL_KEYS := {KEY_M: Tool.ARRANGE, KEY_P: Tool.SCATTER, KEY_C: Tool.ERASE, KEY_L: Tool.LAND, KEY_G: Tool.GROUND, KEY_W: Tool.WATER, KEY_S: Tool.MOOD, KEY_V: Tool.LOOK}
 
@@ -104,6 +108,9 @@ var _stroke: Dictionary = {}
 var _stroke_added: Array = []
 var _stroke_removed: Array = []
 var _stroke_skipped := 0
+var _stroke_limited := false
+var _agent_label: Label
+var stayed_open := false
 var _land_constraints := {}
 var _land_constraints_ready := false
 var _painting := false
@@ -194,6 +201,12 @@ func _build_ui() -> void:
 	_save_label = ProTheme.note("")
 	_save_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	top.add_child(_save_label)
+	_agent_label = ProTheme.note("Agent connected")
+	_agent_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_agent_label.add_theme_color_override("font_color", ProTheme.color("accent"))
+	_agent_label.tooltip_text = "An agent connected over MCP can edit this world. Its changes appear here and can be undone like yours."
+	_agent_label.visible = false
+	top.add_child(_agent_label)
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(gap)
@@ -695,12 +708,12 @@ func _build_mood_options() -> void:
 		_finish_edits()
 		history.set_values("Sky", m, {"sky": keys[i], "strength": float(skies[keys[i]].strength)}))
 	_options.add_child(pick)
-	_slider("Sun strength", 0.5, 5.0, 0.1, float(m.sun_energy), "%.1f",
+	_slider("Sun strength", SUN_STRENGTH[0], SUN_STRENGTH[1], 0.1, float(m.sun_energy), "%.1f",
 		func(v):
 			m.sun_energy = v
 			_apply_mood(),
 		func(v, was): _commit_value("Sun strength", m, "sun_energy", v, was))
-	_slider("Sky strength", 0.1, 1.5, 0.05, float(m.strength), "%.2f",
+	_slider("Sky strength", SKY_STRENGTH[0], SKY_STRENGTH[1], 0.05, float(m.strength), "%.2f",
 		func(v):
 			m.strength = v
 			_apply_mood(),
@@ -1331,10 +1344,10 @@ func _update_cursor(pos: Vector2) -> void:
 	_brush_material.albedo_color = colour
 	_show_hint(text, pos)
 
-func _why_not_place(hit: Vector3, turn: float) -> String:
-	var why := Placing.why_not_one(doc, place_kind, hit.x, hit.z, turn)
-	if why == "" and WorldScene.mesh_of(place_kind).get_surface_count() == 0:
-		return "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(place_kind)
+func _why_not_place(hit: Vector3, turn: float, kind := place_kind) -> String:
+	var why := Placing.why_not_one(doc, kind, hit.x, hit.z, turn)
+	if why == "" and WorldScene.mesh_of(kind).get_surface_count() == 0:
+		return "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(kind)
 	return why
 
 ## Shows that a model is loading before the pause it takes, the first time it's chosen.
@@ -1374,10 +1387,14 @@ func _build_arrange_options() -> void:
 	_options.add_child(remove)
 
 func _size_slider(thing: Dictionary) -> void:
-	var room := floorf(Placing.largest_scale(doc, thing.kind, thing.x, thing.z) * 100.0) / 100.0
-	_slider("Size", SMALLEST_SIZE, maxf(float(thing.scale), minf(LARGEST_SIZE, room)), 0.01, float(thing.scale), "%.2f×",
+	var sizes := size_range(thing.kind, thing.x, thing.z, float(thing.scale))
+	_slider("Size", sizes[0], sizes[1], 0.01, float(thing.scale), "%.2f×",
 		func(v): _preview_selected("scale", v),
 		func(_v, was): _commit_selected("Resize", "scale", was))
+
+func size_range(kind: String, x: float, z: float, keep := 0.0) -> Array:
+	var room := floorf(Placing.largest_scale(doc, kind, x, z) * 100.0) / 100.0
+	return [SMALLEST_SIZE, maxf(keep, minf(LARGEST_SIZE, room))]
 
 func _selected() -> Dictionary:
 	if _selected_id >= 0:
@@ -1641,6 +1658,9 @@ func _continue_stroke(pos: Vector2) -> void:
 		return
 	if tool == Tool.SCATTER and place_mode == "one":
 		return
+	_stroke_to(hit)
+
+func _stroke_to(hit: Vector3) -> void:
 	var gap: float = (hit - _last_brush).length()
 	var spacing := _brush_spacing()
 	if gap < spacing:
@@ -1659,25 +1679,22 @@ func _apply_brush(hit: Vector3, first: bool) -> void:
 		Tool.ERASE:
 			_erase_at(hit)
 		Tool.LAND:
-			_land_at(hit)
+			if _land_at(hit):
+				_stroke_limited = true
 		Tool.GROUND:
 			_ground_paint_at(hit)
 
 func _scatter_at(hit: Vector3, first: bool) -> void:
 	if place_mode == "one":
-		var spot := Placing.placement(doc, place_kind, hit, _next_turn)
-		hit = spot.at
-		_next_turn = spot.turn
-		var why := _why_not_place(hit, _next_turn)
-		if why != "":
-			_set_status(why)
+		var placed := _place_at(place_kind, hit, _next_turn, _next_scale)
+		hit = placed.at
+		_next_turn = placed.turn
+		if placed.why != "":
+			_set_status(placed.why)
 			_update_cursor(_click_pointer)
 			return
-		var fitted := Placing.fitted_scale(doc, place_kind, hit.x, hit.z, _next_scale)
-		var behind := Placing.hidden_behind(doc, place_kind, hit.x, hit.z, fitted)
-		_placed_note = " It's behind the %s, so it may be hidden from view." % behind if behind != "" else ""
-		_add_stroke_thing(place_kind, hit.x, hit.z, _next_turn, fitted)
-		_show_placed_ring(hit, fitted)
+		_placed_note = " It's behind the %s, so it may be hidden from view." % placed.behind if placed.behind != "" else ""
+		_show_placed_ring(hit, float(placed.thing.scale))
 		_placed_pointer = _click_pointer
 		_on_stage_left()
 		_roll_next()
@@ -1707,12 +1724,45 @@ func _show_placed_ring(hit: Vector3, scale: float) -> void:
 	_placed_ring_until = Time.get_ticks_msec() / 1000.0 + PLACED_RING_SECONDS
 	_redraw()
 
-func _add_stroke_thing(kind: String, x: float, z: float, turn: float, s: float) -> void:
+## With `exact`, an asked-for turn or scale is kept as given or refused: a
+## turn by Q and E's rule, a scale by the size slider's, checked at that size.
+func _place_at(kind: String, at: Vector3, turn: float, scale: float, exact := {}) -> Dictionary:
+	var exact_turn: bool = exact.get("turn", false)
+	var exact_scale: bool = exact.get("scale", false) and not (Placing.modular(kind) and is_equal_approx(scale, Placing.sizes(kind).x))
+	if exact_turn:
+		var bad_turn := _why_not_turn(kind, turn)
+		if bad_turn != "":
+			return {"at": at, "turn": turn, "joins": "", "why": bad_turn, "behind": "", "thing": {}}
+		if Placing.joins(kind):
+			turn = snappedf(turn, PI / 2.0)
+	var spot := Placing.placement(doc, kind, at, turn)
+	var out := {"at": spot.at, "turn": spot.turn, "joins": spot.joins, "why": "", "behind": "", "thing": {}}
+	if exact_turn and absf(angle_difference(float(spot.turn), turn)) > 0.0001:
+		out.why = "%s would join the %s there, which sets its turn to %d°. Leave out turn, or choose another spot." % [_thing_name(kind), _thing_name(spot.joins).to_lower(), roundi(rad_to_deg(wrapf(float(spot.turn), 0.0, TAU)))]
+		return out
+	var size := Placing.fitted_scale(doc, kind, spot.at.x, spot.at.z, scale)
+	if exact_scale:
+		size = scale
+		out.why = _why_not_resize(kind, scale, spot.at.x, spot.at.z)
+		if out.why == "":
+			out.why = Placing.why_not_moved(doc, {"id": -1, "kind": kind, "x": spot.at.x, "z": spot.at.z, "turn": spot.turn, "scale": scale}, spot.at.x, spot.at.z, spot.turn)
+		if out.why == "" and WorldScene.mesh_of(kind).get_surface_count() == 0:
+			out.why = "%s couldn't be loaded. Extract the complete app ZIP, including its kits folder." % _thing_name(kind)
+	else:
+		out.why = _why_not_place(spot.at, spot.turn, kind)
+	if out.why != "":
+		return out
+	out.behind = Placing.hidden_behind(doc, kind, spot.at.x, spot.at.z, size)
+	out.thing = _add_stroke_thing(kind, spot.at.x, spot.at.z, spot.turn, size)
+	return out
+
+func _add_stroke_thing(kind: String, x: float, z: float, turn: float, s: float) -> Dictionary:
 	var thing := doc.add_thing(kind, x, z, turn, s)
 	_stroke_added.append(thing)
 	_scene.update_things([thing], [])
 	_mark_dirty()
 	_redraw()
+	return thing
 
 func _erase_at(hit: Vector3) -> void:
 	var near: Array = doc.data.things.filter(func(t): return not WorldScene.gone_in(t.kind, doc.season()) and Vector2(float(t.x) - hit.x, float(t.z) - hit.z).length() < brush_radius)
@@ -1738,7 +1788,7 @@ func _cells_near(hit: Vector3) -> Array:
 				out.append([j * res + i, 1.0 - d * d * (3.0 - 2.0 * d), p])
 	return out
 
-func _land_at(hit: Vector3) -> void:
+func _land_at(hit: Vector3) -> bool:
 	var res := WorldDoc.TERRAIN_RES
 	var touched := []
 	if not _land_constraints_ready:
@@ -1772,6 +1822,7 @@ func _land_at(hit: Vector3) -> void:
 		_set_status("Land updated.")
 	if limited:
 		_set_status("Some land stayed at its limit to keep the Yard visible.")
+	return limited
 
 func _ground_paint_at(hit: Vector3) -> void:
 	var touched := []
@@ -2160,8 +2211,14 @@ func request_leave(then: Callable) -> void:
 			_cancel.disabled = true
 			_cancel.text = "Stopping…"
 			_job.cancel())
-	ask.canceled.connect(_close_leave_dialog)
+	ask.canceled.connect(_stay)
 	ask.popup_centered()
+
+## The person chose to stay ("Keep rendering", "Keep editing").
+func _stay() -> void:
+	_close_leave_dialog()
+	stayed_open = true
+	stayed.emit()
 
 func _close_leave_dialog() -> void:
 	if _leave_dialog:
@@ -2182,7 +2239,7 @@ func _show_save_error(then: Callable) -> void:
 	ask.confirmed.connect(func():
 		_close_leave_dialog()
 		request_leave(then))
-	ask.canceled.connect(_close_leave_dialog)
+	ask.canceled.connect(_stay)
 	ask.custom_action.connect(func(action):
 		if action == "discard":
 			_close_leave_dialog()
@@ -2220,6 +2277,7 @@ func _begin_job(message: String) -> void:
 	_job = BakeJob.new()
 	add_child(_job)
 	_job.progress.connect(_on_job_progress)
+	job_started.emit(_job)
 
 ## Rendering needs the GPU, so the live view stops and a still picture stands in.
 func _freeze_view(on: bool) -> void:
@@ -2279,20 +2337,26 @@ func _set_controls_enabled(on: bool) -> void:
 	_title_box.editable = on
 
 func _show_preview() -> void:
-	if _exporting:
-		return
+	if not _exporting:
+		await render_preview(theme_name)
+
+func render_preview(theme: String) -> Dictionary:
 	_begin_job("Rendering a preview…")
-	var img: Image = await _job.preview(doc, theme_name)
+	var img: Image = await _job.preview(doc, theme)
 	var error := _job.error
 	var leaving := _after_job.is_valid()
-	var stopped := img == null
 	_end_job()
+	if img == null:
+		if not leaving:
+			_set_status("Preview stopped." if error == "" else "Couldn't render a preview: " + error)
+		return {"image": null, "error": error if error != "" else BakeJob.CANCELLED}
 	if leaving:
-		return
-	if stopped:
-		_set_status("Preview stopped." if error == "" else "Couldn't render a preview: " + error)
-		return
+		return {"image": img, "error": ""}
 	_set_status("Preview ready.")
+	_show_preview_picture(img, theme)
+	return {"image": img, "error": ""}
+
+func _show_preview_picture(img: Image, theme: String) -> void:
 	_dismiss_preview()
 	var cover := PanelContainer.new()
 	cover.add_theme_stylebox_override("panel", ProTheme.box(ProTheme.color("bg"), Color.TRANSPARENT, 0, 10, 10))
@@ -2302,7 +2366,7 @@ func _show_preview() -> void:
 	cover.add_child(stack)
 	var head := HBoxContainer.new()
 	stack.add_child(head)
-	var note := ProTheme.note("%s preview, without the Yard's live halls and crews." % ("Day" if theme_name == "light" else "Dusk"))
+	var note := ProTheme.note("%s preview, without the Yard's live halls and crews." % ("Day" if theme == "light" else "Dusk"))
 	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(note)
 	var close := Button.new()
@@ -2335,18 +2399,33 @@ func _export_dialog() -> void:
 	add_child(d)
 	d.popup_centered(Vector2i(800, 500))
 
-func _export_to(to: String) -> void:
+## `done` hears (error, notice) once the export ends: "" is success, and
+## BakeJob.CANCELLED means it was stopped. `on_progress` hears (done, total).
+func _export_to(to: String, done := Callable(), on_progress := Callable(), quality := _quality, replace := true) -> void:
+	if _exporting:
+		_set_status(ALREADY_RENDERING)
+		if done.is_valid():
+			done.call(ALREADY_RENDERING, "")
+		return
 	if not _save_now():
+		if done.is_valid():
+			done.call("Your project couldn't be saved, so it wasn't exported. " + _save_failure, "")
 		return
 	if not _refresh_problems():
+		if done.is_valid():
+			done.call(_problem_label.text, "")
 		return
 	_begin_job("Getting ready to render by day and at dusk…")
+	if on_progress.is_valid():
+		_job.progress.connect(on_progress)
 	_job.finished.connect(func(e):
 		var leaving := _after_job.is_valid()
 		if _job.recovery_path != "" or e == "":
 			_recovery_path = _job.recovery_path
 		var notice := _job.notice
 		_end_job()
+		if done.is_valid():
+			done.call(e, notice)
 		if leaving:
 			return
 		if e == BakeJob.CANCELLED:
@@ -2360,7 +2439,7 @@ func _export_to(to: String) -> void:
 				_result_path = _recovery_path
 				_result_button.visible = true
 			_set_status("That didn't export: " + e))
-	_job.run(doc, to, _quality)
+	_job.run(doc, to, quality, replace)
 
 func _save_rendered_dialog() -> void:
 	var d := FileDialog.new()
@@ -2386,3 +2465,253 @@ func _save_rendered_to(to: String) -> void:
 	_result_path = to
 	_result_button.visible = true
 	_set_status(report.get("notice", "Exported %s." % to.get_file()))
+
+const AGENT_GESTURE := "The person is in the middle of an edit."
+const NOT_RECORDED := "Not changed: the edit couldn't be recorded for undo."
+const ALREADY_RENDERING := "A render is already running. Export again when it finishes."
+
+func show_agent_connected(on: bool) -> void:
+	if _agent_label:
+		_agent_label.visible = on
+
+## Why an agent's edit can't run now, or "" when it can. AGENT_GESTURE passes
+## once the person lets go.
+func agent_busy() -> String:
+	if _exporting:
+		return "Builders is rendering. Wait for it to finish."
+	if _leave_dialog:
+		return "Builders is waiting for the person to answer a question in its window."
+	if _in_gesture():
+		return AGENT_GESTURE
+	return ""
+
+func _begin_agent_edit() -> void:
+	_finish_edits()
+	_dismiss_preview()
+
+func _after_agent_edit(said: String) -> void:
+	if tool == Tool.ARRANGE:
+		_refresh_selection()
+	if said != "":
+		_set_status("Agent: " + said)
+
+func agent_place(items: Array) -> Array:
+	_begin_agent_edit()
+	_stroke_added = []
+	var out := []
+	for item in items:
+		out.append(_place_at(item.kind, Vector3(item.x, 0.0, item.z), item.turn, item.scale, item.get("exact", {})))
+	var added := _stroke_added
+	_stroke_added = []
+	if not added.is_empty():
+		var label := "Place " + _thing_name(added[0].kind) if added.size() == 1 else "Place %d things" % added.size()
+		if not history.things_edit(label, added, [], true):
+			doc.remove_things(added)
+			_scene.update_things([], added)
+			for r in out:
+				if not r.thing.is_empty():
+					r.why = NOT_RECORDED
+					r.thing = {}
+			return out
+		_after_agent_edit(label.replace("Place", "placed") + ".")
+	return out
+
+## Each requested change follows the editor's own rule for it: a new position
+## follows dragging (joins and grid snapping, then the move checks), a turn
+## follows Q/E (quarter turns for joining pieces, no snapping), and a size
+## follows the size slider. Checks see the complete proposed item.
+func agent_move(moves: Array) -> Array:
+	_begin_agent_edit()
+	var out := []
+	var moved := []
+	var was := []
+	for m in moves:
+		var thing := _thing_by_id(int(m.id))
+		if thing.is_empty():
+			out.append({"why": "There's no item with id %d in this world." % int(m.id)})
+			continue
+		var proposed := _proposed_move(thing, m)
+		if proposed.has("why"):
+			out.append(proposed)
+			continue
+		var changed: Dictionary = proposed.thing
+		doc.data.things[doc.data.things.find(thing)] = changed
+		_scene.update_things([changed], [thing])
+		moved.append(changed)
+		was.append(thing)
+		out.append({"thing": changed})
+	if moved.is_empty():
+		return out
+	var label := "Move " + _thing_name(moved[0].kind) if moved.size() == 1 else "Move %d things" % moved.size()
+	if not history.things_edit(label, moved, was, true):
+		for i in range(moved.size() - 1, -1, -1):
+			doc.data.things[doc.data.things.find(moved[i])] = was[i]
+			_scene.update_things([was[i]], [moved[i]])
+		for r in out:
+			if r.has("thing"):
+				r.erase("thing")
+				r.why = NOT_RECORDED
+		return out
+	_mark_dirty()
+	_after_agent_edit(label.replace("Move", "moved") + ".")
+	return out
+
+func _proposed_move(thing: Dictionary, m: Dictionary) -> Dictionary:
+	var name := _thing_name(thing.kind)
+	var moving := m.has("x") or m.has("z")
+	if not moving and not m.has("turn") and not m.has("scale"):
+		return {"why": "Nothing to change: give x and z, turn or scale."}
+	var changed: Dictionary = thing.duplicate()
+	if m.has("turn"):
+		var turn := float(m.turn)
+		var bad_turn := _why_not_turn(thing.kind, turn)
+		if bad_turn != "":
+			return {"why": bad_turn}
+		if Placing.joins(thing.kind):
+			turn = snappedf(turn, PI / 2.0)
+		changed.turn = wrapf(turn, 0.0, TAU)
+	if m.has("scale"):
+		changed.scale = float(m.scale)
+	if moving:
+		var spot := Placing.placement(doc, thing.kind, Vector3(float(m.get("x", thing.x)), 0.0, float(m.get("z", thing.z))), float(changed.turn), int(thing.id))
+		if m.has("turn") and absf(angle_difference(float(spot.turn), float(changed.turn))) > 0.0001:
+			return {"why": "%s would join the %s there, which sets its turn to %d°. Leave out turn, or choose another spot." % [name, _thing_name(spot.joins).to_lower(), roundi(rad_to_deg(wrapf(float(spot.turn), 0.0, TAU)))]}
+		changed.x = spot.at.x
+		changed.z = spot.at.z
+		changed.turn = spot.turn
+		var why := Placing.why_not_moved(doc, changed, spot.at.x, spot.at.z, spot.turn)
+		if why != "":
+			return {"why": why}
+	if m.has("scale"):
+		var why := _why_not_resize(thing.kind, float(changed.scale), float(changed.x), float(changed.z), float(thing.scale))
+		if why != "":
+			return {"why": why}
+	return {"thing": changed}
+
+func _why_not_resize(kind: String, scale: float, x: float, z: float, keep := 0.0) -> String:
+	if Placing.modular(kind):
+		return "%s keeps its own size." % _thing_name(kind)
+	var sizes := size_range(kind, x, z, keep)
+	if sizes[1] < sizes[0]:
+		return "%s can't be resized here: even its smallest size would hide the Yard." % _thing_name(kind)
+	if scale < sizes[0] or scale > sizes[1]:
+		return "%s can be %.2f× to %.2f× here: larger would hide the Yard." % [_thing_name(kind), sizes[0], sizes[1]]
+	return ""
+
+func _why_not_turn(kind: String, turn: float) -> String:
+	if Placing.joins(kind) and absf(wrapf(turn, -PI / 4.0, PI / 4.0)) > 0.0001:
+		return "%s turns in 90° steps, as in the editor." % _thing_name(kind)
+	return ""
+
+func _thing_by_id(id: int) -> Dictionary:
+	for t in doc.data.things:
+		if int(t.id) == id:
+			return t
+	return {}
+
+func agent_remove(ids: Array) -> Dictionary:
+	_begin_agent_edit()
+	var found := []
+	var missing := []
+	var seen := {}
+	for id in ids:
+		if seen.has(int(id)):
+			continue
+		seen[int(id)] = true
+		var thing := _thing_by_id(int(id))
+		if thing.is_empty():
+			missing.append(int(id))
+		else:
+			found.append(thing)
+	if found.is_empty():
+		return {"removed": 0, "not_found": missing}
+	var label := "Remove " + _thing_name(found[0].kind) if found.size() == 1 else "Remove %d things" % found.size()
+	if not history.things_edit(label, [], found):
+		return {"removed": 0, "not_found": missing, "why": NOT_RECORDED}
+	_after_agent_edit(label.replace("Remove", "removed") + ".")
+	return {"removed": found.size(), "not_found": missing}
+
+func agent_brush(brush: int, points: Array, radius: float, setup: Dictionary, passes := 1) -> Dictionary:
+	_begin_agent_edit()
+	var kept := {"tool": tool, "brush_radius": brush_radius, "land_mode": land_mode, "ground_kind": ground_kind, "place_mode": place_mode, "paint_choice": paint_choice}
+	tool = brush
+	brush_radius = radius
+	for key in setup:
+		set(key, setup[key])
+	_stroke = {}
+	_stroke_added = []
+	_stroke_removed = []
+	_stroke_skipped = 0
+	_stroke_limited = false
+	for i in passes:
+		_last_brush = _ground_point(points[0])
+		_apply_brush(_last_brush, i == 0)
+		for p in points.slice(1):
+			_stroke_to(_ground_point(p))
+	var out := {"added": _stroke_added.size(), "added_ids": _stroke_added.map(func(t): return int(t.id)), "removed": _stroke_removed.size(), "cells": _stroke.size(), "skipped": _stroke_skipped, "limited": _stroke_limited}
+	_finish_stroke()
+	for key in kept:
+		set(key, kept[key])
+	_after_agent_edit(_status.text if _status.text != "" else "done.")
+	return out
+
+func _ground_point(p: Vector2) -> Vector3:
+	return Vector3(p.x, doc.height_at(p.x, p.y), p.y)
+
+## Only what differs is changed, as one undo step; returns whether anything
+## did. Choosing a different sky resets its strength, as the sky menu does;
+## choosing the sky already set changes nothing.
+func agent_set_look(look: Dictionary) -> bool:
+	_begin_agent_edit()
+	var changes := []
+	var top := {}
+	if look.has("season") and look.season != doc.season():
+		top["season"] = look.season
+	if look.has("water_level"):
+		var off := float(look.water_level) <= WorldDoc.NO_WATER_BELOW and float(doc.data.water_level) <= WorldDoc.NO_WATER_BELOW
+		if not off and float(look.water_level) != float(doc.data.water_level):
+			top["water_level"] = look.water_level
+	if not top.is_empty():
+		changes.append([doc.data, top])
+	var skies: Dictionary = WorldScene.load_kit().get("skies", {})
+	for time in ["light", "dark"]:
+		var m: Dictionary = doc.data.mood[time]
+		var asked: Dictionary = look.get(time, {})
+		var values := {}
+		if asked.has("sky") and asked.sky != m.sky:
+			values["sky"] = asked.sky
+			values["strength"] = float(skies[asked.sky].strength)
+		if asked.has("strength"):
+			values["strength"] = float(asked.strength)
+		if asked.has("sun_energy"):
+			values["sun_energy"] = float(asked.sun_energy)
+		for key in values.keys():
+			if values[key] == m.get(key):
+				values.erase(key)
+		if not values.is_empty():
+			changes.append([m, values])
+	if changes.is_empty():
+		return false
+	history.set_many("Change the look", changes)
+	_after_agent_edit("changed the look.")
+	return true
+
+func agent_undo(redo: bool) -> String:
+	var label := history.redo_label() if redo else history.undo_label()
+	if label == "":
+		return ""
+	if redo:
+		_redo()
+	else:
+		_undo()
+	return label
+
+func agent_export(to: String, quality: String, replace: bool, done: Callable, on_progress: Callable) -> void:
+	_begin_agent_edit()
+	_export_to(to, done, on_progress, quality, replace)
+
+func cancel_job() -> void:
+	if _job:
+		_cancel.disabled = true
+		_cancel.text = "Stopping…"
+		_job.cancel()

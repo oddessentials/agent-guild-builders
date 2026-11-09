@@ -7,6 +7,7 @@ signal progress(done: int, total: int)
 signal finished(error: String)
 
 const CANCELLED := "cancelled"
+const NEEDS_WINDOW := "Rendering needs a window. Start Builders without --headless to preview or export."
 var _baker: PlateBaker
 var _cancelled := false
 var error := ""
@@ -18,6 +19,9 @@ func cancel() -> void:
 	if is_instance_valid(_baker):
 		_baker.cancelled = true
 
+static func can_render() -> bool:
+	return DisplayServer.get_name() != "headless"
+
 static func total_chunks() -> int:
 	var count := 0
 	for layer in Yard.layers():
@@ -25,7 +29,7 @@ static func total_chunks() -> int:
 			count += PlateBaker.chunks_in(tile)
 	return count
 
-func run(doc: WorldDoc, out_path: String, quality := "final") -> void:
+func run(doc: WorldDoc, out_path: String, quality := "final", replace := true) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	if _cancelled:
@@ -37,8 +41,11 @@ func run(doc: WorldDoc, out_path: String, quality := "final") -> void:
 		finished.emit(checked.get("problem", "The project couldn't be checked for export."))
 		return
 	var report := {}
-	if WorldPackage.prepare_destination(out_path, report) != OK:
+	if WorldPackage.prepare_destination(out_path, report, replace) != OK:
 		finished.emit(report.error)
+		return
+	if not can_render():
+		finished.emit(NEEDS_WINDOW)
 		return
 	clean_leftovers()
 	var plates := OS.get_user_data_dir().path_join("bakes").path_join("%s-%s" % [OS.get_process_id(), Time.get_ticks_usec()])
@@ -92,20 +99,20 @@ func run(doc: WorldDoc, out_path: String, quality := "final") -> void:
 		recovery_path = ""
 		finished.emit(report.get("error", "The world file couldn't be written (%s)." % error_string(written)) + " Rendered pictures have been kept at " + plates)
 		return
-	if save_rendered(recovery_path, out_path, report) != OK:
+	if save_rendered(recovery_path, out_path, report, replace) != OK:
 		finished.emit(report.get("error", "The world file couldn't be written.") + " The finished world is kept at " + recovery_path)
 		return
 	recovery_path = ""
 	notice = report.get("notice", "")
 	finished.emit("")
 
-static func save_rendered(source: String, out_path: String, report := {}) -> Error:
+static func save_rendered(source: String, out_path: String, report := {}, replace := true) -> Error:
 	var source_folder := ProjectSettings.globalize_path(source).replace("\\", "/").get_base_dir().simplify_path().to_lower()
 	var destination := ProjectSettings.globalize_path(out_path).replace("\\", "/").simplify_path().to_lower()
 	if destination.begins_with(source_folder + "/"):
 		report.error = "Choose a destination outside the recovered export folder."
 		return ERR_INVALID_PARAMETER
-	var written := WorldPackage.publish(source, out_path, report)
+	var written := WorldPackage.publish(source, out_path, report, replace)
 	if written == OK:
 		var folder := source.get_base_dir()
 		var root := OS.get_user_data_dir().path_join("bakes")
@@ -123,6 +130,9 @@ func preview(doc: WorldDoc, theme: String) -> Image:
 	var sky := BakeSky.from_file(WorldScene.kit_file("skies/%s.hdr" % m.sky), float(m.strength))
 	if sky == null:
 		error = "The %s sky couldn't be read. Extract the complete app ZIP, including its kits folder." % str(m.sky)
+		return null
+	if not can_render():
+		error = NEEDS_WINDOW
 		return null
 	WorldScene.load_kit()
 	var scene := WorldScene.new()
