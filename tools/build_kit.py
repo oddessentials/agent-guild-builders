@@ -134,6 +134,9 @@ MODELS = {
     'fort_walkway_end': ('modular_fort_01:wall_walkway_end_01', None, 'Walkway end', 'medieval', 5),
     'fort_stairs_straight': ('modular_fort_01:wall_stairs_straight_01', None, 'Wall stairs', 'medieval', 15),
     'fort_tower_round': ('modular_fort_01:tower_round', None, 'Round tower', 'medieval', 16),
+    'tree_blossom': ('jacaranda_tree', 1, 'Blossom tree', 'trees', 9),
+    'moon_rock': ('moon_rock_01', None, 'Moon rock', 'rocks', 3),
+    'moon_boulder': ('moon_rock_03', None, 'Moon boulder', 'rocks', 6),
 }
 MODULAR = {key for key in MODELS if key.startswith('fort_')} | {'castle_door'}
 JOINS = MODULAR - {'castle_door', 'fort_thick_corner_b', 'fort_walkway_corner_b'}
@@ -204,7 +207,9 @@ TARGET = {'tree_oak': 9, 'tree_elm': 8, 'tree_fir': 16, 'tree_young': 6, 'shrub_
           'gnome_cottage': 8.5, 'gnome_cottage_small': 6.5, 'gnome_tower': 12.5, 'gnome_workshop': 6, 'gnome_mill': 8,
           'goblin_house': 9, 'goblin_shack': 7, 'goblin_hut': 5, 'goblin_factory': 13, 'goblin_water_tower': 10, 'goblin_crane': 11,
           'treehouse': 10, 'stump_house': 4.5, 'mushroom_house': 6.5, 'stone_lantern': 2.2,
-          'space_dish': 7, 'space_crane': 5, 'space_shuttle': 5.5}
+          'space_dish': 7, 'space_crane': 5, 'space_shuttle': 5.5,
+          'tree_blossom': 8, 'moon_rock': 0.8, 'moon_boulder': 2.4}
+FOLIAGE = {'tree_blossom': ((0.62, 0.26, 0.4), (0.98, 0.78, 0.86))}
 # Lit at dusk only: watts, colour and height above the model's base, in Blender's units.
 LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'street_lamp': {'watts': 300.0, 'color': [1.0, 0.72, 0.45], 'height': 3.6},
@@ -226,13 +231,61 @@ GROUNDS = {
     'grass': ('leafy_grass', 'Meadow grass'), 'dirt': ('forest_ground_04', 'Forest floor'),
     'rock': ('rocky_trail', 'Rocky ground'), 'gravel': ('gravel_floor', 'Gravel'),
     'cobble': ('cobblestone_floor_04', 'Cobbles'),
+    'mars_sand': ('red_sand', 'Red sand'), 'mars_stones': ('red_laterite_soil_stones', 'Red stones'),
+    'mars_cliff': ('cliff_side', 'Layered rock'), 'mars_dust': ('red_mud_stones', 'Dark regolith'),
+    'moon_dust': ('moon_01', 'Grey regolith'), 'moon_bright': ('moon_dusted_03', 'Bright dust'),
+    'moon_rock': ('moon_meteor_01', 'Cratered rock'), 'space': ('made_stars', 'Open space'),
+    'salt_crust': ('made_salt_crust', 'Salt crust'), 'salt_flat': ('made_salt_flat', 'Smooth salt'),
+    'salt_mud': ('dry_mud_field_001', 'Dry mud'),
+    'ash': ('made_ash', 'Ash'), 'cinder': ('made_red_cinder', 'Red cinder'),
+    'basalt': ('made_basalt', 'Basalt'), 'lava': ('made_lava', 'Lava'),
+    'raked': ('made_raked_gravel', 'Raked gravel'),
+    'mossy_stone': ('mossy_rock', 'Mossy stone'), 'pebbles': ('dry_river_pebbles', 'River pebbles'),
+    'plaza_panels': ('granite_tile', 'Stone panels'),
+    'plaza_sandstone': ('white_sandstone_blocks_02', 'White sandstone'), 'plaza_basalt': ('volcanic_rock_tiles', 'Basalt tiles'),
+    'plaza_slate': ('large_grey_tiles', 'Grey flagstones'), 'plaza_concrete': ('concrete_pavers_02', 'Concrete pavers'),
+}
+# A world's four painted grounds and its plaza. Per ground: metres per repeat as a
+# multiple of the land shader's, glow from within, and side projection on steep land.
+LANDS = {
+    'meadow': {'label': 'Meadow', 'grounds': ['grass', 'dirt', 'rock', 'gravel'], 'plaza': 'cobble', 'grass': True, 'leaves': True},
+    'mars': {'label': 'Red planet', 'grounds': ['mars_sand', 'mars_stones', 'mars_cliff', 'mars_dust'], 'plaza': 'plaza_concrete',
+             'scale': [2, 1, 4, 1.5], 'triplanar': True},
+    'moon': {'label': 'Moon', 'grounds': ['moon_dust', 'moon_bright', 'moon_rock', 'space'], 'plaza': 'plaza_panels',
+             'scale': [2, 2, 2, 20], 'glow': [0, 0, 0, 3], 'glow_power': [1, 1, 1, 1], 'triplanar': True},
+    'salt': {'label': 'Salt flat', 'grounds': ['salt_crust', 'salt_flat', 'basalt', 'salt_mud'], 'plaza': 'plaza_sandstone',
+             'scale': [8, 3, 3, 2], 'triplanar': True,
+             'water': {'shallow': [0.16, 0.66, 0.64], 'deep': [0.01, 0.3, 0.38], 'clear': 0.25, 'mirror': 0.2}},
+    'volcano': {'label': 'Volcanic', 'grounds': ['ash', 'cinder', 'basalt', 'lava'], 'plaza': 'plaza_basalt',
+                'scale': [2, 1.5, 3, 6], 'glow': [0, 0, 0, 9], 'glow_power': [1, 1, 1, 1.6], 'triplanar': True},
+    'garden': {'label': 'Garden', 'grounds': ['grass', 'raked', 'mossy_stone', 'pebbles'], 'plaza': 'plaza_slate', 'grass': True,
+               'grass_tint': [0.5, 0.78, 0.42], 'water': {'shallow': [0.08, 0.16, 0.1], 'deep': [0.006, 0.03, 0.025], 'clear': 0.55}},
 }
 SKIES = {
     'day': ('kloofendal_48d_partly_cloudy_puresky', 'Clear day', 0.9),
     'overcast': ('kloofendal_misty_morning_puresky', 'Misty morning', 0.9),
     'dusk': ('qwantani_dusk_2_puresky', 'Warm dusk', 0.5),
     'moon': ('qwantani_moonrise_puresky', 'Moonrise', 0.3),
+    'clear': ('kloofendal_43d_clear_puresky', 'Clear sky', 0.9),
+    'sunset': ('qwantani_sunset_puresky', 'Golden sunset', 0.5),
+    'haze': ('made_haze_day', 'Volcanic haze', 0.9),
+    'fire': ('the_sky_is_on_fire', 'Fire sky', 0.5),
+    'mars_day': ('made_mars_day', 'Mars day', 0.9),
+    'mars_dusk': ('made_mars_dusk', 'Mars blue dusk', 0.9),
+    'orbit_day': ('yard-env/orbital-day', 'Orbit', 1.0),
+    'orbit_dusk': ('yard-env/orbital-dusk', 'Orbit dusk', 1.0),
 }
+
+
+def source_file(rel):
+    for folder in (SOURCE, *MORE_SOURCES):
+        if folder.joinpath(rel).is_file():
+            return folder / rel
+    raise RuntimeError(f'Missing source {rel}: run tools/fetch_sources.py and tools/make_sources.py')
+
+
+def licence_of(name):
+    return MADE_LICENCE if name.startswith('made_') else GUILD_LICENCE if '/' in name else LICENCE
 
 
 def blend_of(name):
@@ -288,6 +341,23 @@ def standard_foliage(material):
         tree.links.new(images['nor_gl'].outputs['Color'], normal.inputs['Color'])
         tree.links.new(normal.outputs['Normal'], bsdf.inputs['Normal'])
     material.surface_render_method = 'DITHERED'
+
+
+def recolour_foliage(material, dark, light):
+    if material is None or not material.use_nodes or 'leaves' not in material.name.lower():
+        return
+    for n in material.node_tree.nodes:
+        if n.type == 'TEX_IMAGE' and n.image and 'diff' in n.image.name.lower():
+            img = n.image
+            px = np.empty(len(img.pixels), np.float32)
+            img.pixels.foreach_get(px)
+            px = px.reshape(-1, 4)
+            lum = px[:, :3] @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+            t = np.clip((lum - np.percentile(lum, 5)) / max(np.percentile(lum, 95) - np.percentile(lum, 5), 1e-4), 0, 1)[:, None]
+            px[:, :3] = np.array(dark, np.float32) + (np.array(light, np.float32) - np.array(dark, np.float32)) * t
+            img.pixels.foreach_set(px.ravel())
+            img.update()
+            img.pack()
 
 
 def stand_at_origin(parts, grounded=True):
@@ -444,6 +514,8 @@ def export_model(kit_id, spec):
             high = Vector(map(max, high, c))
     for material in {m for o in parts for m in o.data.materials}:
         standard_foliage(material)
+        if kit_id in FOLIAGE:
+            recolour_foliage(material, *FOLIAGE[kit_id])
     for o in parts:
         o.select_set(True)
     bpy.context.view_layer.objects.active = parts[0]
@@ -513,16 +585,17 @@ def main():
     for key, (name, label) in GROUNDS.items():
         for m in ('diff', 'nor_gl', 'rough'):
             if (key, m) != ('grass', 'diff') and not (KIT / 'textures' / f'{key}_{m}.jpg').exists():
-                shutil.copyfile(SOURCE / name / f'{name}_{m}_2k.jpg', KIT / 'textures' / f'{key}_{m}.jpg')
-        kit['grounds'][key] = {'label': label, 'source': name, 'licence': LICENCE}
+                shutil.copyfile(source_file(f'{name}/{name}_{m}_2k.jpg'), KIT / 'textures' / f'{key}_{m}.jpg')
+        kit['grounds'][key] = {'label': label, 'source': name, 'licence': licence_of(name)}
     if not (KIT / 'textures' / 'grass_diff.jpg').exists():
         write_meadow_texture(MEADOW, KIT / 'textures' / 'grass_diff.jpg')
     kit['grounds']['grass'].update({'source': 'agent-guild concept-art/guild-yard/env/textures/meadow.jpg',
                                     'licence': 'AGPL-3.0-only (Agent Guild)', 'note': 'Generated locally for the shipped Yard worlds; see ART.md in agent-guild.'})
     for key, (name, label, strength) in SKIES.items():
         if not (KIT / 'skies' / f'{key}.hdr').exists():
-            shutil.copyfile(SOURCE / name / f'{name}_1k.hdr', KIT / 'skies' / f'{key}.hdr')
-        kit['skies'][key] = {'label': label, 'strength': strength, 'source': name, 'licence': LICENCE}
+            shutil.copyfile(source_file(f'{name}.hdr' if '/' in name else f'{name}/{name}_1k.hdr'), KIT / 'skies' / f'{key}.hdr')
+        kit['skies'][key] = {'label': label, 'strength': strength, 'source': name, 'licence': licence_of(name)}
+    kit['lands'] = LANDS
     (KIT / 'kit.json').write_text(json.dumps(kit, indent=1) + '\n', encoding='utf-8', newline='\n')
     print('KIT done', len(kit['models']), 'models')
 

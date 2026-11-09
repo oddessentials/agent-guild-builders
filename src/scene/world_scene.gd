@@ -65,6 +65,7 @@ var _plaza_stone: ShaderMaterial
 var _kerb_stone: StandardMaterial3D
 var _pool: StandardMaterial3D
 var _drawn_season := ""
+var _drawn_surface := ""
 
 static func load_kit() -> Dictionary:
 	_cache_lock.lock()
@@ -319,8 +320,62 @@ func build(document: WorldDoc) -> void:
 	_things = Node3D.new()
 	add_child(_things)
 	_drawn_season = doc.season()
+	_drawn_surface = _surface_key()
+	_apply_surface()
 	_apply_season_surfaces()
 	refresh_things()
+
+static func land_of(document: WorldDoc) -> Dictionary:
+	var lands: Dictionary = load_kit().get("lands", {})
+	var fallback: Dictionary = lands.get("meadow", {"grounds": GROUND_ORDER, "plaza": "cobble", "grass": true, "leaves": true})
+	var land = lands.get(str(document.data.get("land", "meadow")), fallback)
+	return land if land is Dictionary and land.get("grounds") is Array and land.grounds.size() == GROUND_ORDER.size() else fallback
+
+static func plaza_of(document: WorldDoc) -> String:
+	var plaza = document.data.get("plaza")
+	var ground := str(plaza.get("ground", "")) if plaza is Dictionary else ""
+	return ground if load_kit().get("grounds", {}).has(ground) else str(land_of(document).get("plaza", "cobble"))
+
+static func surface_textures(document: WorldDoc) -> Array:
+	return land_of(document).grounds + [plaza_of(document)]
+
+func _surface_key() -> String:
+	return JSON.stringify([doc.data.get("land", "meadow"), plaza_of(doc)])
+
+func refresh_surface() -> void:
+	if _drawn_surface == _surface_key():
+		return
+	_drawn_surface = _surface_key()
+	_apply_surface()
+	_apply_season_surfaces()
+
+func _apply_surface() -> void:
+	var land := land_of(doc)
+	for i in GROUND_ORDER.size():
+		var name: String = land.grounds[i]
+		_land_material.set_shader_parameter("color_%d" % i, _texture("%s_diff" % name, true))
+		_land_material.set_shader_parameter("normal_%d" % i, _texture("%s_nor_gl" % name, false))
+		_land_material.set_shader_parameter("rough_%d" % i, _texture("%s_rough" % name, false))
+	_land_material.set_shader_parameter("grass_recipe", 1.0 if land.get("grass", false) else 0.0)
+	_land_material.set_shader_parameter("sides", 1.0 if land.get("triplanar", false) else 0.0)
+	_land_material.set_shader_parameter("scale", _vec4(land.get("scale"), 1.0))
+	_land_material.set_shader_parameter("glow", _vec4(land.get("glow"), 0.0))
+	_land_material.set_shader_parameter("glow_power", _vec4(land.get("glow_power"), 1.0))
+	_land_material.set_shader_parameter("glow_on", 1.0)
+	var plaza := plaza_of(doc)
+	_plaza_stone.set_shader_parameter("color_map", _texture("%s_diff" % plaza, true))
+	_plaza_stone.set_shader_parameter("normal_map_tex", _texture("%s_nor_gl" % plaza, false))
+	_plaza_stone.set_shader_parameter("rough_map", _texture("%s_rough" % plaza, false))
+
+static func _vec3(values: Variant, fallback: Vector3) -> Vector3:
+	return Vector3(float(values[0]), float(values[1]), float(values[2])) if values is Array and values.size() == 3 else fallback
+
+static func _vec4(values: Variant, fallback: float) -> Vector4:
+	var v := Vector4(fallback, fallback, fallback, fallback)
+	if values is Array and values.size() == 4:
+		for i in 4:
+			v[i] = float(values[i])
+	return v
 
 ## Dresses the world for its season, and redraws things only if it changed.
 func refresh_season() -> void:
@@ -333,19 +388,22 @@ func refresh_season() -> void:
 func _apply_season_surfaces() -> void:
 	var autumn := doc.season() == "autumn"
 	var winter := doc.season() == "winter"
-	_land_material.set_shader_parameter("grass_tint", AUTUMN_GRASS_TINT if autumn else GRASS_TINT)
-	_land_material.set_shader_parameter("fallen_leaves", 0.7 if autumn else 0.0)
+	var leafy: bool = land_of(doc).get("leaves", false)
+	_land_material.set_shader_parameter("grass_tint", AUTUMN_GRASS_TINT if autumn else _vec3(land_of(doc).get("grass_tint"), GRASS_TINT))
+	_land_material.set_shader_parameter("fallen_leaves", 0.7 if autumn and leafy else 0.0)
 	_land_material.set_shader_parameter("snow", 1.0 if winter else 0.0)
-	_plaza_stone.set_shader_parameter("fallen_leaves", 0.5 if autumn else 0.0)
+	_plaza_stone.set_shader_parameter("fallen_leaves", 0.5 if autumn and leafy else 0.0)
 	_plaza_stone.set_shader_parameter("snow", 1.0 if winter else 0.0)
 	_kerb_stone.albedo_color = Color(0.42, 0.44, 0.47) if winter else Color(0.2, 0.19, 0.17)
 	_pool.albedo_color = Color(0.56, 0.68, 0.74) if winter else Color(0.06, 0.19, 0.21)
 	_pool.roughness = 0.45 if winter else 0.3
 	var water := _water.material_override as ShaderMaterial
-	water.set_shader_parameter("shallow_color", ICE_COLOR if winter else Vector3(0.07, 0.09, 0.06))
-	water.set_shader_parameter("deep_color", ICE_DEEP_COLOR if winter else Vector3(0.008, 0.022, 0.026))
-	water.set_shader_parameter("clear", 0.0 if winter else 0.7)
+	var look: Dictionary = land_of(doc).get("water", {}) if land_of(doc).get("water") is Dictionary else {}
+	water.set_shader_parameter("shallow_color", ICE_COLOR if winter else _vec3(look.get("shallow"), Vector3(0.07, 0.09, 0.06)))
+	water.set_shader_parameter("deep_color", ICE_DEEP_COLOR if winter else _vec3(look.get("deep"), Vector3(0.008, 0.022, 0.026)))
+	water.set_shader_parameter("clear", 0.0 if winter else float(look.get("clear", 0.7)))
 	water.set_shader_parameter("roughness", 0.4 if winter else 0.02)
+	water.set_shader_parameter("mirror", 0.0 if winter else float(look.get("mirror", 0.0)))
 
 func mesh_for(kind: String) -> Mesh:
 	return season_mesh(kind, doc.season())
@@ -412,11 +470,6 @@ func _build_land() -> void:
 	_rebuild_weights_raw()
 	_weights = ImageTexture.create_from_image(_blended_weights())
 	_land_material.set_shader_parameter("weights", _weights)
-	for i in GROUND_ORDER.size():
-		var name: String = GROUND_ORDER[i]
-		_land_material.set_shader_parameter("color_%d" % i, _texture("%s_diff" % name, true))
-		_land_material.set_shader_parameter("normal_%d" % i, _texture("%s_nor_gl" % name, false))
-		_land_material.set_shader_parameter("rough_%d" % i, _texture("%s_rough" % name, false))
 	var count := chunk_count()
 	for cy in count:
 		for cx in count:
@@ -508,9 +561,6 @@ func _build_plaza() -> void:
 	var stone := ShaderMaterial.new()
 	_plaza_stone = stone
 	stone.shader = load("res://src/scene/plaza.gdshader")
-	stone.set_shader_parameter("color_map", _texture("cobble_diff", true))
-	stone.set_shader_parameter("normal_map_tex", _texture("cobble_nor_gl", false))
-	stone.set_shader_parameter("rough_map", _texture("cobble_rough", false))
 	disc.material_override = stone
 	_plaza.add_child(disc)
 	var kerb_stone := StandardMaterial3D.new()

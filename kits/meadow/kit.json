@@ -1810,6 +1810,39 @@
    "joins": true,
    "seated": true
   },
+  "tree_blossom": {
+   "label": "Blossom tree",
+   "group": "trees",
+   "spacing": 9,
+   "height": 8,
+   "radius": 5.02,
+   "triangles": 1845603,
+   "source": "jacaranda_tree",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 112431152
+  },
+  "moon_rock": {
+   "label": "Moon rock",
+   "group": "rocks",
+   "spacing": 3,
+   "height": 0.8,
+   "radius": 1.13,
+   "triangles": 18668,
+   "source": "moon_rock_01",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 621560
+  },
+  "moon_boulder": {
+   "label": "Moon boulder",
+   "group": "rocks",
+   "spacing": 6,
+   "height": 2.4,
+   "radius": 2.31,
+   "triangles": 10492,
+   "source": "moon_rock_03",
+   "licence": "CC0-1.0 (Poly Haven)",
+   "bytes": 442124
+  },
   "xmas_tree": {
    "label": "Christmas tree",
    "group": "holiday",
@@ -2873,6 +2906,121 @@
    "label": "Cobbles",
    "source": "cobblestone_floor_04",
    "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "mars_sand": {
+   "label": "Red sand",
+   "source": "red_sand",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "mars_stones": {
+   "label": "Red stones",
+   "source": "red_laterite_soil_stones",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "mars_cliff": {
+   "label": "Layered rock",
+   "source": "cliff_side",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "mars_dust": {
+   "label": "Dark regolith",
+   "source": "red_mud_stones",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "moon_dust": {
+   "label": "Grey regolith",
+   "source": "moon_01",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "moon_bright": {
+   "label": "Bright dust",
+   "source": "moon_dusted_03",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "moon_rock": {
+   "label": "Cratered rock",
+   "source": "moon_meteor_01",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "space": {
+   "label": "Open space",
+   "source": "made_stars",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "salt_crust": {
+   "label": "Salt crust",
+   "source": "made_salt_crust",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "salt_flat": {
+   "label": "Smooth salt",
+   "source": "made_salt_flat",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "salt_mud": {
+   "label": "Dry mud",
+   "source": "dry_mud_field_001",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "ash": {
+   "label": "Ash",
+   "source": "made_ash",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "cinder": {
+   "label": "Red cinder",
+   "source": "made_red_cinder",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "basalt": {
+   "label": "Basalt",
+   "source": "made_basalt",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "lava": {
+   "label": "Lava",
+   "source": "made_lava",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "raked": {
+   "label": "Raked gravel",
+   "source": "made_raked_gravel",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "mossy_stone": {
+   "label": "Mossy stone",
+   "source": "mossy_rock",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "pebbles": {
+   "label": "River pebbles",
+   "source": "dry_river_pebbles",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "plaza_panels": {
+   "label": "Stone panels",
+   "source": "granite_tile",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "plaza_sandstone": {
+   "label": "White sandstone",
+   "source": "white_sandstone_blocks_02",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "plaza_basalt": {
+   "label": "Basalt tiles",
+   "source": "volcanic_rock_tiles",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "plaza_slate": {
+   "label": "Grey flagstones",
+   "source": "large_grey_tiles",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "plaza_concrete": {
+   "label": "Concrete pavers",
+   "source": "concrete_pavers_02",
+   "licence": "CC0-1.0 (Poly Haven)"
   }
  },
  "skies": {
@@ -2899,6 +3047,203 @@
    "strength": 0.3,
    "source": "qwantani_moonrise_puresky",
    "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "clear": {
+   "label": "Clear sky",
+   "strength": 0.9,
+   "source": "kloofendal_43d_clear_puresky",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "sunset": {
+   "label": "Golden sunset",
+   "strength": 0.5,
+   "source": "qwantani_sunset_puresky",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "haze": {
+   "label": "Volcanic haze",
+   "strength": 0.9,
+   "source": "made_haze_day",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "fire": {
+   "label": "Fire sky",
+   "strength": 0.5,
+   "source": "the_sky_is_on_fire",
+   "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "mars_day": {
+   "label": "Mars day",
+   "strength": 0.9,
+   "source": "made_mars_day",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "mars_dusk": {
+   "label": "Mars blue dusk",
+   "strength": 0.9,
+   "source": "made_mars_dusk",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "orbit_day": {
+   "label": "Orbit",
+   "strength": 1.0,
+   "source": "yard-env/orbital-day",
+   "licence": "AGPL-3.0-only (Agent Guild)"
+  },
+  "orbit_dusk": {
+   "label": "Orbit dusk",
+   "strength": 1.0,
+   "source": "yard-env/orbital-dusk",
+   "licence": "AGPL-3.0-only (Agent Guild)"
+  }
+ },
+ "lands": {
+  "meadow": {
+   "label": "Meadow",
+   "grounds": [
+    "grass",
+    "dirt",
+    "rock",
+    "gravel"
+   ],
+   "plaza": "cobble",
+   "grass": true,
+   "leaves": true
+  },
+  "mars": {
+   "label": "Red planet",
+   "grounds": [
+    "mars_sand",
+    "mars_stones",
+    "mars_cliff",
+    "mars_dust"
+   ],
+   "plaza": "plaza_concrete",
+   "scale": [
+    2,
+    1,
+    4,
+    1.5
+   ],
+   "triplanar": true
+  },
+  "moon": {
+   "label": "Moon",
+   "grounds": [
+    "moon_dust",
+    "moon_bright",
+    "moon_rock",
+    "space"
+   ],
+   "plaza": "plaza_panels",
+   "scale": [
+    2,
+    2,
+    2,
+    20
+   ],
+   "glow": [
+    0,
+    0,
+    0,
+    3
+   ],
+   "glow_power": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "triplanar": true
+  },
+  "salt": {
+   "label": "Salt flat",
+   "grounds": [
+    "salt_crust",
+    "salt_flat",
+    "basalt",
+    "salt_mud"
+   ],
+   "plaza": "plaza_sandstone",
+   "scale": [
+    8,
+    3,
+    3,
+    2
+   ],
+   "triplanar": true,
+   "water": {
+    "shallow": [
+     0.16,
+     0.66,
+     0.64
+    ],
+    "deep": [
+     0.01,
+     0.3,
+     0.38
+    ],
+    "clear": 0.25,
+    "mirror": 0.2
+   }
+  },
+  "volcano": {
+   "label": "Volcanic",
+   "grounds": [
+    "ash",
+    "cinder",
+    "basalt",
+    "lava"
+   ],
+   "plaza": "plaza_basalt",
+   "scale": [
+    2,
+    1.5,
+    3,
+    6
+   ],
+   "glow": [
+    0,
+    0,
+    0,
+    9
+   ],
+   "glow_power": [
+    1,
+    1,
+    1,
+    1.6
+   ],
+   "triplanar": true
+  },
+  "garden": {
+   "label": "Garden",
+   "grounds": [
+    "grass",
+    "raked",
+    "mossy_stone",
+    "pebbles"
+   ],
+   "plaza": "plaza_slate",
+   "grass": true,
+   "grass_tint": [
+    0.5,
+    0.78,
+    0.42
+   ],
+   "water": {
+    "shallow": [
+     0.08,
+     0.16,
+     0.1
+    ],
+    "deep": [
+     0.006,
+     0.03,
+     0.025
+    ],
+    "clear": 0.55
+   }
   }
  }
 }

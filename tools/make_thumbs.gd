@@ -25,7 +25,13 @@ func _run() -> void:
 		if not _made("mix_" + key):
 			await _shoot(stage, Placing.MIXES[key].kinds, "mix_" + key)
 	stage.free()
-	for key in WorldScene.GROUND_ORDER:
+	var grounds := {}
+	for land in WorldScene.load_kit().get("lands", {}).values():
+		for key in land.grounds:
+			grounds[key] = true
+	for key in grounds:
+		if _made("ground_" + key):
+			continue
 		var img := Image.load_from_file(WorldScene.kit_file("textures/%s_diff.jpg" % key))
 		img.resize(ITEM.x, ITEM.y, Image.INTERPOLATE_LANCZOS)
 		_save(img, "ground_" + key)
@@ -66,6 +72,11 @@ func _template(key: String) -> void:
 		"meadow": [0.3, Vector3(0, 1, -25)],
 		"lakeside": [0.42, Vector3(-20, 1, -24)],
 		"highland": [0.26, Vector3(10, 1, -25)],
+		"mars": [0.3, Vector3(-4, 1, -26)],
+		"moon": [0.32, Vector3(8, 1, -6)],
+		"garden": [0.4, Vector3(-4, 1, -10)],
+		"volcano": [0.34, Vector3(12, 1, -4)],
+		"salt": [0.3, Vector3(0, 1, -24)],
 	}
 	view._zoom = framing[key][0]
 	view._target = framing[key][1]

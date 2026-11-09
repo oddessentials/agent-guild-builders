@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp], ["lands", _lands]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -157,7 +157,7 @@ func _templates() -> bool:
 					flat = false
 		check(flat, key + ": the ground crews stand on is flat")
 		check(Clearance.check_world(a).get("valid", false), key + ": a new world is ready to export")
-		if float(a.data.water_level) > -50.0 and key != "island":
+		if float(a.data.water_level) > -50.0 and key not in ["island", "salt"]:
 			var wet := 0
 			for h in a.heights:
 				if h < float(a.data.water_level):
@@ -180,6 +180,128 @@ func _templates() -> bool:
 	check(canyon.height_at(behind.x, behind.y) > 20.0, "canyon: cliffs rise behind the Yard")
 	check(canyon.height_at(front.x, front.y) < float(canyon.data.water_level), "canyon: a gorge runs in front of it")
 	check(canyon.data.things.any(func(t): return t.kind == "rock_face"), "canyon: rock faces dress the walls")
+	var mars := Templates.create("mars", "guild", "T", 42)
+	var mesa := up * 150.0
+	check(mars.data.land == "mars" and mars.data.water_level <= WorldDoc.NO_WATER_BELOW, "mars: red ground and no water")
+	check(mars.height_at(mesa.x, mesa.y) > 20.0, "mars: mesas rise behind the Yard")
+	check(mars.ground.count(2) > 0 and mars.ground.count(3) > 0, "mars: cliffs and dark crater floors")
+	check(mars.data.mood.light.sky == "mars_day" and mars.data.mood.dark.sky == "mars_dusk", "mars: a butterscotch day and a blue dusk")
+	var moon := Templates.create("moon", "guild", "T", 42)
+	var deep := true
+	for o in moon.ground.size():
+		if moon.ground[o] == 3 and moon.heights[o] > -40.0:
+			deep = false
+	check(moon.height_at(0.0, 75.0) < -60.0 and moon.height_at(60.0, 20.0) < -60.0, "moon: open space past the edge, in front and beside the Yard")
+	check(deep and moon.ground.count(3) > 1000, "moon: the starfield lies only far below the edge")
+	check(moon.data.things.any(func(t): return t.kind == "space_crane"), "moon: gantries stand at the dock")
+	var garden := Templates.create("garden", "guild", "T", 42)
+	var ring := 0
+	var raked := 0
+	for j in WorldDoc.TERRAIN_RES:
+		for i in WorldDoc.TERRAIN_RES:
+			var p := WorldDoc.cell_to_world(i, j)
+			var d := Clearance.live_distance(p.x, p.y)
+			if d > 5.5 and d < 10.0:
+				ring += 1
+				raked += 1 if garden.ground[j * WorldDoc.TERRAIN_RES + i] == 1 else 0
+	check(float(raked) / ring > 0.6, "garden: raked gravel rings the Yard")
+	check(not garden.data.has("season") and garden.data.things.any(func(t): return t.kind == "tree_blossom") and garden.data.things.any(func(t): return t.kind == "stone_lantern"), "garden: blossom and stone lanterns")
+	var volcano := Templates.create("volcano", "guild", "T", 42)
+	var lava := 0
+	var lava_flat := true
+	var lava_near := false
+	for o in volcano.ground.size():
+		if volcano.ground[o] == 3:
+			lava += 1
+			lava_flat = lava_flat and volcano.heights[o] <= -3.0
+			var p := WorldDoc.cell_to_world(o % WorldDoc.TERRAIN_RES, o / WorldDoc.TERRAIN_RES)
+			lava_near = lava_near or Clearance.live_distance(p.x, p.y) < 25.0
+	check(lava > 800 and lava_flat, "volcano: lava lies low and flat")
+	check(lava_near, "volcano: lava runs close enough to see from the Yard")
+	var salt := Templates.create("salt", "guild", "T", 42)
+	var wet := 0
+	for h in salt.heights:
+		if h < float(salt.data.water_level):
+			wet += 1
+	check(float(wet) / salt.heights.size() > 0.15 and salt.height_at(0.0, 10.0) > float(salt.data.water_level), "salt: brine pools all round, and a dry Yard")
+	return true
+
+func _lands() -> bool:
+	var kit := WorldScene.load_kit()
+	for key in kit.lands:
+		var land: Dictionary = kit.lands[key]
+		check(land.grounds.size() == 4 and kit.grounds.has(land.plaza), "lands: %s has four grounds and a plaza" % key)
+		for name in land.grounds + [land.plaza]:
+			for suffix in ["_diff", "_nor_gl", "_rough"]:
+				check(FileAccess.file_exists(WorldScene.kit_file("textures/%s%s.jpg" % [name, suffix])), "lands: %s has %s%s" % [key, name, suffix])
+	for key in Templates.LIST:
+		var doc := Templates.create(key, "guild", "T", 7)
+		check(kit.lands.has(str(doc.data.get("land", "meadow"))), "lands: %s uses a known ground set" % key)
+		for time in ["light", "dark"]:
+			var sky := str(doc.data.mood[time].sky)
+			check(kit.skies.has(sky) and FileAccess.file_exists(WorldScene.kit_file("skies/%s.hdr" % sky)), "lands: %s %s sky %s is in the kit" % [key, time, sky])
+	var plain := WorldDoc.create("guild", "T", 1)
+	check(WorldScene.land_of(plain).grounds == WorldScene.GROUND_ORDER and WorldScene.plaza_of(plain) == "cobble", "lands: a world without a set is the meadow")
+	plain.data.land = "nowhere"
+	plain.data.plaza.ground = "nowhere"
+	check(WorldScene.land_of(plain).grounds == WorldScene.GROUND_ORDER and WorldScene.plaza_of(plain) == "cobble", "lands: unknown names fall back to the meadow")
+	plain.data.land = "mars"
+	check(WorldScene.plaza_of(plain) == kit.lands.mars.plaza, "lands: an unknown paving falls back to the set's own")
+	for bad in [5, "", " mars", "a/b", "mars
+", null]:
+		var odd := WorldDoc.create("guild", "T", 1).data
+		odd.land = bad
+		check(not WorldDoc._valid_data(odd), "lands: refuses the ground set %s" % var_to_str(bad))
+	for bad in [5, "cobble", {"ground": 3}, {"ground": ""}, {"ground": "../x"}]:
+		var odd := WorldDoc.create("guild", "T", 1).data
+		odd.plaza = bad
+		check(not WorldDoc._valid_data(odd), "lands: refuses the plaza %s" % var_to_str(bad))
+	var bare := WorldDoc.create("guild", "T", 1).data
+	bare.erase("plaza")
+	check(WorldDoc._valid_data(bare), "lands: a world may leave the plaza out")
+	var folder := OS.get_user_data_dir().path_join("lands-test")
+	WorldDoc.remove_folder(folder)
+	var made := Templates.create("volcano", "guild", "T", 3)
+	var opened: WorldDoc = WorldDoc.open(folder) if made.save(folder) == OK else null
+	check(opened != null and opened.data.land == "volcano" and opened.data.plaza.ground == kit.lands.volcano.plaza, "lands: saved and opened again")
+	WorldDoc.remove_folder(folder)
+	var scene := WorldScene.new()
+	root.add_child(scene)
+	scene.build(Templates.create("volcano", "guild", "T", 3))
+	var baker := PlateBaker.new()
+	baker._scene_root = scene
+	baker._collect_glow()
+	check(baker._glow_materials.has(scene._land_material), "lands: the bake finds glowing ground")
+	baker._glow(false)
+	check(scene._land_material.get_shader_parameter("glow_on") == 0.0, "lands: the bake can switch ground glow off")
+	baker._glow(true)
+	check(scene._land_material.get_shader_parameter("glow_on") == 1.0, "lands: and on again")
+	baker.free()
+	scene.free()
+	var view: Control = load("res://src/ui/editor_view.gd").new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.size = Vector2(1200, 800)
+	var live := WorldDoc.create("guild", "T", 1)
+	view.open(live, "")
+	await process_frame
+	var material: ShaderMaterial = view._scene._land_material
+	check(material.get_shader_parameter("color_0") == WorldScene._texture("grass_diff", true) and material.get_shader_parameter("grass_recipe") == 1.0 and material.get_shader_parameter("glow") == Vector4.ZERO, "lands: a meadow draws as before")
+	view._select_tool(view.Tool.GROUND)
+	view._set_land("volcano")
+	check(live.data.land == "volcano" and live.data.plaza.ground == kit.lands.volcano.plaza, "lands: choosing a set brings its plaza")
+	check(material.get_shader_parameter("color_0") == WorldScene._texture(kit.lands.volcano.grounds[0] + "_diff", true) and material.get_shader_parameter("glow").w > 0.0, "lands: the land redraws in the new set")
+	check(view._scene._plaza_stone.get_shader_parameter("color_map") == WorldScene._texture(kit.lands.volcano.plaza + "_diff", true), "lands: the plaza repaves")
+	check(view.history.undo_label() == "Ground set", "lands: one undo step")
+	view._undo()
+	check(not live.data.has("land") and live.data.plaza.ground == "cobble" and material.get_shader_parameter("color_0") == WorldScene._texture("grass_diff", true), "lands: undo brings the meadow back")
+	view._redo()
+	check(live.data.land == "volcano", "lands: redo")
+	var steps: String = view.history.undo_label()
+	view._set_land("volcano")
+	check(view.history.undo_label() == steps, "lands: choosing the same set again changes nothing")
+	view.queue_free()
+	await process_frame
 	return true
 
 func _pack(path: String, changes: Dictionary = {}, drop: Array = [], meta_changes: Dictionary = {}, relist := true) -> void:
@@ -2117,6 +2239,12 @@ func _mcp_editor() -> bool:
 	check(_data(grounded).get("cells", 0) > 0 and view.history.undo_label() == "Paint ground", "mcp: paint_ground paints as one undo step")
 	var look := await _call_tool(server, lines, 16, "set_look", {"world": world, "season": "winter", "water": {"on": true, "level": -2.0}, "day": {"sky": "overcast", "sun_strength": 2.0}})
 	check(look.get("isError") == false and doc.season() == "winter" and doc.data.mood.light.sky == "overcast" and is_equal_approx(float(doc.data.mood.light.sun_energy), 2.0) and is_equal_approx(doc.safe_water_level(), -2.0), "mcp: set_look changes season, water and sky")
+	var regrounded := await _call_tool(server, lines, 161, "set_look", {"world": world, "ground_set": "salt"})
+	check(regrounded.get("isError") == false and doc.data.land == "salt" and doc.data.plaza.ground == WorldScene.load_kit().lands.salt.plaza and view.history.undo_label() == "Change the look", "mcp: set_look changes the ground set and its plaza")
+	var described := await _call_tool(server, lines, 162, "describe_world", {"world": world})
+	check(_data(described).get("ground_set") == "salt" and _data(described).get("grounds", {}).get("grass") == WorldScene.load_kit().grounds.salt_crust.label, "mcp: describe_world names the ground set and its grounds")
+	await _call_tool(server, lines, 163, "undo", {"world": world})
+	check(str(doc.data.get("land", "meadow")) == "meadow" and doc.data.plaza.ground == "cobble" and doc.season() == "winter", "mcp: undoing the ground set leaves the rest of the look")
 	await _call_tool(server, lines, 17, "undo", {"world": world})
 	check(doc.season() == "summer" and doc.data.mood.light.sky == "day" and float(doc.data.water_level) < WorldDoc.NO_WATER_BELOW, "mcp: one undo puts the whole look back")
 	var titled := str(doc.data.title)

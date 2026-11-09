@@ -638,9 +638,23 @@ func _build_options() -> void:
 			_options.add_child(ProTheme.heading("Paint ground"))
 			_options.add_child(ProTheme.note("Drag to paint the chosen ground."))
 			_brush_slider()
+			var lands: Dictionary = WorldScene.load_kit().get("lands", {})
+			if lands.size() > 1:
+				_options.add_child(ProTheme.heading("Ground set", 13))
+				var pick := OptionButton.new()
+				pick.tooltip_text = "The four grounds you paint with, and the plaza's paving. Painted areas keep their place and take the new set's look."
+				var keys := lands.keys()
+				var current := str(doc.data.get("land", "meadow"))
+				for i in keys.size():
+					pick.add_item(str(lands[keys[i]].get("label", keys[i])))
+					if keys[i] == current:
+						pick.selected = i
+				pick.item_selected.connect(func(i): _set_land(keys[i]))
+				_options.add_child(pick)
 			var grid := _item_grid()
+			var grounds: Array = WorldScene.land_of(doc).grounds
 			for i in WorldScene.GROUND_ORDER.size():
-				var key: String = WorldScene.GROUND_ORDER[i]
+				var key: String = grounds[i]
 				var label: String = WorldScene.load_kit().get("grounds", {}).get(key, {}).get("label", key)
 				var index: int = i
 				var b := _item_button(label, "ground_" + key, ground_kind == i, func():
@@ -717,6 +731,21 @@ func _build_mood_options() -> void:
 			m.strength = v
 			_apply_mood(),
 		func(v, was): _commit_value("Sky strength", m, "strength", v, was))
+
+func _set_land(land: String) -> void:
+	_finish_edits()
+	_dismiss_preview()
+	var changes := _land_changes(land)
+	if not changes.is_empty():
+		history.set_many("Ground set", changes)
+
+func _land_changes(land: String) -> Array:
+	if str(doc.data.get("land", "meadow")) == land:
+		return []
+	var paving := str(WorldScene.load_kit().get("lands", {}).get(land, {}).get("plaza", "cobble"))
+	if doc.data.get("plaza") is Dictionary:
+		return [[doc.data, {"land": land}], [doc.data.plaza, {"ground": paving}]]
+	return [[doc.data, {"land": land, "plaza": {"ground": paving}}]]
 
 func _set_season(season: String) -> void:
 	_finish_edits()
@@ -1901,10 +1930,11 @@ func _on_changed(part: int, detail: Variant) -> void:
 		History.Part.VALUE:
 			_scene.refresh_water()
 			_scene.refresh_season()
+			_scene.refresh_surface()
 			_apply_mood()
 			if detail.has("title"):
 				_title_box.text = str(doc.data.title)
-			if not _own_commit and tool in [Tool.WATER, Tool.MOOD]:
+			if not _own_commit and tool in [Tool.WATER, Tool.MOOD, Tool.GROUND]:
 				_build_options()
 	if tool == Tool.ARRANGE:
 		_refresh_selection()
@@ -2671,6 +2701,8 @@ func agent_set_look(look: Dictionary) -> bool:
 			top["water_level"] = look.water_level
 	if not top.is_empty():
 		changes.append([doc.data, top])
+	if look.has("land"):
+		changes.append_array(_land_changes(look.land))
 	var skies: Dictionary = WorldScene.load_kit().get("skies", {})
 	for time in ["light", "dark"]:
 		var m: Dictionary = doc.data.mood[time]

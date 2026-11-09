@@ -13,6 +13,7 @@ uniform float deep_at = 1.6;
 uniform float clear_at = 0.7;
 uniform float clear = 0.7;
 uniform float roughness = 0.02;
+uniform float mirror = 0.0;
 
 varying vec3 world;
 
@@ -30,4 +31,7 @@ void fragment() {
 	ALPHA = mix(1.0 - clear, 1.0, clamp(depth / clear_at, 0.0, 1.0));
 	ROUGHNESS = roughness;
 	SPECULAR = 0.5;
+	ALBEDO = mix(ALBEDO, vec3(0.9), mirror);
+	METALLIC = mirror;
+	ALPHA = mix(ALPHA, 1.0, mirror);
 }
