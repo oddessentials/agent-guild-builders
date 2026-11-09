@@ -556,7 +556,7 @@ static func connect_commands(exe: String, before: Array) -> Array:
 		["Codex CLI", "codex mcp add agent-guild-builders \"--\" " + line],
 		["Antigravity CLI", "agy mcp add agent-guild-builders \"--\" " + line],
 		["Grok Build", "grok mcp add agent-guild-builders \"--\" " + line],
-		["Docker Agent", "toolsets:\n  - type: mcp\n    command: '%s'\n    args: [%s]" % [exe.replace("'", "''"), yaml_args]],
+		["Docker Agent", "agents:\n  root:\n    toolsets:\n      - type: mcp\n        command: '%s'\n        args: [%s]" % [exe.replace("'", "''"), yaml_args]],
 	]
 
 ## Quoted for PowerShell: paths always in single quotes, which PowerShell
@@ -612,7 +612,7 @@ func _connect_dialog(exe := OS.get_executable_path()) -> void:
 			DisplayServer.clipboard_set(command)
 			copy.text = "Copied")
 		row.add_child(copy)
-	var docker := ProTheme.note("Docker Agent: add the toolset to your agent's YAML file.")
+	var docker := ProTheme.note("Docker Agent: add the toolset to your agent in its YAML file, with root replaced by your agent's name.")
 	docker.custom_minimum_size = Vector2(CONNECT_WIDTH, 0)
 	box.add_child(docker)
 	add_child(ask)
