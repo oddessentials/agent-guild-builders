@@ -13,7 +13,15 @@ foreach ($name in @('day', 'dusk', 'overcast', 'moon')) {
     if (-not $kit.skies.$name) { throw "The Meadow kit is missing sky: $name" }
 }
 $files = @('kits/meadow/kit.json', 'LICENSE', 'data/agx_mhc.lut', 'data/yard_layout.json')
-$thumbs = @('template_blank', 'template_island', 'template_canyon', 'template_meadow', 'template_lakeside', 'template_highland', 'mix_wildflowers', 'mix_undergrowth', 'mix_woodland', 'mix_rocks', 'mix_garden', 'mix_camp')
+$thumbs = @('mix_wildflowers', 'mix_undergrowth', 'mix_woodland', 'mix_rocks', 'mix_garden', 'mix_camp')
+$presets = [regex]::Match((Get-Content -LiteralPath (Join-Path $project 'src/core/templates.gd') -Raw), '(?ms)^const LIST := \{(.*?)^\}').Groups[1].Value
+$presets = @([regex]::Matches($presets, '(?m)^\t"(\w+)":') | ForEach-Object { $_.Groups[1].Value })
+if ($presets -notcontains 'blank') { throw 'Could not read the presets from src/core/templates.gd.' }
+foreach ($preset in $presets) { $thumbs += "template_$preset" }
+if (-not $kit.lands.meadow) { throw 'The Meadow kit has no meadow ground set.' }
+foreach ($land in $kit.lands.PSObject.Properties) {
+    foreach ($ground in $land.Value.grounds) { $thumbs += "ground_$ground" }
+}
 foreach ($model in $kit.models.PSObject.Properties) {
     if (-not $model.Value.licence -or -not $model.Value.source) { throw "Missing attribution for $($model.Name)" }
     $files += "kits/meadow/models/$($model.Name).glb"
@@ -22,7 +30,6 @@ foreach ($model in $kit.models.PSObject.Properties) {
 foreach ($ground in $kit.grounds.PSObject.Properties) {
     if (-not $ground.Value.licence -or -not $ground.Value.source) { throw "Missing attribution for $($ground.Name)" }
     foreach ($suffix in @('diff', 'nor_gl', 'rough')) { $files += "kits/meadow/textures/$($ground.Name)_$suffix.jpg" }
-    if ($ground.Name -ne 'cobble') { $thumbs += "ground_$($ground.Name)" }
 }
 foreach ($sky in $kit.skies.PSObject.Properties) {
     if (-not $sky.Value.licence -or -not $sky.Value.source) { throw "Missing attribution for $($sky.Name)" }

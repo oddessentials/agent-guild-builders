@@ -234,7 +234,10 @@ func _lands() -> bool:
 		for name in land.grounds + [land.plaza]:
 			for suffix in ["_diff", "_nor_gl", "_rough"]:
 				check(FileAccess.file_exists(WorldScene.kit_file("textures/%s%s.jpg" % [name, suffix])), "lands: %s has %s%s" % [key, name, suffix])
+		for name in land.grounds:
+			check(ResourceLoader.exists("res://data/thumbs/ground_%s.webp" % name), "lands: %s ground %s has a thumbnail" % [key, name])
 	for key in Templates.LIST:
+		check(ResourceLoader.exists("res://data/thumbs/template_%s.webp" % key), "lands: preset %s has a picture" % key)
 		var doc := Templates.create(key, "guild", "T", 7)
 		check(kit.lands.has(str(doc.data.get("land", "meadow"))), "lands: %s uses a known ground set" % key)
 		for time in ["light", "dark"]:
