@@ -8,6 +8,9 @@
   </a>
 </p>
 <p align="center">
+  <a href="https://oddessentials.github.io/agent-guild-builders/">For agents</a>
+</p>
+<p align="center">
   <a href="https://github.com/oddessentials/agent-guild-builders/releases/latest">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="data/brand/hero-dark.webp" />

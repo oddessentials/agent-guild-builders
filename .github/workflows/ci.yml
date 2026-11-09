@@ -4,6 +4,14 @@ on:
   pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - README.md
+      - site/**
+      - tools/make_site.py
+      - tests/site_check.ps1
+      - tests/site_commands.gd
+      - .github/workflows/pages.yml
+      - .github/workflows/ci.yml
 
 permissions:
   contents: read
@@ -70,7 +78,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test
         run: |
-          foreach ($suite in 'run', 'hardening', 'clearance_hardening', 'package_hardening') {
+          foreach ($suite in 'run', 'hardening', 'clearance_hardening', 'package_hardening', 'site_commands') {
             & $env:GODOT --headless --path . --script "res://tests/$suite.gd"
             if ($LASTEXITCODE -ne 0) { throw "$suite failed" }
           }
