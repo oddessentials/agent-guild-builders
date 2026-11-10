@@ -247,6 +247,9 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path "$world/world.json")) { throw 'The packaged app did not create a world.' }
           node tests/mcp_smoke.mjs $exe
           if ($LASTEXITCODE -ne 0) { throw 'The packaged app did not serve MCP.' }
+      - name: Signing checks
+        shell: bash
+        run: tests/macos_signature.sh .smoke/AgentGuildBuilders.app
       - id: zip
         if: github.event_name != 'pull_request'
         run: Add-Content $env:GITHUB_OUTPUT "sha256=$((Get-FileHash build/AgentGuildBuilders-macos.zip).Hash.ToLower())"
@@ -258,9 +261,71 @@ jobs:
           compression-level: 0
           retention-days: 7
 
+  sign-macos:
+    if: github.event_name != 'pull_request'
+    needs: build-macos
+    runs-on: macos-latest
+    timeout-minutes: 240
+    environment: release-signing
+    permissions:
+      contents: read
+    outputs:
+      sha256: ${{ steps.package.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            tests
+            tools/macos
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-zip
+          path: ${{ runner.temp }}/unsigned
+      - name: Check the build
+        env:
+          BUILT: ${{ needs.build-macos.outputs.sha256 }}
+        run: |
+          if [ -z "$BUILT" ] || [ "$(shasum -a 256 "$RUNNER_TEMP/unsigned/AgentGuildBuilders-macos.zip" | cut -d' ' -f1)" != "$BUILT" ]; then
+            echo "::error::The macOS zip is not the one the build made."
+            exit 1
+          fi
+      - id: package
+        name: Sign, notarize and staple
+        env:
+          APPLE_DEVELOPER_ID_APPLICATION_P12: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_P12 }}
+          APPLE_P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
+          APPLE_NOTARY_KEY_P8: ${{ secrets.APPLE_NOTARY_KEY_P8 }}
+          ASC_KEY_ID: ${{ vars.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ vars.ASC_ISSUER_ID }}
+        run: |
+          zip="$RUNNER_TEMP/signed/AgentGuildBuilders-macos.zip"
+          tools/macos/sign.sh "$RUNNER_TEMP/unsigned/AgentGuildBuilders-macos.zip" "$zip"
+          echo "sha256=$(shasum -a 256 "$zip" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Run the signed app
+        run: |
+          ditto -x -k "$RUNNER_TEMP/signed/AgentGuildBuilders-macos.zip" "$RUNNER_TEMP/smoke"
+          exe="$RUNNER_TEMP/smoke/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
+          "$exe" --headless -- --new=meadow --title=Smoke "--save=$RUNNER_TEMP/smoke/world"
+          if [ ! -f "$RUNNER_TEMP/smoke/world/world.json" ]; then
+            echo "::error::The signed app did not create a world."
+            exit 1
+          fi
+          node tests/mcp_smoke.mjs "$exe"
+      - name: Check the signature
+        run: |
+          source tools/macos/sign.sh
+          check_app "$RUNNER_TEMP/smoke/AgentGuildBuilders.app"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-signed
+          path: ${{ runner.temp }}/signed/AgentGuildBuilders-macos.zip
+          compression-level: 0
+          retention-days: 7
+
   release:
     if: github.event_name == 'push'
-    needs: [build, sign-windows, build-macos]
+    needs: [build, sign-windows, build-macos, sign-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -270,14 +335,14 @@ jobs:
           name: windows-signed
       - uses: actions/download-artifact@v4
         with:
-          name: macos-zip
+          name: macos-signed
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RUN: ${{ github.run_number }}
           WINDOWS_SHA256: ${{ needs.sign-windows.outputs.sha256 }}
-          MACOS_SHA256: ${{ needs.build-macos.outputs.sha256 }}
+          MACOS_SHA256: ${{ needs.sign-macos.outputs.sha256 }}
         run: |
           tag="build-$RUN"
           assets=(AgentGuildBuilders-windows.zip AgentGuildBuilders-macos.zip)
