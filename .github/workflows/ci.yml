@@ -126,6 +126,7 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: |
+            data/brand
             tests
             tools/windows
       - uses: actions/download-artifact@v4
