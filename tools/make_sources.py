@@ -242,6 +242,32 @@ def glade_grounds():
     pixel_map('made_glade_paving', flagstones(rng, 32, 8, 4, stones, (0.17, 0.2, 0.21), mosses), 0.3)
 
 
+def retro_grounds():
+    rng = np.random.default_rng(20261112)
+    side = 64
+    y, x = np.indices((side, side))
+    checker = np.where((((x // 4) + (y // 4)) % 2 == 0)[..., None], (0.93, 0.86, 0.68), (0.8, 0.67, 0.47)).astype(np.float32)
+    pixel_map('made_retro_checker', checker, 0.6)
+    pixel_map('made_retro_carpet', scattered(rng, rng.uniform(0, 1, (side, side)), [(0.3, 0.38, 0.55), (0.34, 0.43, 0.6), (0.39, 0.48, 0.65)], 0.0), 0.97)
+    planks = np.zeros((side, side, 3), np.float32)
+    for row in range(side // 2):
+        shift = int(rng.integers(0, 16))
+        for col in range(side):
+            board = (col + shift) // 16
+            shade = [(0.6, 0.39, 0.23), (0.66, 0.44, 0.26), (0.55, 0.35, 0.2)][(board + row) % 3]
+            planks[row * 2:row * 2 + 2, col] = (0.4, 0.25, 0.15) if (col + shift) % 16 == 0 else shade
+        planks[row * 2 + 1] *= 0.93
+    pixel_map('made_retro_planks', planks, 0.8)
+    slate = np.where((((x // 4) + (y // 4)) % 2 == 0)[..., None], (0.26, 0.28, 0.36), (0.2, 0.22, 0.3)).astype(np.float32)
+    pixel_map('made_retro_slate', slate, 0.5)
+    paving = np.full((32, 32, 3), (0.62, 0.66, 0.74), np.float32)
+    paving[::8] = paving[:, ::8] = (0.42, 0.46, 0.56)
+    paving[1::8] = paving[:, 1::8] = (0.74, 0.78, 0.85)
+    paving[::8] = (0.42, 0.46, 0.56)
+    paving[:, ::8] = (0.42, 0.46, 0.56)
+    pixel_map('made_retro_paving', paving, 0.3)
+
+
 def studio_sky(name, top, fill):
     """Soft light from overhead, and dark where the Yard's camera sees the sky mirrored in water."""
     d = directions(1024, 512)
@@ -263,6 +289,7 @@ def main():
     raked('made_raked_gravel')
     clay_grounds()
     glade_grounds()
+    retro_grounds()
     print('made made_stars', flush=True)
     gradient_sky('made_mars_day', SUN_LIGHT, [0.42, 0.27, 0.17], [0.98, 0.7, 0.46], [0.3, 0.18, 0.11],
                  [(0.9, 0.06, [1.0, 0.86, 0.7]), (0.25, 0.5, [1.0, 0.86, 0.7])])

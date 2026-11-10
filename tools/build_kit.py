@@ -170,12 +170,30 @@ GLADE = {
     'glade_tent': ('Tent', 5), 'glade_banner': ('Banner', 3), 'glade_signpost': ('Signpost', 3), 'glade_chest': ('Chest', 2),
     'glade_supplies': ('Supplies', 3), 'glade_weapon_rack': ('Weapon rack', 3), 'glade_fence': ('Fence', 2.2),
 }
-MADE_SETS = {'clay': CLAY, 'glade': GLADE}
+# id: (label, scatter spacing in metres), built by tools/build_retro.py
+RETRO = {
+    'retro_wall_plain': ('Wall', 8), 'retro_wall_window': ('Window wall', 8), 'retro_wall_door': ('Door wall', 8), 'retro_wall_posters': ('Poster wall', 8),
+    'retro_wall_short': ('Short wall', 4), 'retro_wall_corner': ('Wall corner', 2), 'retro_partition': ('Partition', 4),
+    'retro_desk_single': ('Desk', 3), 'retro_desk_row': ('Desk row', 6), 'retro_cubicles': ('Cubicles', 6), 'retro_boss_desk': ('Boss desk', 4),
+    'retro_office_chair': ('Office chair', 1.5), 'retro_meeting_table': ('Meeting table', 6), 'retro_whiteboard': ('Whiteboard', 3),
+    'retro_reception': ('Reception desk', 5),
+    'retro_mainframe': ('Mainframe', 4), 'retro_printer': ('Printer', 2), 'retro_copier': ('Copier', 2.5), 'retro_tv': ('Television', 2.5),
+    'retro_arcade': ('Arcade cabinet', 2), 'retro_vending': ('Vending machine', 2), 'retro_table_football': ('Table football', 4),
+    'retro_coffee_corner': ('Coffee corner', 5), 'retro_water_cooler': ('Water cooler', 1.5),
+    'retro_sofa': ('Sofa', 3), 'retro_armchair': ('Armchair', 2), 'retro_coffee_table': ('Coffee table', 2), 'retro_rug': ('Rug', 4),
+    'retro_rug_large': ('Large rug', 6),
+    'retro_bookshelf': ('Bookshelf', 2.5), 'retro_filing': ('Filing cabinets', 2.5), 'retro_lockers': ('Lockers', 2.5), 'retro_boxes': ('Boxes', 2),
+    'retro_bin': ('Bin', 1),
+    'retro_plant': ('Pot plant', 1.5), 'retro_plant_tall': ('Tall plant', 2), 'retro_planter': ('Flower box', 2.5), 'retro_cactus': ('Cactus', 1.2),
+    'retro_floor_lamp': ('Floor lamp', 3),
+}
+MADE_SETS = {'clay': CLAY, 'glade': GLADE, 'retro': RETRO}
+RETRO_JOINS = {'retro_wall_plain', 'retro_wall_window', 'retro_wall_door', 'retro_wall_posters', 'retro_wall_short', 'retro_wall_corner', 'retro_partition'}
 CLAY_JOINS = {'clay_wall', 'clay_wall_short', 'clay_wall_window', 'clay_wall_door', 'clay_wall_corner', 'clay_partition'}
 CLAY_FIXED = CLAY_JOINS | {'clay_wall_art', 'clay_wall_shelf', 'clay_wall_clock', 'clay_wall_display', 'clay_neon_sign'}
 FORT = {key for key in MODELS if key.startswith('fort_')}
-MODULAR = FORT | {'castle_door'} | CLAY_FIXED
-JOINS = FORT - {'fort_thick_corner_b', 'fort_walkway_corner_b'} | CLAY_JOINS
+MODULAR = FORT | {'castle_door'} | CLAY_FIXED | RETRO_JOINS
+JOINS = FORT - {'fort_thick_corner_b', 'fort_walkway_corner_b'} | CLAY_JOINS | RETRO_JOINS
 SEATED_GROUPS = {'city', 'medieval', 'gnomes', 'goblins', 'forest', 'space'}
 MADE_HERE = {
     'xmas_tree': ('Christmas tree', 8), 'gift_red': ('Red gift', 2), 'gift_green': ('Green gift', 2), 'gift_pile': ('Pile of gifts', 4),
@@ -278,6 +296,16 @@ LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'glade_tower': {'watts': 400.0, 'color': [1.0, 0.55, 0.22], 'height': 3.6},
           'glade_forge': {'watts': 600.0, 'color': [1.0, 0.55, 0.22], 'height': 1.6},
           'glade_library': {'watts': 250.0, 'color': [1.0, 0.7, 0.35], 'height': 1.6},
+          'retro_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.8, 0.5], 'height': 2.1},
+          'retro_cubicles': {'watts': 140.0, 'color': [0.72, 0.84, 1.0], 'height': 1.7},
+          'retro_desk_row': {'watts': 90.0, 'color': [0.72, 0.84, 1.0], 'height': 1.6},
+          'retro_mainframe': {'watts': 120.0, 'color': [0.4, 1.0, 0.5], 'height': 2.3},
+          'retro_arcade': {'watts': 160.0, 'color': [0.4, 0.6, 1.0], 'height': 2.2},
+          'retro_vending': {'watts': 200.0, 'color': [1.0, 0.9, 0.7], 'height': 2.2},
+          'retro_tv': {'watts': 140.0, 'color': [0.6, 0.75, 1.0], 'height': 1.8},
+          'retro_coffee_corner': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 2.1},
+          'retro_reception': {'watts': 200.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
+          'retro_boss_desk': {'watts': 120.0, 'color': [0.8, 1.0, 0.7], 'height': 1.7},
           'clay_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.72, 0.45], 'height': 1.95},
           'clay_kitchen': {'watts': 260.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
           'clay_reception': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
@@ -312,6 +340,9 @@ GROUNDS = {
     'glade_grass': ('made_glade_grass', 'Pixel grass'), 'glade_floor': ('made_glade_floor', 'Pixel forest floor'),
     'glade_stone': ('made_glade_stone', 'Pixel flagstones'), 'glade_dirt': ('made_glade_dirt', 'Pixel dirt'),
     'plaza_glade': ('made_glade_paving', 'Pixel paving'),
+    'retro_checker': ('made_retro_checker', 'Checkered tiles'), 'retro_carpet': ('made_retro_carpet', 'Office carpet'),
+    'retro_planks': ('made_retro_planks', 'Pixel planks'), 'retro_slate': ('made_retro_slate', 'Dark tiles'),
+    'plaza_retro': ('made_retro_paving', 'Pixel tiles'),
 }
 # A world's four painted grounds and its plaza. Per ground: metres per repeat as a
 # multiple of the land shader's, glow from within, and side projection on steep land.
@@ -330,6 +361,8 @@ LANDS = {
                'grass_tint': [0.5, 0.78, 0.42], 'water': {'shallow': [0.08, 0.16, 0.1], 'deep': [0.006, 0.03, 0.025], 'clear': 0.55}},
     'clay': {'label': 'Clay office', 'grounds': ['clay_planks', 'clay_carpet', 'clay_sage', 'clay_tiles'], 'plaza': 'plaza_terrazzo',
              'scale': [2, 1, 1, 1], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
+    'retro': {'label': 'Pixel office', 'grounds': ['retro_checker', 'retro_carpet', 'retro_planks', 'retro_slate'], 'plaza': 'plaza_retro',
+              'scale': [2.6667, 2.6667, 2.6667, 2.6667], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
     'glade': {'label': 'Pixel glade', 'grounds': ['glade_grass', 'glade_floor', 'glade_stone', 'glade_dirt'], 'plaza': 'plaza_glade',
               'scale': [2.6667, 2.6667, 2.6667, 2.6667], 'water': {'shallow': [0.05, 0.3, 0.3], 'deep': [0.01, 0.1, 0.14], 'clear': 0.35}},
 }
@@ -493,8 +526,11 @@ AUTHORED_JOINTS = {
     'fort_stairs_straight': [((0, 0), (-1, 0), 1), ((0, -14.819), (-1, 0), 1), ((0, -14.819), (0, -1), 0)],
     'clay_wall_corner': [((0.2, 0), (1, 0), 0), ((-0.2, 0), (-1, 0), 0), ((0, 0.2), (0, 1), 0), ((0, -0.2), (0, -1), 0)],
 }
+AUTHORED_JOINTS['retro_wall_corner'] = [((0.1875, 0), (1, 0), 0), ((-0.1875, 0), (-1, 0), 0), ((0, 0.1875), (0, 1), 0), ((0, -0.1875), (0, -1), 0)]
 AUTHORED_JOINTS.update({key: [((half, 0), (1, 0), 0), ((-half, 0), (-1, 0), 0)]
-                        for key, half in (('clay_wall', 4), ('clay_wall_window', 4), ('clay_wall_door', 4), ('clay_wall_short', 2), ('clay_partition', 2))})
+                        for key, half in (('clay_wall', 4), ('clay_wall_window', 4), ('clay_wall_door', 4), ('clay_wall_short', 2), ('clay_partition', 2),
+                                          ('retro_wall_plain', 4), ('retro_wall_window', 4), ('retro_wall_door', 4), ('retro_wall_posters', 4),
+                                          ('retro_wall_short', 2), ('retro_partition', 2))})
 TOWER_REACH = 7.0
 
 

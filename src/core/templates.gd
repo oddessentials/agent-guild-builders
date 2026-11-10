@@ -18,6 +18,7 @@ const LIST := {
 	"salt": {"label": "Salt Flats", "note": "White salt crust and turquoise brine pools below distant peaks"},
 	"clay_office": {"label": "Clay Office", "note": "A sunlit open-plan office in soft clay, set on black glass"},
 	"pixel_glade": {"label": "Pixel Glade", "note": "A torchlit forest clearing in cube art, with ruins and glowing crystals"},
+	"pixel_office": {"label": "Pixel Office", "note": "A bright 8-bit office in cube art, with cubicles, a mainframe and an arcade"},
 }
 
 const LAKE_CENTRE := Vector2(-30.0, -44.0)
@@ -94,6 +95,9 @@ static func create(template: String, base: String, title: String, seed_value: in
 			return doc
 		"pixel_glade":
 			_pixel_glade(doc, rng, noise)
+			return doc
+		"pixel_office":
+			_pixel_office(doc, rng)
 			return doc
 		"lakeside":
 			_shape(doc, noise, 7.0, 34.0)
@@ -918,3 +922,136 @@ static func _pixel_glade(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
 	_scatter(doc, rng, noise, ["glade_mushrooms", "glade_glow_mushrooms"], 70, 15.5, 80.0, 0.3, 1.0, true)
 	_scatter(doc, rng, noise, ["glade_flowers"], 260, 15.0, 70.0, 0.1, 1.0, true)
 	_scatter(doc, rng, noise, ["glade_grass"], 700, 15.0, 80.0, 0.1, 1.0, true)
+
+## The Clay Office's cut-away room again, in bright cube art: cubicles, a machine
+## room and a games corner.
+static func _pixel_office(doc: WorldDoc, rng: Rng) -> void:
+	_surface(doc, "retro")
+	_mood(doc, ["studio", 1.0, 2.6, [1.0, 0.96, 0.9]], ["studio_night", 1.0, 0.35, [0.55, 0.68, 1.0]])
+	doc.data.water_level = -0.12
+	const LEFT := -28.0
+	const BACK := -24.0
+	const RIGHT := 28.0
+	const FRONT := 44.0
+	const SIDEWAYS := PI / 2.0
+	const HALF_WALL := 0.1875
+	var res := WorldDoc.TERRAIN_RES
+	for j in res:
+		for i in res:
+			var p := WorldDoc.cell_to_world(i, j)
+			var inside := p.x > LEFT - 0.5 and p.x < RIGHT + 0.5 and p.y > BACK - 0.5 and p.y < FRONT + 0.75
+			doc.heights[j * res + i] = 0.0 if inside else -0.4
+
+	_stand(doc, "retro_wall_corner", LEFT - HALF_WALL, BACK - HALF_WALL, 0.0)
+	var back_wall := ["retro_wall_plain", "retro_wall_window", "retro_wall_posters", "retro_wall_door", "retro_wall_window", "retro_wall_posters", "retro_wall_window"]
+	for k in back_wall.size():
+		_stand(doc, back_wall[k], LEFT + 4.0 + 8.0 * k, BACK - HALF_WALL, 0.0)
+	var left_wall := ["retro_wall_window", "retro_wall_plain", "retro_wall_window", "retro_wall_posters", "retro_wall_window", "retro_wall_plain", "retro_wall_window", "retro_wall_posters"]
+	for k in left_wall.size():
+		_stand(doc, left_wall[k], LEFT - HALF_WALL, BACK + 4.0 + 8.0 * k, SIDEWAYS)
+	_stand(doc, "retro_wall_short", LEFT - HALF_WALL, BACK + 66.0, SIDEWAYS)
+
+	for k in 3:
+		_stand(doc, "retro_mainframe", -25.6 + k * 3.8, -23.4, 0.0)
+	_stand(doc, "retro_filing", -27.4, -19.6, SIDEWAYS)
+	_stand(doc, "retro_filing", -27.4, -17.4, SIDEWAYS)
+	_stand(doc, "retro_lockers", -27.5, -14.6, SIDEWAYS)
+	_stand(doc, "retro_boxes", -26.6, -11.8, 0.0)
+	_stand(doc, "retro_partition", -15.6, -22.0, SIDEWAYS)
+	_stand(doc, "retro_partition", -15.6, -18.0, SIDEWAYS)
+
+	_stand(doc, "retro_vending", -13.8, -23.5, 0.0)
+	_stand(doc, "retro_coffee_corner", -9.6, -23.4, 0.0)
+	_stand(doc, "retro_water_cooler", -6.4, -23.6, 0.0)
+	_stand(doc, "retro_table_football", -10.6, -18.6, 0.0)
+	_stand(doc, "retro_bin", -5.4, -23.6, 0.0)
+	for side in [-1.0, 1.0]:
+		_stand(doc, "retro_plant_tall", side * 2.6, -23.2, 0.0)
+
+	_stand(doc, "retro_bookshelf", 5.2, -23.6, 0.0)
+	_stand(doc, "retro_bookshelf", 7.4, -23.6, 0.0)
+	_stand(doc, "retro_rug_large", 6.4, -18.8, 0.0)
+	_stand(doc, "retro_sofa", 6.4, -21.4, 0.0)
+	_stand(doc, "retro_tv", 2.4, -19.0, SIDEWAYS)
+	_stand(doc, "retro_armchair", 10.2, -18.6, -SIDEWAYS)
+	_stand(doc, "retro_coffee_table", 6.4, -18.8, 0.0)
+	_stand(doc, "retro_floor_lamp", 9.6, -22.8, 0.0)
+
+	_stand(doc, "retro_partition", 12.4, -22.0, SIDEWAYS)
+	_stand(doc, "retro_partition", 12.4, -18.0, SIDEWAYS)
+	_stand(doc, "retro_meeting_table", 18.0, -19.6, 0.0)
+	_stand(doc, "retro_whiteboard", 23.8, -21.4, 0.0)
+	_stand(doc, "retro_plant", 26.6, -22.8, 0.0)
+
+	for row in 4:
+		for column in 2:
+			var x := -24.4 + column * 5.0
+			var z := -7.6 + row * 5.8
+			if rng.next() < 0.75:
+				_stand(doc, "retro_cubicles", x, z, SIDEWAYS)
+			else:
+				_stand(doc, "retro_desk_row", x - 1.0, z, SIDEWAYS)
+				_stand(doc, "retro_desk_row", x + 1.2, z, SIDEWAYS)
+	_stand(doc, "retro_printer", -27.3, 15.4, SIDEWAYS)
+	_stand(doc, "retro_copier", -27.2, 17.4, SIDEWAYS)
+	_stand(doc, "retro_bin", -27.4, 19.0, 0.0)
+
+	for k in 3:
+		_stand(doc, "retro_arcade", -27.3, 21.6 + k * 1.3, SIDEWAYS)
+	_stand(doc, "retro_rug", -22.4, 23.2, SIDEWAYS)
+	_stand(doc, "retro_table_football", -21.6, 27.4, SIDEWAYS)
+	_stand(doc, "retro_sofa", -26.9, 28.6, SIDEWAYS)
+	_stand(doc, "retro_vending", -27.3, 31.4, SIDEWAYS)
+
+	_stand(doc, "retro_partition", -26.0, 33.6, 0.0)
+	_stand(doc, "retro_partition", -22.0, 33.6, 0.0)
+	_stand(doc, "retro_rug_large", -22.6, 38.4, SIDEWAYS)
+	_stand(doc, "retro_boss_desk", -23.2, 38.4, SIDEWAYS)
+	_stand(doc, "retro_bookshelf", -27.5, 36.2, SIDEWAYS)
+	_stand(doc, "retro_bookshelf", -27.5, 38.4, SIDEWAYS)
+	_stand(doc, "retro_plant_tall", -27.0, 41.6, 0.0)
+	_stand(doc, "retro_armchair", -19.6, 40.6, -SIDEWAYS)
+
+	for row in 3:
+		for column in 2:
+			_stand(doc, "retro_desk_row", 20.8 + column * 4.4, -7.6 + row * 5.6, SIDEWAYS)
+	_stand(doc, "retro_rug", 23.0, 16.2, 0.0)
+	_stand(doc, "retro_coffee_table", 23.0, 16.2, 0.0)
+	_stand(doc, "retro_sofa", 23.0, 13.6, 0.0)
+	_stand(doc, "retro_sofa", 20.2, 16.4, SIDEWAYS)
+	_stand(doc, "retro_armchair", 25.8, 17.0, -SIDEWAYS)
+	_stand(doc, "retro_floor_lamp", 20.4, 13.2, 0.0)
+	_stand(doc, "retro_plant_tall", 26.4, 11.6, 0.0)
+	for k in 3:
+		_stand(doc, "retro_desk_single", 20.4 + k * 2.4, 25.8, SIDEWAYS)
+	_stand(doc, "retro_copier", 20.6, 31.0, 0.0)
+	_stand(doc, "retro_water_cooler", 22.6, 31.2, 0.0)
+	_stand(doc, "retro_lockers", 25.4, 31.0, 0.0)
+
+	_stand(doc, "retro_reception", 0.0, 41.2, PI)
+	_stand(doc, "retro_plant", -4.0, 42.4, 0.0)
+	_stand(doc, "retro_plant", 4.0, 42.4, 0.0)
+	_stand(doc, "retro_rug", 21.6, 40.0, SIDEWAYS)
+	_stand(doc, "retro_sofa", 19.4, 40.0, SIDEWAYS)
+	_stand(doc, "retro_armchair", 22.0, 37.2, 0.0)
+	_stand(doc, "retro_coffee_table", 21.8, 40.2, SIDEWAYS)
+
+	for k in 5:
+		for side in [-1.0, 1.0]:
+			if rng.next() < 0.85:
+				_stand(doc, "retro_planter", side * 15.6, 3.0 + k * 6.5, SIDEWAYS)
+	for x in [-9.6, -3.4, 3.4, 9.6]:
+		_stand(doc, "retro_planter", x, 34.0, 0.0)
+	for spot in [Vector2(-9.0, -16.4), Vector2(9.0, -16.4), Vector2(-5.0, -15.6), Vector2(5.0, -15.6)]:
+		if rng.next() < 0.85:
+			_stand(doc, "retro_planter", spot.x, spot.y, 0.0)
+	for k in 9:
+		if rng.next() < 0.8:
+			_stand(doc, "retro_planter", RIGHT - 0.2, -20.0 + k * 7.0 + rng.range_f(-1.0, 1.0), SIDEWAYS)
+	for k in 8:
+		if rng.next() < 0.8:
+			_stand(doc, "retro_planter", -24.0 + k * 6.6 + rng.range_f(-1.0, 1.0), FRONT + 0.1, 0.0)
+	var spots := [Vector2(-17.0, -14.6), Vector2(16.0, -15.6), Vector2(-16.6, 17.6), Vector2(-16.0, 31.6), Vector2(11.0, -15.4), Vector2(-27.0, -9.8), Vector2(-13.4, 38.2), Vector2(18.6, 9.4), Vector2(18.8, 22.6), Vector2(19.6, 34.8), Vector2(26.8, 43.0), Vector2(-27.0, 43.0), Vector2(26.6, 22.4), Vector2(-16.4, 8.8), Vector2(9.0, 41.0), Vector2(-9.0, 41.0)]
+	for spot in spots:
+		if rng.next() < 0.8:
+			_stand(doc, _pick(rng, ["retro_plant", "retro_plant_tall", "retro_cactus", "retro_floor_lamp", "retro_bin"]), spot.x + rng.range_f(-0.4, 0.4), spot.y + rng.range_f(-0.4, 0.4), 0.0)

@@ -157,7 +157,7 @@ func _templates() -> bool:
 					flat = false
 		check(flat, key + ": the ground crews stand on is flat")
 		check(Clearance.check_world(a).get("valid", false), key + ": a new world is ready to export")
-		if float(a.data.water_level) > -50.0 and key not in ["island", "salt", "clay_office"]:
+		if float(a.data.water_level) > -50.0 and key not in ["island", "salt", "clay_office", "pixel_office"]:
 			var wet := 0
 			for h in a.heights:
 				if h < float(a.data.water_level):
@@ -230,9 +230,13 @@ func _templates() -> bool:
 	var level := float(office.data.water_level)
 	check(office.height_at(20.0, 20.0) == 0.0 and office.height_at(40.0, 20.0) < level and office.height_at(0.0, 60.0) < level, "clay office: a level floor that ends in dark water")
 	var glade := Templates.create("pixel_glade", "guild", "T", 42)
-	var square := func(t): return str(t.kind).begins_with("glade_") and float(t.scale) == 1.0 and absf(float(t.turn) / (PI / 2.0) - roundf(float(t.turn) / (PI / 2.0))) < 0.0001
-	check(glade.data.land == "glade" and glade.data.things.all(square), "pixel glade: every piece keeps its size and turns by quarters")
+	var square := func(t): return float(t.scale) == 1.0 and absf(float(t.turn) / (PI / 2.0) - roundf(float(t.turn) / (PI / 2.0))) < 0.0001
+	check(glade.data.land == "glade" and glade.data.things.all(func(t): return str(t.kind).begins_with("glade_") and square.call(t)), "pixel glade: every piece keeps its size and turns by quarters")
 	check(glade.data.things.any(func(t): return t.kind == "glade_shrine") and glade.height_at(-37.0, 8.0) < float(glade.data.water_level), "pixel glade: a shrine behind the Yard and a brook beside it")
+	var retro := Templates.create("pixel_office", "guild", "T", 42)
+	check(retro.data.land == "retro" and retro.data.things.all(func(t): return str(t.kind).begins_with("retro_") and square.call(t)), "pixel office: every piece keeps its size and turns by quarters")
+	var retro_walls: Array = retro.data.things.filter(func(t): return str(t.kind).begins_with("retro_wall"))
+	check(retro_walls.size() == 17 and retro_walls.all(func(t): return is_inf(Clearance.max_elevation(t.x, t.z))) and retro.height_at(40.0, 20.0) < float(retro.data.water_level), "pixel office: walls only behind the Yard, and a floor that ends in dark water")
 	return true
 
 func _lands() -> bool:
