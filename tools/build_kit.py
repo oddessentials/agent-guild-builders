@@ -154,6 +154,23 @@ CLAY = {
     'clay_plant': ('Office plant', 1.5), 'clay_plant_tall': ('Tall office plant', 2), 'clay_planter': ('Plant divider', 3),
     'clay_floor_lamp': ('Floor lamp', 3), 'clay_ping_pong': ('Table tennis', 5), 'clay_slide': ('Slide', 7), 'clay_mezzanine': ('Mezzanine', 12),
 }
+# id: (label, scatter spacing in metres), built by tools/build_glade.py
+GLADE = {
+    'glade_tree_oak': ('Oak', 7), 'glade_tree_pine': ('Pine', 5), 'glade_tree_ancient': ('Ancient tree', 12), 'glade_tree_dead': ('Bare tree', 5),
+    'glade_bush': ('Bush', 2.5), 'glade_grass': ('Grass tuft', 1.2), 'glade_flowers': ('Wildflowers', 1.2),
+    'glade_mushrooms': ('Toadstools', 1.5), 'glade_glow_mushrooms': ('Glowing mushrooms', 1.5),
+    'glade_rock': ('Rock', 3), 'glade_boulder': ('Mossy boulder', 4), 'glade_log': ('Fallen log', 4), 'glade_stump': ('Stump', 3),
+    'glade_dais': ('Rune dais', 8), 'glade_shrine': ('Crystal shrine', 9), 'glade_portal': ('Portal arch', 5), 'glade_tower': ('Ruined tower', 6),
+    'glade_wall_ruin': ('Ruined wall', 5), 'glade_pillar': ('Pillar', 2), 'glade_pillar_broken': ('Broken pillar', 3),
+    'glade_statue': ('Guardian statue', 3), 'glade_obelisk': ('Rune stone', 3), 'glade_well': ('Well', 4), 'glade_path': ('Stepping stones', 3),
+    'glade_brazier': ('Brazier', 3), 'glade_torch': ('Torch', 4), 'glade_lantern_post': ('Lantern post', 4), 'glade_campfire': ('Campfire', 4),
+    'glade_crystal': ('Crystals', 3), 'glade_crystal_small': ('Small crystals', 2),
+    'glade_forge': ('Forge', 5), 'glade_alchemy': ('Alchemy bench', 5), 'glade_library': ('Library', 4), 'glade_scrying': ('Scrying orb', 3),
+    'glade_map_table': ('Map table', 3), 'glade_meeting_stones': ('Meeting stones', 6),
+    'glade_tent': ('Tent', 5), 'glade_banner': ('Banner', 3), 'glade_signpost': ('Signpost', 3), 'glade_chest': ('Chest', 2),
+    'glade_supplies': ('Supplies', 3), 'glade_weapon_rack': ('Weapon rack', 3), 'glade_fence': ('Fence', 2.2),
+}
+MADE_SETS = {'clay': CLAY, 'glade': GLADE}
 CLAY_JOINS = {'clay_wall', 'clay_wall_short', 'clay_wall_window', 'clay_wall_door', 'clay_wall_corner', 'clay_partition'}
 CLAY_FIXED = CLAY_JOINS | {'clay_wall_art', 'clay_wall_shelf', 'clay_wall_clock', 'clay_wall_display', 'clay_neon_sign'}
 FORT = {key for key in MODELS if key.startswith('fort_')}
@@ -246,14 +263,29 @@ LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'wreath_arch': {'watts': 80.0, 'color': [1.0, 0.72, 0.4], 'height': 3.3},
           'paper_lanterns': {'watts': 70.0, 'color': [1.0, 0.45, 0.2], 'height': 1.9},
           'stone_lantern': {'watts': 160.0, 'color': [1.0, 0.6, 0.3], 'height': 1.28},
-          'clay_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.72, 0.45], 'height': 1.6},
+          'glade_brazier': {'watts': 700.0, 'color': [1.0, 0.55, 0.22], 'height': 1.5},
+          'glade_torch': {'watts': 800.0, 'color': [1.0, 0.55, 0.22], 'height': 2.8},
+          'glade_campfire': {'watts': 1000.0, 'color': [1.0, 0.55, 0.22], 'height': 1.6},
+          'glade_lantern_post': {'watts': 600.0, 'color': [1.0, 0.7, 0.35], 'height': 1.7},
+          'glade_crystal': {'watts': 400.0, 'color': [0.3, 1.0, 0.92], 'height': 3.0},
+          'glade_shrine': {'watts': 900.0, 'color': [0.3, 1.0, 0.92], 'height': 5.6},
+          'glade_dais': {'watts': 300.0, 'color': [0.3, 1.0, 0.92], 'height': 1.6},
+          'glade_obelisk': {'watts': 300.0, 'color': [0.3, 1.0, 0.92], 'height': 3.6},
+          'glade_meeting_stones': {'watts': 400.0, 'color': [0.3, 1.0, 0.92], 'height': 0.6},
+          'glade_portal': {'watts': 600.0, 'color': [0.62, 0.42, 1.0], 'height': 6.0},
+          'glade_scrying': {'watts': 500.0, 'color': [0.62, 0.42, 1.0], 'height': 2.3},
+          'glade_alchemy': {'watts': 350.0, 'color': [0.62, 0.42, 1.0], 'height': 2.0},
+          'glade_tower': {'watts': 400.0, 'color': [1.0, 0.55, 0.22], 'height': 3.6},
+          'glade_forge': {'watts': 600.0, 'color': [1.0, 0.55, 0.22], 'height': 1.6},
+          'glade_library': {'watts': 250.0, 'color': [1.0, 0.7, 0.35], 'height': 1.6},
+          'clay_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.72, 0.45], 'height': 1.95},
           'clay_kitchen': {'watts': 260.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
           'clay_reception': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
           'clay_mezzanine': {'watts': 320.0, 'color': [1.0, 0.74, 0.48], 'height': 3.9},
           'clay_phone_booth': {'watts': 60.0, 'color': [1.0, 0.8, 0.55], 'height': 2.0},
-          'clay_neon_sign': {'watts': 140.0, 'color': [1.0, 0.45, 0.3], 'height': 3.0},
-          'clay_wall_display': {'watts': 160.0, 'color': [0.5, 0.75, 1.0], 'height': 2.4},
-          'clay_screen': {'watts': 120.0, 'color': [0.5, 0.75, 1.0], 'height': 1.55},
+          'clay_neon_sign': {'watts': 140.0, 'color': [1.0, 0.45, 0.3], 'height': 3.7},
+          'clay_wall_display': {'watts': 160.0, 'color': [0.5, 0.75, 1.0], 'height': 3.45},
+          'clay_screen': {'watts': 120.0, 'color': [0.5, 0.75, 1.0], 'height': 2.4},
           'clay_desk_pod': {'watts': 110.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3},
           'clay_desk_pod_six': {'watts': 140.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3},
           'clay_desk_row': {'watts': 90.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3}}
@@ -277,6 +309,9 @@ GROUNDS = {
     'clay_planks': ('made_clay_planks', 'Oak planks'), 'clay_carpet': ('made_clay_carpet', 'Cream carpet'),
     'clay_sage': ('made_clay_sage', 'Sage carpet'), 'clay_tiles': ('made_clay_tiles', 'White tiles'),
     'plaza_terrazzo': ('made_terrazzo', 'Terrazzo'),
+    'glade_grass': ('made_glade_grass', 'Pixel grass'), 'glade_floor': ('made_glade_floor', 'Pixel forest floor'),
+    'glade_stone': ('made_glade_stone', 'Pixel flagstones'), 'glade_dirt': ('made_glade_dirt', 'Pixel dirt'),
+    'plaza_glade': ('made_glade_paving', 'Pixel paving'),
 }
 # A world's four painted grounds and its plaza. Per ground: metres per repeat as a
 # multiple of the land shader's, glow from within, and side projection on steep land.
@@ -295,6 +330,8 @@ LANDS = {
                'grass_tint': [0.5, 0.78, 0.42], 'water': {'shallow': [0.08, 0.16, 0.1], 'deep': [0.006, 0.03, 0.025], 'clear': 0.55}},
     'clay': {'label': 'Clay office', 'grounds': ['clay_planks', 'clay_carpet', 'clay_sage', 'clay_tiles'], 'plaza': 'plaza_terrazzo',
              'scale': [2, 1, 1, 1], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
+    'glade': {'label': 'Pixel glade', 'grounds': ['glade_grass', 'glade_floor', 'glade_stone', 'glade_dirt'], 'plaza': 'plaza_glade',
+              'scale': [2.6667, 2.6667, 2.6667, 2.6667], 'water': {'shallow': [0.05, 0.3, 0.3], 'deep': [0.01, 0.1, 0.14], 'clear': 0.35}},
 }
 SKIES = {
     'day': ('kloofendal_48d_partly_cloudy_puresky', 'Clear day', 0.9),
@@ -564,7 +601,7 @@ def export_model(kit_id, spec):
                               export_image_quality=85, export_animations=False, export_cameras=False, export_lights=False)
     size = max(high.z if kit_id in MODULAR else high.z - min(low.z, 0), .001)
     target = TARGET.get(kit_id, round(size, 4 if kit_id in MODULAR else 2))
-    licence = MADE_LICENCE if kit_id in MADE_HERE or kit_id in CLAY else GUILD_LICENCE if kit_id in GUILD else LICENCE
+    licence = MADE_LICENCE if kit_id in MADE_HERE or any(kit_id in ids for ids in MADE_SETS.values()) else GUILD_LICENCE if kit_id in GUILD else LICENCE
     entry = {'label': label, 'group': group, 'spacing': spacing, 'height': target,
              'radius': round(max(high.x - low.x, high.y - low.y) / 2 * target / size, 2), 'triangles': tris,
              'source': f'{name} {lod}' if kit_id in GUILD and lod else name, 'licence': licence, 'bytes': out.stat().st_size}
@@ -615,7 +652,8 @@ def main():
     built = json.loads((KIT / 'kit.json').read_text(encoding='utf-8')) if (KIT / 'kit.json').exists() else {}
     kit = {'id': 'meadow', 'title': 'Meadow', 'models': {}, 'grounds': {}, 'skies': {}}
     made = {key: (key, None, label, 'holiday', spacing) for key, (label, spacing) in MADE_HERE.items()}
-    made.update({key: (key, None, label, 'clay', spacing) for key, (label, spacing) in CLAY.items()})
+    for group, ids in MADE_SETS.items():
+        made.update({key: (key, None, label, group, spacing) for key, (label, spacing) in ids.items()})
     for key, spec in {**MODELS, **made, **GUILD}.items():
         if key in built.get('models', {}) and (KIT / 'models' / f'{key}.glb').exists():
             kit['models'][key] = described(built['models'][key], key, spec)

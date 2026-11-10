@@ -2402,7 +2402,7 @@
      0.75,
      1.0
     ],
-    "height": 2.4
+    "height": 3.45
    },
    "modular": true
   },
@@ -2423,7 +2423,7 @@
      0.45,
      0.3
     ],
-    "height": 3.0
+    "height": 3.7
    },
    "modular": true
   },
@@ -2559,7 +2559,7 @@
      0.75,
      1.0
     ],
-    "height": 1.55
+    "height": 2.4
    }
   },
   "clay_reception": {
@@ -2815,7 +2815,7 @@
      0.72,
      0.45
     ],
-    "height": 1.6
+    "height": 1.95
    }
   },
   "clay_ping_pong": {
@@ -2859,6 +2859,614 @@
     ],
     "height": 3.9
    }
+  },
+  "glade_tree_oak": {
+   "label": "Oak",
+   "group": "glade",
+   "spacing": 7,
+   "height": 9.25,
+   "radius": 3.44,
+   "triangles": 22620,
+   "source": "glade_tree_oak",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1226884
+  },
+  "glade_tree_pine": {
+   "label": "Pine",
+   "group": "glade",
+   "spacing": 5,
+   "height": 14.0,
+   "radius": 2.56,
+   "triangles": 29972,
+   "source": "glade_tree_pine",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1623176
+  },
+  "glade_tree_ancient": {
+   "label": "Ancient tree",
+   "group": "glade",
+   "spacing": 12,
+   "height": 14.62,
+   "radius": 5.69,
+   "triangles": 86300,
+   "source": "glade_tree_ancient",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 4668588
+  },
+  "glade_tree_dead": {
+   "label": "Bare tree",
+   "group": "glade",
+   "spacing": 5,
+   "height": 5.62,
+   "radius": 2.25,
+   "triangles": 3128,
+   "source": "glade_tree_dead",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 171396
+  },
+  "glade_bush": {
+   "label": "Bush",
+   "group": "glade",
+   "spacing": 2.5,
+   "height": 1.5,
+   "radius": 1.31,
+   "triangles": 2358,
+   "source": "glade_bush",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 131208
+  },
+  "glade_grass": {
+   "label": "Grass tuft",
+   "group": "glade",
+   "spacing": 1.2,
+   "height": 0.62,
+   "radius": 0.81,
+   "triangles": 1060,
+   "source": "glade_grass",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 59724
+  },
+  "glade_flowers": {
+   "label": "Wildflowers",
+   "group": "glade",
+   "spacing": 1.2,
+   "height": 0.62,
+   "radius": 0.81,
+   "triangles": 940,
+   "source": "glade_flowers",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 55360
+  },
+  "glade_mushrooms": {
+   "label": "Toadstools",
+   "group": "glade",
+   "spacing": 1.5,
+   "height": 0.88,
+   "radius": 0.88,
+   "triangles": 824,
+   "source": "glade_mushrooms",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 47684
+  },
+  "glade_glow_mushrooms": {
+   "label": "Glowing mushrooms",
+   "group": "glade",
+   "spacing": 1.5,
+   "height": 0.88,
+   "radius": 0.82,
+   "triangles": 832,
+   "source": "glade_glow_mushrooms",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 46764
+  },
+  "glade_rock": {
+   "label": "Rock",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.38,
+   "radius": 1.13,
+   "triangles": 1648,
+   "source": "glade_rock",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 93556
+  },
+  "glade_boulder": {
+   "label": "Mossy boulder",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.5,
+   "radius": 2.06,
+   "triangles": 5050,
+   "source": "glade_boulder",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 277316
+  },
+  "glade_log": {
+   "label": "Fallen log",
+   "group": "glade",
+   "spacing": 4,
+   "height": 1.12,
+   "radius": 2.12,
+   "triangles": 2216,
+   "source": "glade_log",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 127780
+  },
+  "glade_stump": {
+   "label": "Stump",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.75,
+   "radius": 0.75,
+   "triangles": 592,
+   "source": "glade_stump",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 37232
+  },
+  "glade_dais": {
+   "label": "Rune dais",
+   "group": "glade",
+   "spacing": 8,
+   "height": 1.12,
+   "radius": 3.48,
+   "triangles": 12592,
+   "source": "glade_dais",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 686156,
+   "light": {
+    "watts": 300.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_shrine": {
+   "label": "Crystal shrine",
+   "group": "glade",
+   "spacing": 9,
+   "height": 5.38,
+   "radius": 3.5,
+   "triangles": 23048,
+   "source": "glade_shrine",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1250828,
+   "light": {
+    "watts": 900.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 5.6
+   }
+  },
+  "glade_portal": {
+   "label": "Portal arch",
+   "group": "glade",
+   "spacing": 5,
+   "height": 5.75,
+   "radius": 2.19,
+   "triangles": 9180,
+   "source": "glade_portal",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 502684,
+   "light": {
+    "watts": 600.0,
+    "color": [
+     0.62,
+     0.42,
+     1.0
+    ],
+    "height": 6.0
+   }
+  },
+  "glade_tower": {
+   "label": "Ruined tower",
+   "group": "glade",
+   "spacing": 6,
+   "height": 7.38,
+   "radius": 2.0,
+   "triangles": 26376,
+   "source": "glade_tower",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1435500,
+   "light": {
+    "watts": 400.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 3.6
+   }
+  },
+  "glade_wall_ruin": {
+   "label": "Ruined wall",
+   "group": "glade",
+   "spacing": 5,
+   "height": 2.12,
+   "radius": 2.74,
+   "triangles": 4228,
+   "source": "glade_wall_ruin",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 235096
+  },
+  "glade_pillar": {
+   "label": "Pillar",
+   "group": "glade",
+   "spacing": 2,
+   "height": 3.75,
+   "radius": 0.5,
+   "triangles": 1908,
+   "source": "glade_pillar",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 107584
+  },
+  "glade_pillar_broken": {
+   "label": "Broken pillar",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.62,
+   "radius": 1.25,
+   "triangles": 1510,
+   "source": "glade_pillar_broken",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 86140
+  },
+  "glade_statue": {
+   "label": "Guardian statue",
+   "group": "glade",
+   "spacing": 3,
+   "height": 3.38,
+   "radius": 0.75,
+   "triangles": 2364,
+   "source": "glade_statue",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 133020
+  },
+  "glade_obelisk": {
+   "label": "Rune stone",
+   "group": "glade",
+   "spacing": 3,
+   "height": 3.25,
+   "radius": 0.75,
+   "triangles": 1648,
+   "source": "glade_obelisk",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 95132,
+   "light": {
+    "watts": 300.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 3.6
+   }
+  },
+  "glade_well": {
+   "label": "Well",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.88,
+   "radius": 1.25,
+   "triangles": 4336,
+   "source": "glade_well",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 243804
+  },
+  "glade_path": {
+   "label": "Stepping stones",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.12,
+   "radius": 1.38,
+   "triangles": 930,
+   "source": "glade_path",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 54084
+  },
+  "glade_brazier": {
+   "label": "Brazier",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.88,
+   "radius": 0.44,
+   "triangles": 458,
+   "source": "glade_brazier",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30400,
+   "light": {
+    "watts": 700.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 1.5
+   }
+  },
+  "glade_torch": {
+   "label": "Torch",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.25,
+   "radius": 0.31,
+   "triangles": 490,
+   "source": "glade_torch",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 34368,
+   "light": {
+    "watts": 800.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 2.8
+   }
+  },
+  "glade_lantern_post": {
+   "label": "Lantern post",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.62,
+   "radius": 0.69,
+   "triangles": 828,
+   "source": "glade_lantern_post",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 52196,
+   "light": {
+    "watts": 600.0,
+    "color": [
+     1.0,
+     0.7,
+     0.35
+    ],
+    "height": 1.7
+   }
+  },
+  "glade_campfire": {
+   "label": "Campfire",
+   "group": "glade",
+   "spacing": 4,
+   "height": 0.88,
+   "radius": 0.88,
+   "triangles": 982,
+   "source": "glade_campfire",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 61356,
+   "light": {
+    "watts": 1000.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_crystal": {
+   "label": "Crystals",
+   "group": "glade",
+   "spacing": 3,
+   "height": 2.5,
+   "radius": 1.06,
+   "triangles": 2368,
+   "source": "glade_crystal",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 132624,
+   "light": {
+    "watts": 400.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 3.0
+   }
+  },
+  "glade_crystal_small": {
+   "label": "Small crystals",
+   "group": "glade",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.62,
+   "triangles": 514,
+   "source": "glade_crystal_small",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 32472
+  },
+  "glade_forge": {
+   "label": "Forge",
+   "group": "glade",
+   "spacing": 5,
+   "height": 3.25,
+   "radius": 1.75,
+   "triangles": 3462,
+   "source": "glade_forge",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 197544,
+   "light": {
+    "watts": 600.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_alchemy": {
+   "label": "Alchemy bench",
+   "group": "glade",
+   "spacing": 5,
+   "height": 1.88,
+   "radius": 1.94,
+   "triangles": 3076,
+   "source": "glade_alchemy",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 175184,
+   "light": {
+    "watts": 350.0,
+    "color": [
+     0.62,
+     0.42,
+     1.0
+    ],
+    "height": 2.0
+   }
+  },
+  "glade_library": {
+   "label": "Library",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.5,
+   "radius": 1.5,
+   "triangles": 4516,
+   "source": "glade_library",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 253716,
+   "light": {
+    "watts": 250.0,
+    "color": [
+     1.0,
+     0.7,
+     0.35
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_scrying": {
+   "label": "Scrying orb",
+   "group": "glade",
+   "spacing": 3,
+   "height": 2.12,
+   "radius": 0.87,
+   "triangles": 1704,
+   "source": "glade_scrying",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 98160,
+   "light": {
+    "watts": 500.0,
+    "color": [
+     0.62,
+     0.42,
+     1.0
+    ],
+    "height": 2.3
+   }
+  },
+  "glade_map_table": {
+   "label": "Map table",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.88,
+   "radius": 1.01,
+   "triangles": 1328,
+   "source": "glade_map_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 76816
+  },
+  "glade_meeting_stones": {
+   "label": "Meeting stones",
+   "group": "glade",
+   "spacing": 6,
+   "height": 0.75,
+   "radius": 2.12,
+   "triangles": 2592,
+   "source": "glade_meeting_stones",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 146952,
+   "light": {
+    "watts": 400.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 0.6
+   }
+  },
+  "glade_tent": {
+   "label": "Tent",
+   "group": "glade",
+   "spacing": 5,
+   "height": 2.38,
+   "radius": 1.75,
+   "triangles": 7612,
+   "source": "glade_tent",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 417788
+  },
+  "glade_banner": {
+   "label": "Banner",
+   "group": "glade",
+   "spacing": 3,
+   "height": 3.38,
+   "radius": 0.63,
+   "triangles": 948,
+   "source": "glade_banner",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 58572
+  },
+  "glade_signpost": {
+   "label": "Signpost",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.88,
+   "radius": 0.75,
+   "triangles": 472,
+   "source": "glade_signpost",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30472
+  },
+  "glade_chest": {
+   "label": "Chest",
+   "group": "glade",
+   "spacing": 2,
+   "height": 0.88,
+   "radius": 0.63,
+   "triangles": 616,
+   "source": "glade_chest",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 37156
+  },
+  "glade_supplies": {
+   "label": "Supplies",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.88,
+   "radius": 1.26,
+   "triangles": 1124,
+   "source": "glade_supplies",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 64580
+  },
+  "glade_weapon_rack": {
+   "label": "Weapon rack",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.88,
+   "radius": 1.25,
+   "triangles": 1336,
+   "source": "glade_weapon_rack",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 76728
+  },
+  "glade_fence": {
+   "label": "Fence",
+   "group": "glade",
+   "spacing": 2.2,
+   "height": 0.88,
+   "radius": 1.13,
+   "triangles": 536,
+   "source": "glade_fence",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 31384
   },
   "car_sedan": {
    "label": "Sedan",
@@ -3756,6 +4364,31 @@
    "label": "Terrazzo",
    "source": "made_terrazzo",
    "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_grass": {
+   "label": "Pixel grass",
+   "source": "made_glade_grass",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_floor": {
+   "label": "Pixel forest floor",
+   "source": "made_glade_floor",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_stone": {
+   "label": "Pixel flagstones",
+   "source": "made_glade_stone",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_dirt": {
+   "label": "Pixel dirt",
+   "source": "made_glade_dirt",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "plaza_glade": {
+   "label": "Pixel paving",
+   "source": "made_glade_paving",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
   }
  },
  "skies": {
@@ -4019,6 +4652,35 @@
      0.014
     ],
     "clear": 0.0
+   }
+  },
+  "glade": {
+   "label": "Pixel glade",
+   "grounds": [
+    "glade_grass",
+    "glade_floor",
+    "glade_stone",
+    "glade_dirt"
+   ],
+   "plaza": "plaza_glade",
+   "scale": [
+    2.6667,
+    2.6667,
+    2.6667,
+    2.6667
+   ],
+   "water": {
+    "shallow": [
+     0.05,
+     0.3,
+     0.3
+    ],
+    "deep": [
+     0.01,
+     0.1,
+     0.14
+    ],
+    "clear": 0.35
    }
   }
  }

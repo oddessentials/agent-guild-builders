@@ -229,6 +229,10 @@ func _templates() -> bool:
 	check(office.data.land == "clay" and walls.size() >= 17 and walls.all(func(t): return is_inf(Clearance.max_elevation(t.x, t.z))), "clay office: walls stand only behind the Yard")
 	var level := float(office.data.water_level)
 	check(office.height_at(20.0, 20.0) == 0.0 and office.height_at(40.0, 20.0) < level and office.height_at(0.0, 60.0) < level, "clay office: a level floor that ends in dark water")
+	var glade := Templates.create("pixel_glade", "guild", "T", 42)
+	var square := func(t): return str(t.kind).begins_with("glade_") and float(t.scale) == 1.0 and absf(float(t.turn) / (PI / 2.0) - roundf(float(t.turn) / (PI / 2.0))) < 0.0001
+	check(glade.data.land == "glade" and glade.data.things.all(square), "pixel glade: every piece keeps its size and turns by quarters")
+	check(glade.data.things.any(func(t): return t.kind == "glade_shrine") and glade.height_at(-37.0, 8.0) < float(glade.data.water_level), "pixel glade: a shrine behind the Yard and a brook beside it")
 	return true
 
 func _lands() -> bool:

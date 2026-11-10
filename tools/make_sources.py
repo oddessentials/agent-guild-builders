@@ -194,6 +194,54 @@ def gradient_sky(name, sun_at, zenith, horizon, ground, halo):
     write_hdr(sky.astype(np.float32), OUT / name / f'{name}_1k.hdr')
 
 
+def pixel_map(name, pixels, rough):
+    big = np.repeat(np.repeat(pixels, SIZE // pixels.shape[0], 0), SIZE // pixels.shape[1], 1)
+    save_jpg(big, OUT / name / f'{name}_diff_2k.jpg')
+    rough_map(name, rough)
+
+
+def scattered(rng, field, shades, noise=0.5):
+    """Picks a shade for each pixel from a smooth field, with ragged borders."""
+    t = (field - field.min()) / (field.max() - field.min()) + rng.uniform(-noise, noise, field.shape) / len(shades)
+    return np.array(shades, np.float32)[np.clip((t * len(shades)).astype(int), 0, len(shades) - 1)]
+
+
+def flagstones(rng, side, wide, tall, shades, mortar, moss):
+    out = np.zeros((side, side, 3), np.float32)
+    for row in range(side // tall):
+        shift = (wide // 2) * (row % 2)
+        for col in range(side // wide):
+            shade = np.array(shades[rng.integers(len(shades))]) * rng.uniform(0.94, 1.06)
+            for y in range(tall):
+                for x in range(wide):
+                    edge = x == 0 or y == 0
+                    pixel = mortar if edge else shade
+                    if rng.random() < (0.3 if edge else 0.04):
+                        pixel = moss[rng.integers(len(moss))]
+                    out[row * tall + y, (col * wide + x + shift) % side] = pixel
+    return out
+
+
+def glade_grounds():
+    rng = np.random.default_rng(20261111)
+    side = 64
+    grass = scattered(rng, periodic_noise(rng, side, 1.6), [(0.12, 0.29, 0.2), (0.16, 0.36, 0.23), (0.21, 0.43, 0.26), (0.28, 0.5, 0.28)])
+    grass[rng.random((side, side)) < 0.02] = (0.42, 0.62, 0.32)
+    grass[rng.random((side, side)) < 0.004] = (0.93, 0.85, 0.45)
+    pixel_map('made_glade_grass', grass, 0.95)
+    floor = scattered(rng, periodic_noise(rng, side, 1.6), [(0.09, 0.19, 0.17), (0.12, 0.24, 0.19), (0.16, 0.27, 0.18)])
+    floor[rng.random((side, side)) < 0.05] = (0.3, 0.22, 0.15)
+    floor[rng.random((side, side)) < 0.02] = (0.42, 0.3, 0.17)
+    pixel_map('made_glade_floor', floor, 0.95)
+    dirt = scattered(rng, periodic_noise(rng, side, 1.4), [(0.23, 0.17, 0.14), (0.3, 0.22, 0.17), (0.37, 0.28, 0.2)])
+    dirt[rng.random((side, side)) < 0.025] = (0.5, 0.48, 0.44)
+    pixel_map('made_glade_dirt', dirt, 0.95)
+    stones = [(0.36, 0.39, 0.4), (0.44, 0.47, 0.47), (0.52, 0.55, 0.53)]
+    mosses = [(0.22, 0.36, 0.21), (0.33, 0.47, 0.24)]
+    pixel_map('made_glade_stone', flagstones(rng, side, 8, 4, stones, (0.17, 0.2, 0.21), mosses), 0.9)
+    pixel_map('made_glade_paving', flagstones(rng, 32, 8, 4, stones, (0.17, 0.2, 0.21), mosses), 0.3)
+
+
 def studio_sky(name, top, fill):
     """Soft light from overhead, and dark where the Yard's camera sees the sky mirrored in water."""
     d = directions(1024, 512)
@@ -214,6 +262,7 @@ def main():
     stars('made_stars')
     raked('made_raked_gravel')
     clay_grounds()
+    glade_grounds()
     print('made made_stars', flush=True)
     gradient_sky('made_mars_day', SUN_LIGHT, [0.42, 0.27, 0.17], [0.98, 0.7, 0.46], [0.3, 0.18, 0.11],
                  [(0.9, 0.06, [1.0, 0.86, 0.7]), (0.25, 0.5, [1.0, 0.86, 0.7])])

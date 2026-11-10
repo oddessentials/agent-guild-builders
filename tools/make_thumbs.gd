@@ -78,6 +78,7 @@ func _template(key: String) -> void:
 		"volcano": [0.34, Vector3(12, 1, -4)],
 		"salt": [0.3, Vector3(0, 1, -24)],
 		"clay_office": [0.58, Vector3(-1, 1, 7)],
+		"pixel_glade": [0.5, Vector3(0, 1, -8)],
 	}
 	view._zoom = framing[key][0]
 	view._target = framing[key][1]

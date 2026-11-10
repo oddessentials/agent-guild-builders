@@ -17,6 +17,7 @@ const LIST := {
 	"volcano": {"label": "Volcanic Caldera", "note": "Black basalt above glowing rivers of lava"},
 	"salt": {"label": "Salt Flats", "note": "White salt crust and turquoise brine pools below distant peaks"},
 	"clay_office": {"label": "Clay Office", "note": "A sunlit open-plan office in soft clay, set on black glass"},
+	"pixel_glade": {"label": "Pixel Glade", "note": "A torchlit forest clearing in cube art, with ruins and glowing crystals"},
 }
 
 const LAKE_CENTRE := Vector2(-30.0, -44.0)
@@ -90,6 +91,9 @@ static func create(template: String, base: String, title: String, seed_value: in
 			return doc
 		"clay_office":
 			_clay_office(doc, rng)
+			return doc
+		"pixel_glade":
+			_pixel_glade(doc, rng, noise)
 			return doc
 		"lakeside":
 			_shape(doc, noise, 7.0, 34.0)
@@ -299,7 +303,7 @@ static func _try(doc: WorldDoc, rng: Rng, kind: String, x: float, z: float, s: f
 	return true
 
 ## Places things in loose clumps, keeping every placement rule.
-static func _scatter(doc: WorldDoc, rng: Rng, noise: ValueNoise, kinds: Array, count: int, inner: float, outer: float, clump: float, scale: float) -> void:
+static func _scatter(doc: WorldDoc, rng: Rng, noise: ValueNoise, kinds: Array, count: int, inner: float, outer: float, clump: float, scale: float, squarely := false) -> void:
 	var models: Dictionary = WorldScene.load_kit().get("models", {})
 	var placed := 0
 	var tries := 0
@@ -314,7 +318,7 @@ static func _scatter(doc: WorldDoc, rng: Rng, noise: ValueNoise, kinds: Array, c
 			continue
 		var kind: String = kinds[int(rng.next() * kinds.size()) % kinds.size()]
 		var info: Dictionary = models.get(kind, {})
-		var s := scale * rng.range_f(0.8, 1.25)
+		var s := scale if squarely else scale * rng.range_f(0.8, 1.25)
 		var height: float = float(info.get("height", 1.0)) * s
 		if Clearance.refuse(x, z, doc.height_at(x, z) + height) != "":
 			continue
@@ -329,7 +333,7 @@ static func _scatter(doc: WorldDoc, rng: Rng, noise: ValueNoise, kinds: Array, c
 		if clash:
 			continue
 		taken.append(Vector3(x, z, spacing))
-		doc.add_thing(kind, x, z, rng.range_f(0.0, TAU), s)
+		doc.add_thing(kind, x, z, floorf(rng.range_f(0.0, 4.0)) * PI / 2.0 if squarely else rng.range_f(0.0, TAU), s)
 		placed += 1
 
 static func _surface(doc: WorldDoc, land: String) -> void:
@@ -809,3 +813,108 @@ static func _clay_office(doc: WorldDoc, rng: Rng) -> void:
 	for spot in spots:
 		if rng.next() < 0.75:
 			_stand(doc, _pick(rng, ["clay_plant", "clay_plant", "clay_plant_tall", "clay_floor_lamp"]), spot.x + rng.range_f(-0.4, 0.4), spot.y + rng.range_f(-0.4, 0.4), rng.range_f(0.0, TAU))
+
+## A forest clearing in cube art. Pieces keep their size and turn by quarters, so
+## every cube stays on one grid.
+static func _pixel_glade(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
+	_surface(doc, "glade")
+	_mood(doc, ["overcast", 0.9, 3.0, [1.0, 0.93, 0.8]], ["moon", 0.6, 0.7, [0.55, 0.7, 1.0]])
+	_shape(doc, noise, 1.2, 12.0)
+	const QUARTER := PI / 2.0
+	const BROOK := -0.45
+	doc.data.water_level = BROOK
+	var bend := rng.range_f(-5.0, 5.0)
+	var course := [Vector2(-70.0, -260.0), Vector2(-46.0, -70.0), Vector2(-33.0 + bend, -22.0), Vector2(-37.0, 8.0), Vector2(-29.0 - bend, 42.0), Vector2(-44.0, 96.0), Vector2(-70.0, 260.0)]
+	var paths := [[Vector2(0.0, -14.0), Vector2(0.0, -21.0)], [Vector2(-14.0, 6.0), Vector2(-27.0, 8.0)], [Vector2(-27.0, 8.0), Vector2(-48.0, 4.0)], [Vector2(14.0, 20.0), Vector2(24.0, 24.0)], [Vector2(-13.0, 33.0), Vector2(-19.0, 36.0)]]
+	var res := WorldDoc.TERRAIN_RES
+	var brook := PackedFloat32Array()
+	brook.resize(res * res)
+	for j in res:
+		for i in res:
+			var p := WorldDoc.cell_to_world(i, j)
+			var o := j * res + i
+			var d := INF
+			for k in course.size() - 1:
+				d = minf(d, _to_segment(p, course[k], course[k + 1]))
+			d += (noise.fbm(p.x * 0.05, p.y * 0.05) - 0.5) * 3.0
+			brook[o] = d
+			doc.heights[o] = lerpf(-1.5, maxf(doc.heights[o], BROOK + 0.35), smoothstep(2.0, 5.5, d))
+	for j in range(1, res - 1):
+		for i in range(1, res - 1):
+			var p := WorldDoc.cell_to_world(i, j)
+			var o := j * res + i
+			var kind := 0
+			if noise.fbm(p.x * 0.012 + 3.0, p.y * 0.012 + 8.0) > 0.42 and Clearance.live_distance(p.x, p.y) > 16.0:
+				kind = 1
+			for path in paths:
+				if _to_segment(p, path[0], path[1]) < 1.6:
+					kind = 3
+			if absf(p.x) < 7.0 and p.y < -19.0 and p.y > -31.0:
+				kind = 2
+			if brook[o] < 6.5:
+				kind = 3
+			doc.ground[o] = kind
+
+	_stand(doc, "glade_shrine", 0.0, -25.0, 0.0)
+	for side in [-1.0, 1.0]:
+		_stand(doc, "glade_statue", side * 5.6, -19.6, 0.0)
+		_stand(doc, "glade_pillar" if rng.next() < 0.5 else "glade_pillar_broken", side * 8.6, -29.0, 0.0)
+	_stand(doc, "glade_tower", -22.0, -21.0, QUARTER)
+	_stand(doc, "glade_wall_ruin", -15.0, -24.6, 0.0)
+	_stand(doc, "glade_portal", 12.6, -23.6, 0.0)
+	_stand(doc, "glade_tree_ancient", 25.0, -27.0, 0.0)
+	_stand(doc, "glade_obelisk", 20.4, -15.4, 0.0)
+	_stand(doc, "glade_obelisk", -17.6, -12.4, 0.0)
+
+	for k in 13:
+		var a := deg_to_rad(194.0 + k * 12.7)
+		if k != 6:
+			_stand(doc, "glade_brazier", cos(a) * 15.6, sin(a) * 15.6, 0.0)
+	for z in [5.0, 14.0, 23.0, 32.0]:
+		for side in [-1.0, 1.0]:
+			_stand(doc, "glade_brazier", side * 15.0, z, 0.0)
+	for x in [-7.0, 7.0]:
+		_stand(doc, "glade_brazier", x, 33.8, 0.0)
+
+	var benches := ["glade_forge", "glade_library", "glade_alchemy"]
+	for k in 3:
+		var swap := k + int(rng.next() * (3 - k)) % (3 - k)
+		var held: String = benches[k]
+		benches[k] = benches[swap]
+		benches[swap] = held
+		_stand(doc, benches[k], -21.0, 0.0 + k * 8.4, QUARTER)
+		_stand(doc, "glade_path", -18.0, 0.0 + k * 8.4, 0.0)
+	_stand(doc, "glade_lantern_post", -19.4, 4.4, QUARTER)
+	_stand(doc, "glade_lantern_post", -19.4, 12.8, QUARTER)
+	_stand(doc, "glade_well", -26.6, -6.4, 0.0)
+	_stand(doc, "glade_signpost", -27.6, 5.6, QUARTER)
+	_stand(doc, "glade_path", -33.0, 7.6, 0.0)
+	_stand(doc, "glade_path", -36.6, 6.4, QUARTER)
+
+	_stand(doc, "glade_scrying", 18.6, -10.6, 0.0)
+	_stand(doc, "glade_map_table", 17.6, 6.0, 0.0)
+	_stand(doc, "glade_banner", 21.6, 3.6, QUARTER)
+	_stand(doc, "glade_weapon_rack", 22.0, 8.6, QUARTER)
+	_stand(doc, "glade_meeting_stones", 24.6, 24.6, 0.0)
+	_stand(doc, "glade_chest", 19.0, 13.6, QUARTER)
+
+	_stand(doc, "glade_tent", -22.6, 34.0, QUARTER)
+	_stand(doc, "glade_tent", -24.0, 40.6, QUARTER)
+	_stand(doc, "glade_campfire", -17.4, 37.4, 0.0)
+	_stand(doc, "glade_log", -16.4, 40.6, 0.0)
+	_stand(doc, "glade_log", -14.0, 36.4, QUARTER)
+	_stand(doc, "glade_supplies", -19.6, 31.0, 0.0)
+	_stand(doc, "glade_banner", -26.6, 37.4, QUARTER)
+
+	for spot in [Vector2(-52.0, -44.0), Vector2(58.0, 14.0), Vector2(-64.0, 30.0), Vector2(46.0, -64.0)]:
+		_stand(doc, "glade_tree_ancient", spot.x + rng.range_f(-6.0, 6.0), spot.y + rng.range_f(-6.0, 6.0), floorf(rng.range_f(0.0, 4.0)) * QUARTER)
+	_scatter(doc, rng, noise, ["glade_tree_oak", "glade_tree_pine", "glade_tree_oak"], 190, 21.0, 170.0, 0.36, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_tree_pine"], 70, 60.0, 220.0, 0.3, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_tree_dead", "glade_stump", "glade_log"], 24, 20.0, 110.0, 0.0, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_crystal"], 6, 20.0, 60.0, 0.0, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_crystal_small"], 22, 15.5, 70.0, 0.0, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_boulder", "glade_rock", "glade_rock"], 70, 17.0, 110.0, 0.0, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_bush"], 190, 15.5, 100.0, 0.2, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_mushrooms", "glade_glow_mushrooms"], 70, 15.5, 80.0, 0.3, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_flowers"], 260, 15.0, 70.0, 0.1, 1.0, true)
+	_scatter(doc, rng, noise, ["glade_grass"], 700, 15.0, 80.0, 0.1, 1.0, true)
