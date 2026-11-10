@@ -19,6 +19,13 @@ EMBLEM_X = PX + 86
 STAMP_X, STAMP_Y = PX + PW - 64, PY + 8
 STAMP_RED = "#ff4a3d"
 
+WINDOWS = "M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"
+APPLE = ("M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 "
+         "1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 "
+         "3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559"
+         "-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052"
+         "-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701")
+
 
 def font(name, weight):
     f = TTFont(os.path.join(FONTS, name))
@@ -53,12 +60,18 @@ def svg(theme):
     cinzel = font("cinzel.woff2", 800)
     exo = font("exo2.woff2", 600)
     title, title_w = outline(cinzel, "INSTALL NOW", 47, 0.07)
-    sub, sub_w = outline(exo, "AGENT GUILD: BUILDERS  ·  FOR WINDOWS", 12.5, 0.2)
+    sub, sub_w = outline(exo, "AGENT GUILD: BUILDERS", 12.5, 0.2)
 
+    logo = 14
+    logos_w = logo * 2 + 11
+    gap = 16
     text_l = PX + 178
     text_r = PX + PW - 66
     title_x = text_l + (text_r - text_l - title_w) / 2
-    sub_x = text_l + (text_r - text_l - sub_w) / 2
+    sub_x = text_l + (text_r - text_l - sub_w - gap - logos_w) / 2
+    sub_y = CY + 40
+    logos_x = sub_x + sub_w + gap
+    logos_y = sub_y - logo + 2
     divider_x = PX + 160
     stamp_text, stamp_w = outline(font("exo2.woff2", 900), "BETA", 28, 0.12)
     stamp_outer_w = stamp_w + 34
@@ -83,7 +96,7 @@ def svg(theme):
     )
 
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t">
-<title id="t">Install Agent Guild: Builders beta for Windows</title>
+<title id="t">Install Agent Guild: Builders beta for Windows or macOS</title>
 <defs>
   <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="#fff3cf"/><stop offset=".28" stop-color="#f6dc9c"/>
@@ -174,7 +187,11 @@ def svg(theme):
 <g filter="url(#engrave)">
   <path transform="translate({title_x:.2f} {CY + 14})" d="{title}" fill="url(#goldText)"/>
 </g>
-<path transform="translate({sub_x:.2f} {CY + 40})" d="{sub}" fill="#a9b0c4"/>
+<path transform="translate({sub_x:.2f} {sub_y})" d="{sub}" fill="#a9b0c4"/>
+<g fill="#c8cede" aria-hidden="true">
+  <path transform="translate({logos_x:.2f} {logos_y:.2f}) scale({logo / 24})" d="{WINDOWS}"/>
+  <path transform="translate({logos_x + logo + 11:.2f} {logos_y:.2f}) scale({logo / 24})" d="{APPLE}"/>
+</g>
 {chevrons}
 <g transform="rotate(-8 {STAMP_X} {STAMP_Y})" filter="url(#ink)" opacity=".95">
   <rect x="{stamp_l:.2f}" y="{stamp_t:.2f}" width="{stamp_outer_w:.2f}" height="{stamp_outer_h}" rx="5" fill="none" stroke="{STAMP_RED}" stroke-width="3.5"/>
