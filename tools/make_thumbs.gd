@@ -80,6 +80,7 @@ func _template(key: String) -> void:
 		"clay_office": [0.58, Vector3(-1, 1, 7)],
 		"pixel_glade": [0.5, Vector3(0, 1, -8)],
 		"pixel_office": [0.58, Vector3(-1, 1, 7)],
+		"toy_office": [0.5, Vector3(0, 1, 6)],
 	}
 	view._zoom = framing[key][0]
 	view._target = framing[key][1]

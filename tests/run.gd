@@ -237,6 +237,13 @@ func _templates() -> bool:
 	check(retro.data.land == "retro" and retro.data.things.all(func(t): return str(t.kind).begins_with("retro_") and square.call(t)), "pixel office: every piece keeps its size and turns by quarters")
 	var retro_walls: Array = retro.data.things.filter(func(t): return str(t.kind).begins_with("retro_wall"))
 	check(retro_walls.size() == 17 and retro_walls.all(func(t): return is_inf(Clearance.max_elevation(t.x, t.z))) and retro.height_at(40.0, 20.0) < float(retro.data.water_level), "pixel office: walls only behind the Yard, and a floor that ends in dark water")
+	var toy := Templates.create("toy_office", "guild", "T", 42)
+	var toy_models: Dictionary = WorldScene.load_kit().get("models", {})
+	var toy_floors: Array = toy.data.things.filter(func(t): return str(t.kind).begins_with("toy_floor_"))
+	var toy_walls: Array = toy.data.things.filter(func(t): return str(t.kind).begins_with("toy_wall"))
+	check(toy.data.land == "toy" and toy_floors.size() == 144 and toy_floors.any(func(t): return float(t.z) > 36.0), "toy office: twelve rooms of floor tiles, some in front of the Yard")
+	check(toy_walls.size() == 216 and toy_walls.all(func(t): return float(toy_models[t.kind].height) <= 1.0), "toy office: every wall is low enough to stand anywhere")
+	check(toy.data.things.any(func(t): return t.kind == "toy_rocket" and is_inf(Clearance.max_elevation(t.x, t.z))), "toy office: the rocket stands behind the Yard")
 	return true
 
 func _lands() -> bool:

@@ -268,6 +268,29 @@ def retro_grounds():
     pixel_map('made_retro_paving', paving, 0.3)
 
 
+def toy_grounds():
+    rng = np.random.default_rng(20261113)
+    grid = np.full((SIZE, SIZE, 3), (0.105, 0.12, 0.19), np.float32)
+    metre = SIZE // 8
+    for k in range(8):
+        grid[k * metre:k * metre + 6] = grid[:, k * metre:k * metre + 6] = (0.2, 0.24, 0.36)
+    grid[:6] = (0.2, 0.24, 0.36)
+    grid[:, :6] = (0.2, 0.24, 0.36)
+    save_jpg(grid, OUT / 'made_toy_grid' / 'made_toy_grid_diff_2k.jpg')
+    rough_map('made_toy_grid', 0.7)
+    for name, colour, rough in (('made_toy_white', (0.93, 0.93, 0.95), 0.6), ('made_toy_grey', (0.62, 0.65, 0.72), 0.6), ('made_toy_wood', (0.88, 0.74, 0.54), 0.6)):
+        save_jpg(speckled(rng, colour, 0.004), OUT / name / f'{name}_diff_2k.jpg')
+        rough_map(name, rough)
+    slabs = speckled(rng, (0.93, 0.93, 0.96), 0.004)
+    half = SIZE // 2
+    for k in range(2):
+        slabs[k * half:k * half + 8] = slabs[:, k * half:k * half + 8] = (0.78, 0.79, 0.86)
+    slabs[:8] = (0.78, 0.79, 0.86)
+    slabs[:, :8] = (0.78, 0.79, 0.86)
+    save_jpg(slabs, OUT / 'made_toy_paving' / 'made_toy_paving_diff_2k.jpg')
+    rough_map('made_toy_paving', 0.3)
+
+
 def studio_sky(name, top, fill):
     """Soft light from overhead, and dark where the Yard's camera sees the sky mirrored in water."""
     d = directions(1024, 512)
@@ -290,6 +313,7 @@ def main():
     clay_grounds()
     glade_grounds()
     retro_grounds()
+    toy_grounds()
     print('made made_stars', flush=True)
     gradient_sky('made_mars_day', SUN_LIGHT, [0.42, 0.27, 0.17], [0.98, 0.7, 0.46], [0.3, 0.18, 0.11],
                  [(0.9, 0.06, [1.0, 0.86, 0.7]), (0.25, 0.5, [1.0, 0.86, 0.7])])

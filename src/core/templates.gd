@@ -19,6 +19,7 @@ const LIST := {
 	"clay_office": {"label": "Clay Office", "note": "A sunlit open-plan office in soft clay, set on black glass"},
 	"pixel_glade": {"label": "Pixel Glade", "note": "A torchlit forest clearing in cube art, with ruins and glowing crystals"},
 	"pixel_office": {"label": "Pixel Office", "note": "A bright 8-bit office in cube art, with cubicles, a mainframe and an arcade"},
+	"toy_office": {"label": "Toy Office", "note": "Twelve colourful toy rooms round the Yard, with a rocket in the lobby"},
 }
 
 const LAKE_CENTRE := Vector2(-30.0, -44.0)
@@ -98,6 +99,9 @@ static func create(template: String, base: String, title: String, seed_value: in
 			return doc
 		"pixel_office":
 			_pixel_office(doc, rng)
+			return doc
+		"toy_office":
+			_toy_office(doc, rng)
 			return doc
 		"lakeside":
 			_shape(doc, noise, 7.0, 34.0)
@@ -1055,3 +1059,92 @@ static func _pixel_office(doc: WorldDoc, rng: Rng) -> void:
 	for spot in spots:
 		if rng.next() < 0.8:
 			_stand(doc, _pick(rng, ["retro_plant", "retro_plant_tall", "retro_cactus", "retro_floor_lamp", "retro_bin"]), spot.x + rng.range_f(-0.4, 0.4), spot.y + rng.range_f(-0.4, 0.4), 0.0)
+
+## One room of floor tiles ringed by low walls, with a gap for a door on one side:
+## 0 behind, 1 in front, 2 left or 3 right. The sides nearest the camera are glass.
+static func _toy_room(doc: WorldDoc, x0: float, z0: float, colour: String, door: int) -> void:
+	const COLS := 4
+	const ROWS := 3
+	var x1 := x0 + COLS * 4.0
+	var z1 := z0 + ROWS * 4.0
+	for i in COLS:
+		for j in ROWS:
+			_stand(doc, "toy_floor_" + colour, x0 + 2.0 + i * 4.0, z0 + 2.0 + j * 4.0, 0.0)
+	for i in COLS:
+		var x := x0 + 2.0 + i * 4.0
+		for edge in [[z0, 0, "toy_wall"], [z1, 1, "toy_wall_glass"]]:
+			if door == edge[1] and i == COLS / 2:
+				_stand(doc, "toy_wall_short", x + 1.0, edge[0], 0.0)
+			else:
+				_stand(doc, edge[2], x, edge[0], 0.0)
+	for j in ROWS:
+		var z := z0 + 2.0 + j * 4.0
+		for edge in [[x0, 2, "toy_wall"], [x1, 3, "toy_wall_glass"]]:
+			if door == edge[1] and j == ROWS / 2:
+				_stand(doc, "toy_wall_short", edge[0], z + 1.0, PI / 2.0)
+			else:
+				_stand(doc, edge[2], edge[0], z, PI / 2.0)
+	for corner in [Vector2(x0, z0), Vector2(x1, z0), Vector2(x0, z1), Vector2(x1, z1)]:
+		_stand(doc, "toy_wall_post", corner.x, corner.y, 0.0)
+
+## Furnishes a room. Each entry is [kind, metres right, metres forward, quarter turns].
+static func _toy_fill(doc: WorldDoc, x0: float, z0: float, theme: String) -> void:
+	var sets := {
+		"engineering": [["toy_desk_pod", 3.6, 3.6, 1], ["toy_desk_pod", 8.0, 3.6, 1], ["toy_desk_pod", 12.4, 3.6, 1], ["toy_desk_long", 5.0, 9.2, 0], ["toy_desk_long", 11.0, 9.2, 0], ["toy_plant", 1.2, 1.2, 0], ["toy_lamp_low", 14.8, 1.2, 0], ["toy_printer", 1.4, 6.6, 1], ["toy_plant", 14.8, 6.6, 0]],
+		"design": [["toy_drawing_table", 3.0, 2.6, 0], ["toy_drawing_table", 6.6, 2.6, 0], ["toy_drawing_table", 10.2, 2.6, 0], ["toy_whiteboard", 13.8, 2.4, 0], ["toy_drawing_table", 3.0, 6.4, 0], ["toy_drawing_table", 6.6, 6.4, 0], ["toy_rug_round", 11.6, 8.2, 0], ["toy_beanbag", 10.6, 8.6, 0], ["toy_beanbag", 12.6, 7.6, 1], ["toy_armchair", 13.8, 10.2, 3], ["toy_bookcase_low", 1.2, 10.0, 1], ["toy_lamp_low", 14.7, 5.4, 0], ["toy_plant", 5.0, 10.6, 0]],
+		"meeting": [["toy_meeting_table", 4.6, 6.6, 0], ["toy_meeting_table", 11.4, 6.6, 0], ["toy_screen", 4.6, 1.3, 0], ["toy_screen", 11.4, 1.3, 0], ["toy_whiteboard", 8.0, 10.6, 0], ["toy_plant", 14.8, 1.3, 0], ["toy_plant", 1.2, 10.8, 0], ["toy_lamp_low", 14.8, 10.8, 0], ["toy_plant", 8.0, 1.3, 0]],
+		"lounge": [["toy_rug_round", 5.4, 6.4, 0], ["toy_sofa", 5.4, 3.4, 0], ["toy_sofa", 2.2, 6.6, 1], ["toy_armchair", 8.6, 6.8, 3], ["toy_coffee_table", 5.4, 6.4, 0], ["toy_bookcase_low", 11.2, 1.2, 0], ["toy_bookcase_low", 13.2, 1.2, 0], ["toy_beanbag", 11.4, 5.2, 0], ["toy_beanbag", 13.2, 6.2, 1], ["toy_cafe_table", 12.2, 9.4, 0], ["toy_plant", 1.3, 10.8, 0], ["toy_screen", 5.4, 10.4, 0], ["toy_lamp_low", 9.4, 1.4, 0]],
+		"kitchen": [["toy_kitchen", 3.0, 1.3, 0], ["toy_kitchen", 6.2, 1.3, 0], ["toy_fridge", 8.6, 1.3, 0], ["toy_fridge", 9.6, 1.3, 0], ["toy_cafe_table", 3.0, 5.6, 0], ["toy_cafe_table", 7.0, 6.4, 1], ["toy_cafe_table", 11.0, 5.4, 2], ["toy_cafe_table", 4.8, 9.6, 3], ["toy_cafe_table", 9.6, 9.8, 0], ["toy_cafe_table", 13.4, 8.8, 1], ["toy_plant", 14.8, 1.3, 0], ["toy_lamp_low", 1.3, 10.8, 0], ["toy_plant", 12.6, 1.3, 0]],
+		"games": [["toy_ping_pong", 4.4, 6.0, 0], ["toy_ping_pong", 4.4, 9.4, 0], ["toy_table_football", 10.2, 8.8, 1], ["toy_table_football", 13.0, 8.8, 1], ["toy_arcade", 2.0, 1.3, 0], ["toy_arcade", 3.4, 1.3, 0], ["toy_arcade", 4.8, 1.3, 0], ["toy_arcade", 6.2, 1.3, 0], ["toy_basketball", 13.4, 1.6, 0], ["toy_beanbag", 9.6, 3.6, 0], ["toy_beanbag", 11.4, 4.4, 1], ["toy_beanbag", 13.6, 5.2, 2], ["toy_lamp_low", 8.6, 1.3, 0]],
+		"library": [["toy_bookcase_tall", 2.2, 1.1, 0], ["toy_bookcase_tall", 4.2, 1.1, 0], ["toy_bookcase_tall", 6.2, 1.1, 0], ["toy_bookcase_tall", 8.2, 1.1, 0], ["toy_bookcase_tall", 10.2, 1.1, 0], ["toy_bookcase_low", 3.0, 5.0, 0], ["toy_bookcase_low", 5.0, 5.0, 0], ["toy_bookcase_low", 7.0, 5.0, 0], ["toy_bookcase_low", 3.0, 8.0, 0], ["toy_bookcase_low", 5.0, 8.0, 0], ["toy_bookcase_low", 7.0, 8.0, 0], ["toy_rug_round", 12.0, 7.6, 0], ["toy_beanbag", 11.2, 7.0, 0], ["toy_beanbag", 12.8, 8.2, 1], ["toy_armchair", 13.8, 5.0, 3], ["toy_sofa", 12.0, 10.6, 0], ["toy_lamp_low", 13.6, 1.6, 0], ["toy_plant", 1.2, 10.8, 0]],
+		"server": [["toy_server", 2.4, 2.8, 0], ["toy_server", 4.3, 2.8, 0], ["toy_server", 6.2, 2.8, 0], ["toy_server", 8.1, 2.8, 0], ["toy_server", 10.0, 2.8, 0], ["toy_server", 11.9, 2.8, 0], ["toy_server", 2.4, 5.6, 0], ["toy_server", 4.3, 5.6, 0], ["toy_server", 6.2, 5.6, 0], ["toy_server", 8.1, 5.6, 0], ["toy_server", 10.0, 5.6, 0], ["toy_server", 11.9, 5.6, 0], ["toy_server", 2.4, 8.4, 0], ["toy_server", 4.3, 8.4, 0], ["toy_server", 6.2, 8.4, 0], ["toy_server", 8.1, 8.4, 0], ["toy_server", 10.0, 8.4, 0], ["toy_server", 11.9, 8.4, 0], ["toy_desk_single", 14.2, 6.0, 1], ["toy_boxes", 14.2, 10.6, 0], ["toy_lamp_low", 14.7, 1.3, 0]],
+		"gym": [["toy_treadmill", 2.6, 3.0, 0], ["toy_treadmill", 4.8, 3.0, 0], ["toy_treadmill", 7.0, 3.0, 0], ["toy_exercise_bike", 9.6, 2.8, 0], ["toy_exercise_bike", 11.2, 2.8, 0], ["toy_exercise_bike", 12.8, 2.8, 0], ["toy_weights", 14.2, 6.6, 1], ["toy_yoga_mat", 3.0, 7.6, 0], ["toy_yoga_mat", 5.6, 7.6, 0], ["toy_yoga_mat", 8.2, 7.6, 0], ["toy_yoga_mat", 10.8, 7.6, 0], ["toy_bench", 7.0, 10.8, 0], ["toy_plant", 14.8, 10.8, 0], ["toy_lamp_low", 1.3, 10.8, 0], ["toy_plant", 14.8, 1.3, 0]],
+		"garden": [["toy_fountain", 8.0, 6.0, 0], ["toy_bench", 8.0, 2.4, 0], ["toy_bench", 3.6, 6.0, 1], ["toy_bench", 12.4, 6.0, 3], ["toy_flowerbed", 3.2, 2.6, 0], ["toy_flowerbed", 12.8, 2.6, 0], ["toy_flowerbed", 3.2, 9.6, 0], ["toy_flowerbed", 12.8, 9.6, 0], ["toy_tree", 1.4, 1.2, 0], ["toy_tree", 14.6, 1.2, 0], ["toy_tree", 5.6, 1.2, 0], ["toy_tree", 10.4, 1.2, 0], ["toy_planter", 5.6, 10.8, 0], ["toy_planter", 10.4, 10.8, 0], ["toy_duck", 8.0, 9.4, 0], ["toy_lamp_low", 1.3, 6.0, 0]],
+		"lobby": [["toy_rocket", 8.0, 5.0, 0], ["toy_sofa", 3.0, 8.4, 0], ["toy_sofa", 13.0, 8.4, 0], ["toy_coffee_table", 3.0, 10.4, 0], ["toy_coffee_table", 13.0, 10.4, 0], ["toy_armchair", 1.6, 5.4, 1], ["toy_armchair", 14.4, 5.4, 3], ["toy_plant", 1.3, 1.3, 0], ["toy_plant", 14.7, 1.3, 0], ["toy_lamp", 4.6, 1.6, 0], ["toy_lamp", 11.4, 1.6, 0], ["toy_flowerbed", 8.0, 10.4, 0]],
+		"reception": [["toy_reception", 8.0, 4.6, 2], ["toy_sofa", 3.0, 8.8, 0], ["toy_sofa", 13.0, 8.8, 0], ["toy_coffee_table", 3.0, 10.6, 0], ["toy_coffee_table", 13.0, 10.6, 0], ["toy_bookcase_low", 2.2, 1.4, 0], ["toy_plant", 1.3, 5.4, 0], ["toy_plant", 14.7, 5.4, 0], ["toy_duck", 13.4, 2.6, 0], ["toy_lamp_low", 14.7, 10.8, 0], ["toy_planter", 8.0, 10.8, 0]],
+	}
+	for item in sets[theme]:
+		_stand(doc, item[0], x0 + float(item[1]), z0 + float(item[2]), int(item[3]) * PI / 2.0)
+
+static func _shuffled(rng: Rng, items: Array) -> Array:
+	var out := items.duplicate()
+	for k in out.size() - 1:
+		var swap := k + int(rng.next() * (out.size() - k)) % (out.size() - k)
+		var held = out[k]
+		out[k] = out[swap]
+		out[swap] = held
+	return out
+
+## Twelve colour-coded rooms round the Yard on a blueprint grid. Walls and most
+## furniture are a metre tall at most, so rooms can stand in front of the Yard too.
+static func _toy_office(doc: WorldDoc, rng: Rng) -> void:
+	_surface(doc, "toy")
+	_mood(doc, ["studio", 1.0, 2.8, [1.0, 0.97, 0.92]], ["studio_night", 1.0, 0.35, [0.55, 0.68, 1.0]])
+	var themes := _shuffled(rng, ["engineering", "design", "meeting", "lounge", "kitchen", "games", "library", "server", "gym", "garden"])
+	var colours := _shuffled(rng, ["purple", "teal", "coral", "yellow", "blue", "green"])
+	var rooms := [[-28.0, -30.0, 1], [12.0, -30.0, 1], [-32.0, -14.0, 3], [-32.0, 2.0, 3], [-32.0, 18.0, 3], [16.0, -14.0, 2], [16.0, 2.0, 2], [16.0, 18.0, 2], [-28.0, 36.0, 0], [12.0, 36.0, 0]]
+	for k in rooms.size():
+		_toy_room(doc, rooms[k][0], rooms[k][1], colours[k % colours.size()], rooms[k][2])
+		_toy_fill(doc, rooms[k][0], rooms[k][1], themes[k])
+	_toy_room(doc, -8.0, -30.0, "white", 1)
+	_toy_fill(doc, -8.0, -30.0, "lobby")
+	_toy_room(doc, -8.0, 36.0, "white", 0)
+	_toy_fill(doc, -8.0, 36.0, "reception")
+	for side in [-1.0, 1.0]:
+		_stand(doc, "toy_flag", side * 3.4, -17.0, 0.0)
+		_stand(doc, "toy_tree", side * 10.0, -26.6, 0.0)
+		_stand(doc, "toy_bench", side * 10.0, -21.6, 0.0)
+		_stand(doc, "toy_tree", side * 31.4, -24.0, 0.0)
+		_stand(doc, "toy_planter", side * 10.0, 38.0, PI / 2.0)
+		_stand(doc, "toy_flowerbed", side * 10.0, 42.0, 0.0)
+		_stand(doc, "toy_bench", side * 10.0, 46.0, 0.0)
+	for z in [-16.0, 0.0, 16.0, 32.0]:
+		_stand(doc, "toy_tree" if rng.next() < 0.5 else "toy_lamp", -24.0, z, 0.0)
+		_stand(doc, "toy_flowerbed", 24.0, z, 0.0)
+		_stand(doc, _pick(rng, ["toy_planter", "toy_bench", "toy_duck"]), 28.4, z, 0.0)
+	for k in 7:
+		var a := deg_to_rad(212.0 + k * 19.4)
+		if k != 3 and rng.next() < 0.85:
+			_stand(doc, _pick(rng, ["toy_flowerbed", "toy_planter", "toy_lamp_low"]), cos(a) * 16.2, sin(a) * 16.2, 0.0)
+	for x in [-9.6, -3.4, 3.4, 9.6]:
+		_stand(doc, _pick(rng, ["toy_planter", "toy_flowerbed"]), x, 34.2, 0.0)

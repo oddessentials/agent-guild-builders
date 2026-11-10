@@ -187,13 +187,34 @@ RETRO = {
     'retro_plant': ('Pot plant', 1.5), 'retro_plant_tall': ('Tall plant', 2), 'retro_planter': ('Flower box', 2.5), 'retro_cactus': ('Cactus', 1.2),
     'retro_floor_lamp': ('Floor lamp', 3),
 }
-MADE_SETS = {'clay': CLAY, 'glade': GLADE, 'retro': RETRO}
+# id: (label, scatter spacing in metres), built by tools/build_toy.py
+TOY = {
+    'toy_floor_white': ('White floor', 4), 'toy_floor_purple': ('Purple floor', 4), 'toy_floor_teal': ('Teal floor', 4), 'toy_floor_coral': ('Coral floor', 4),
+    'toy_floor_yellow': ('Yellow floor', 4), 'toy_floor_blue': ('Blue floor', 4), 'toy_floor_green': ('Green floor', 4),
+    'toy_wall': ('Low wall', 4), 'toy_wall_short': ('Short low wall', 2), 'toy_wall_glass': ('Low glass wall', 4), 'toy_wall_post': ('Wall post', 1),
+    'toy_desk_single': ('Desk', 2.5), 'toy_desk_pod': ('Desk pod', 5), 'toy_desk_long': ('Desk row', 5), 'toy_drawing_table': ('Drawing table', 2.5),
+    'toy_meeting_table': ('Meeting table', 5), 'toy_whiteboard': ('Easel board', 2), 'toy_screen': ('Screen', 2.5), 'toy_reception': ('Reception desk', 5),
+    'toy_printer': ('Printer', 2), 'toy_server': ('Server', 1.5), 'toy_boxes': ('Boxes', 2),
+    'toy_sofa': ('Sofa', 3), 'toy_armchair': ('Armchair', 2), 'toy_beanbag': ('Beanbag', 1.5), 'toy_coffee_table': ('Coffee table', 2),
+    'toy_rug_round': ('Round rug', 4), 'toy_bookcase_low': ('Low bookcase', 2.5), 'toy_bookcase_tall': ('Tall bookcase', 2.5),
+    'toy_kitchen': ('Kitchen counter', 4), 'toy_cafe_table': ('Caf\u00e9 table', 3), 'toy_fridge': ('Fridge', 1.5),
+    'toy_ping_pong': ('Table tennis', 5), 'toy_table_football': ('Table football', 3), 'toy_arcade': ('Arcade cabinet', 1.5), 'toy_basketball': ('Basketball hoop', 3),
+    'toy_treadmill': ('Treadmill', 2.5), 'toy_exercise_bike': ('Exercise bike', 2), 'toy_weights': ('Weights rack', 2.5), 'toy_yoga_mat': ('Yoga mat', 2.5),
+    'toy_plant': ('Pot plant', 1.5), 'toy_tree': ('Lollipop tree', 4), 'toy_planter': ('Flower box', 2.5), 'toy_flowerbed': ('Flower bed', 2.5),
+    'toy_bench': ('Bench', 2.5), 'toy_fountain': ('Fountain', 4),
+    'toy_lamp': ('Floor lamp', 3), 'toy_lamp_low': ('Globe lamp', 2), 'toy_flag': ('Flag', 2), 'toy_rocket': ('Rocket', 5), 'toy_duck': ('Rubber duck', 2),
+}
+TOY_JOINS = {'toy_wall', 'toy_wall_short', 'toy_wall_glass', 'toy_wall_post'}
+TOY_FLOORS = {key for key in TOY if key.startswith('toy_floor_')}
+# Floor coverings have a small footprint, so things can stand on them and be picked there.
+FLAT = TOY_FLOORS | {'toy_rug_round', 'clay_rug', 'clay_rug_large', 'retro_rug', 'retro_rug_large'}
+MADE_SETS = {'clay': CLAY, 'glade': GLADE, 'retro': RETRO, 'toy': TOY}
 RETRO_JOINS = {'retro_wall_plain', 'retro_wall_window', 'retro_wall_door', 'retro_wall_posters', 'retro_wall_short', 'retro_wall_corner', 'retro_partition'}
 CLAY_JOINS = {'clay_wall', 'clay_wall_short', 'clay_wall_window', 'clay_wall_door', 'clay_wall_corner', 'clay_partition'}
 CLAY_FIXED = CLAY_JOINS | {'clay_wall_art', 'clay_wall_shelf', 'clay_wall_clock', 'clay_wall_display', 'clay_neon_sign'}
 FORT = {key for key in MODELS if key.startswith('fort_')}
-MODULAR = FORT | {'castle_door'} | CLAY_FIXED | RETRO_JOINS
-JOINS = FORT - {'fort_thick_corner_b', 'fort_walkway_corner_b'} | CLAY_JOINS | RETRO_JOINS
+MODULAR = FORT | {'castle_door'} | CLAY_FIXED | RETRO_JOINS | TOY_JOINS | TOY_FLOORS
+JOINS = FORT - {'fort_thick_corner_b', 'fort_walkway_corner_b'} | CLAY_JOINS | RETRO_JOINS | TOY_JOINS
 SEATED_GROUPS = {'city', 'medieval', 'gnomes', 'goblins', 'forest', 'space'}
 MADE_HERE = {
     'xmas_tree': ('Christmas tree', 8), 'gift_red': ('Red gift', 2), 'gift_green': ('Green gift', 2), 'gift_pile': ('Pile of gifts', 4),
@@ -306,6 +327,13 @@ LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'retro_coffee_corner': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 2.1},
           'retro_reception': {'watts': 200.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
           'retro_boss_desk': {'watts': 120.0, 'color': [0.8, 1.0, 0.7], 'height': 1.7},
+          'toy_lamp': {'watts': 420.0, 'color': [1.0, 0.8, 0.5], 'height': 2.0},
+          'toy_lamp_low': {'watts': 520.0, 'color': [1.0, 0.8, 0.5], 'height': 1.1},
+          'toy_screen': {'watts': 100.0, 'color': [0.6, 0.8, 1.0], 'height': 1.2},
+          'toy_rocket': {'watts': 260.0, 'color': [0.6, 0.8, 1.0], 'height': 6.3},
+          'toy_arcade': {'watts': 140.0, 'color': [0.6, 0.8, 1.0], 'height': 1.9},
+          'toy_desk_pod': {'watts': 110.0, 'color': [0.6, 0.8, 1.0], 'height': 1.2},
+          'toy_fountain': {'watts': 120.0, 'color': [0.4, 0.75, 1.0], 'height': 1.25},
           'clay_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.72, 0.45], 'height': 1.95},
           'clay_kitchen': {'watts': 260.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
           'clay_reception': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
@@ -343,6 +371,9 @@ GROUNDS = {
     'retro_checker': ('made_retro_checker', 'Checkered tiles'), 'retro_carpet': ('made_retro_carpet', 'Office carpet'),
     'retro_planks': ('made_retro_planks', 'Pixel planks'), 'retro_slate': ('made_retro_slate', 'Dark tiles'),
     'plaza_retro': ('made_retro_paving', 'Pixel tiles'),
+    'toy_grid': ('made_toy_grid', 'Blueprint grid'), 'toy_white': ('made_toy_white', 'White floor'),
+    'toy_grey': ('made_toy_grey', 'Grey floor'), 'toy_wood': ('made_toy_wood', 'Pale wood'),
+    'plaza_toy': ('made_toy_paving', 'White slabs'),
 }
 # A world's four painted grounds and its plaza. Per ground: metres per repeat as a
 # multiple of the land shader's, glow from within, and side projection on steep land.
@@ -363,6 +394,7 @@ LANDS = {
              'scale': [2, 1, 1, 1], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
     'retro': {'label': 'Pixel office', 'grounds': ['retro_checker', 'retro_carpet', 'retro_planks', 'retro_slate'], 'plaza': 'plaza_retro',
               'scale': [2.6667, 2.6667, 2.6667, 2.6667], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
+    'toy': {'label': 'Toy office', 'grounds': ['toy_grid', 'toy_white', 'toy_grey', 'toy_wood'], 'plaza': 'plaza_toy', 'scale': [2.6667, 1, 1, 1]},
     'glade': {'label': 'Pixel glade', 'grounds': ['glade_grass', 'glade_floor', 'glade_stone', 'glade_dirt'], 'plaza': 'plaza_glade',
               'scale': [2.6667, 2.6667, 2.6667, 2.6667], 'water': {'shallow': [0.05, 0.3, 0.3], 'deep': [0.01, 0.1, 0.14], 'clear': 0.35}},
 }
@@ -526,11 +558,12 @@ AUTHORED_JOINTS = {
     'fort_stairs_straight': [((0, 0), (-1, 0), 1), ((0, -14.819), (-1, 0), 1), ((0, -14.819), (0, -1), 0)],
     'clay_wall_corner': [((0.2, 0), (1, 0), 0), ((-0.2, 0), (-1, 0), 0), ((0, 0.2), (0, 1), 0), ((0, -0.2), (0, -1), 0)],
 }
+AUTHORED_JOINTS['toy_wall_post'] = [((0.17, 0), (1, 0), 0), ((-0.17, 0), (-1, 0), 0), ((0, 0.17), (0, 1), 0), ((0, -0.17), (0, -1), 0)]
 AUTHORED_JOINTS['retro_wall_corner'] = [((0.1875, 0), (1, 0), 0), ((-0.1875, 0), (-1, 0), 0), ((0, 0.1875), (0, 1), 0), ((0, -0.1875), (0, -1), 0)]
 AUTHORED_JOINTS.update({key: [((half, 0), (1, 0), 0), ((-half, 0), (-1, 0), 0)]
                         for key, half in (('clay_wall', 4), ('clay_wall_window', 4), ('clay_wall_door', 4), ('clay_wall_short', 2), ('clay_partition', 2),
                                           ('retro_wall_plain', 4), ('retro_wall_window', 4), ('retro_wall_door', 4), ('retro_wall_posters', 4),
-                                          ('retro_wall_short', 2), ('retro_partition', 2))})
+                                          ('retro_wall_short', 2), ('retro_partition', 2), ('toy_wall', 2), ('toy_wall_glass', 2), ('toy_wall_short', 1))})
 TOWER_REACH = 7.0
 
 
@@ -596,6 +629,8 @@ def joints_of(kit_id, parts):
 
 def described(entry, kit_id, spec):
     entry.update({'label': spec[2], 'group': spec[3], 'spacing': spec[4]})
+    if kit_id in FLAT:
+        entry['radius'] = 0.5
     for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR), ('joins', kit_id in JOINS), ('seated', spec[3] in SEATED_GROUPS)):
         entry.pop(key, None)
         if on:
