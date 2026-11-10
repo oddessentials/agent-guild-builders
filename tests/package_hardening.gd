@@ -82,6 +82,45 @@ func _no_replace() -> bool:
 	for name in DirAccess.get_files_at(odd_folder):
 		DirAccess.remove_absolute(odd_folder.path_join(name))
 	DirAccess.remove_absolute(odd_folder)
+	var marker := OS.get_environment("TMPDIR").path_join("agb-injected") if OS.get_environment("TMPDIR") != "" else ""
+	var hostile := ["run $(touch ${TMPDIR}agb-injected)", "tick `touch ${TMPDIR}agb-injected`", "a; touch b && c", "$HOME %PATH%"]
+	if OS.get_name() != "Windows":
+		hostile += ["pipe | cat", "star *", "quote \" here", "new\nline", "-n"]
+	for name in hostile:
+		var folder := work.path_join(name)
+		DirAccess.make_dir_recursive_absolute(folder)
+		var target := folder.path_join("Yard.agworld")
+		check(WorldPackage._write_package(bytes, target, {}, false) == OK and FileAccess.get_file_as_bytes(target) == bytes and not FileAccess.file_exists(target + ".tmp"), "published literally into a folder named %s" % name.c_escape())
+		_store(target + ".tmp", other)
+		report = {}
+		check(WorldPackage._publish_new(target + ".tmp", target, report) == ERR_ALREADY_EXISTS and FileAccess.get_file_as_bytes(target) == bytes, "there, a taken name is still refused: %s" % name.c_escape())
+		DirAccess.remove_absolute(target)
+		DirAccess.remove_absolute(folder)
+	check(marker == "" or not FileAccess.file_exists(marker), "no folder name runs a command")
+	# Windows passes paths through the process environment, so racing threads
+	# in one process would share it; separate processes don't, and are what
+	# can race there.
+	if OS.get_name() != "Windows":
+		var contested := work.path_join("contested.agworld")
+		var threads: Array[Thread] = []
+		var outcomes := []
+		outcomes.resize(8)
+		for i in outcomes.size():
+			var mine := bytes.duplicate()
+			mine.append(i)
+			_store(contested + ".%d.tmp" % i, mine)
+		for i in outcomes.size():
+			var t := Thread.new()
+			t.start(func(): outcomes[i] = WorldPackage._publish_new(contested + ".%d.tmp" % i, contested, {}))
+			threads.append(t)
+		for t in threads:
+			t.wait_to_finish()
+		var winners := range(outcomes.size()).filter(func(i): return outcomes[i] == OK)
+		var final := FileAccess.get_file_as_bytes(contested)
+		check(winners.size() == 1 and outcomes.count(ERR_ALREADY_EXISTS) == outcomes.size() - 1, "of 8 racing publishes, exactly one wins and the rest are refused")
+		check(winners.size() == 1 and final.size() == bytes.size() + 1 and final[-1] == winners[0], "the destination holds the winner's file, untouched by the others")
+		check(range(outcomes.size()).all(func(i): return not FileAccess.file_exists(contested + ".%d.tmp" % i)), "racing publishes leave nothing behind")
+		DirAccess.remove_absolute(contested)
 	var long_root := work.path_join("long")
 	var long_folder := long_root
 	while long_folder.length() < 230:

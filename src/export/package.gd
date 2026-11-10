@@ -240,7 +240,9 @@ static func _publish_staged(tmp: String, out_path: String, had_previous: bool, r
 
 ## Publishes without ever replacing, which a rename can't promise: Windows'
 ## plain File.Move and a hard link both fail atomically if the name is taken.
-## Paths go through the environment, never through a shell or script text.
+## Paths never pass through a shell or script text: on Windows they go through
+## the environment, and elsewhere ln is started directly, because OS.execute
+## runs its command through a shell on macOS.
 static func _publish_new(tmp: String, out_path: String, report: Dictionary) -> Error:
 	var bytes := FileAccess.get_file_as_bytes(tmp)
 	var output := []
@@ -252,7 +254,7 @@ static func _publish_new(tmp: String, out_path: String, report: Dictionary) -> E
 		OS.unset_environment("AGB_PUBLISH_FROM")
 		OS.unset_environment("AGB_PUBLISH_TO")
 	else:
-		moved = OS.execute("ln", [tmp, out_path], output, true)
+		moved = _hard_link(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(out_path))
 	var published := moved == 0 and FileAccess.file_exists(out_path) and FileAccess.get_file_as_bytes(out_path) == bytes
 	if FileAccess.file_exists(tmp):
 		DirAccess.remove_absolute(tmp)
@@ -261,6 +263,17 @@ static func _publish_new(tmp: String, out_path: String, report: Dictionary) -> E
 	if FileAccess.file_exists(out_path) or DirAccess.dir_exists_absolute(out_path):
 		return _occupied(report, out_path)
 	return _write_error(report, FAILED, "publish the export without risking a replacement", out_path)
+
+## /bin/ln with its own pipes, so the paths reach it as they are and it never
+## shares stdin or stdout, which carry MCP. Returns ln's exit code, or -1.
+static func _hard_link(from: String, to: String) -> int:
+	var started := OS.execute_with_pipe("/bin/ln", [from, to], false)
+	var pid: int = started.get("pid", -1)
+	if pid <= 0:
+		return -1
+	while OS.is_process_running(pid):
+		OS.delay_msec(1)
+	return OS.get_process_exit_code(pid)
 
 ## Windows' extended-length form: no 260-character limit, and taken literally.
 static func _extended_path(path: String) -> String:

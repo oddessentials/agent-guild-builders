@@ -432,6 +432,21 @@ func _editor() -> bool:
 	check(doc.data.things.is_empty(), "editor: undo removes it")
 	view.history.redo()
 	check(doc.data.things.size() == 1, "editor: redo restores it")
+	var command := func(code: Key, shift := false) -> void:
+		var key := InputEventKey.new()
+		key.pressed = true
+		key.keycode = code
+		key.shift_pressed = shift
+		key.meta_pressed = OS.get_name() == "macOS"
+		key.ctrl_pressed = OS.get_name() != "macOS"
+		view._unhandled_key_input(key)
+	var tool_before = view.tool
+	command.call(KEY_Z)
+	check(doc.data.things.is_empty(), "editor: Cmd+Z on a Mac, Ctrl+Z elsewhere, undoes")
+	command.call(KEY_Z, true)
+	check(doc.data.things.size() == 1, "editor: with Shift it redoes")
+	command.call(KEY_S)
+	check(view.tool == tool_before, "editor: the save shortcut doesn't also pick the tool on S")
 	var plaza_hit: Vector2 = view._camera.unproject_position(Vector3(0, 0, 0))
 	_click(view, plaza_hit, true)
 	_click(view, plaza_hit, false)
@@ -2158,15 +2173,19 @@ func _mcp() -> bool:
 	DirAccess.remove_absolute(docs)
 	DirAccess.remove_absolute(outside)
 
-	var commands: Array = load("res://src/ui/main.gd").connect_commands("C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe", [])
+	var commands: Array = load("res://src/ui/main.gd").connect_commands("C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe", [], false)
 	check(commands.map(func(c): return c[0]) == ["Claude Code", "Codex CLI", "Antigravity CLI", "Grok Build", "Docker Agent"], "mcp: connect commands cover every Agent Guild provider")
 	check(commands[0][1] == "claude mcp add -s user agent-guild-builders \"--\" 'C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe' --no-header \"--\" --mcp", "mcp: the Claude Code command quotes the path and every --")
-	var brackets: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps(Builders)/AgentGuildBuilders.exe", [])
+	var brackets: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps(Builders)/AgentGuildBuilders.exe", [], false)
 	check(brackets[0][1].contains(" 'C:/Apps(Builders)/AgentGuildBuilders.exe' "), "mcp: a path PowerShell would read as an expression is single-quoted")
 	check(commands[2][1].begins_with("agy mcp add agent-guild-builders \"--\" "), "mcp: Antigravity flags come before the name")
 	check(commands[4][1].contains("type: mcp") and commands[4][1].contains("'--no-header', '--', '--mcp'"), "mcp: the Docker Agent toolset has the server's arguments")
-	var dollar: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps $x/it's/AgentGuildBuilders.exe", [])
+	var dollar: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps $x/it's/AgentGuildBuilders.exe", [], false)
 	check(dollar[1][1].contains("'C:/Apps $x/it''s/AgentGuildBuilders.exe'"), "mcp: paths PowerShell would expand are single-quoted")
+	var mac: Array = load("res://src/ui/main.gd").connect_commands("/Users/x/Bill's $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders", [], true)
+	check(mac[0][1] == "claude mcp add -s user agent-guild-builders \"--\" '/Users/x/Bill'\\''s $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders' --no-header \"--\" --mcp", "mcp: on a Mac the path is single-quoted for zsh, with a ' written as '\\''")
+	check(mac[4][1].contains("command: '/Users/x/Bill''s $x `y`/"), "mcp: the Docker Agent YAML quotes the path the same everywhere")
+	check(ProjectSettings.get_setting("application/run/flush_stdout_on_print"), "mcp: every reply is flushed at once, which release builds don't do by default")
 	var job := BakeJob.new()
 	root.add_child(job)
 	var ended := []

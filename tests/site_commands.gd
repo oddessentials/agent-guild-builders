@@ -1,15 +1,21 @@
 extends SceneTree
 
 const EXE := "C:/x/AgentGuildBuilders.exe"
+const MAC_EXE := "/x/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
 
 func _initialize() -> void:
 	var page := FileAccess.get_file_as_string("res://site/index.md").replace("\r\n", "\n")
-	var commands: Array = load("res://src/ui/main.gd").connect_commands(EXE, [])
+	var main: GDScript = load("res://src/ui/main.gd")
+	var wanted := []
+	for entry in main.connect_commands(EXE, [], false):
+		wanted.append([entry[0], entry[1].replace("'%s'" % EXE, "$exe") if entry[0] != "Docker Agent" else entry[1].replace(EXE, "<exe>")])
+	for entry in main.connect_commands(MAC_EXE, [], true):
+		if entry[0] != "Docker Agent":
+			wanted.append(["Mac " + entry[0], entry[1].replace("'%s'" % MAC_EXE, "\"$exe\"")])
 	var failed := 0
-	for entry in commands:
-		var wanted: String = entry[1].replace("'%s'" % EXE, "$exe") if entry[0] != "Docker Agent" else entry[1].replace(EXE, "<exe>")
-		if not page.contains(wanted):
+	for entry in wanted:
+		if not page.contains(entry[1]):
 			failed += 1
-			printerr("FAIL the page's %s step isn't the Connect dialog's command: %s" % [entry[0], wanted])
-	print("site commands: %d of %d match" % [commands.size() - failed, commands.size()])
+			printerr("FAIL the page's %s step isn't the Connect dialog's command: %s" % entry)
+	print("site commands: %d of %d match" % [wanted.size() - failed, wanted.size()])
 	quit(1 if failed else 0)

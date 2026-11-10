@@ -229,7 +229,7 @@ static func _flat(points: Array) -> Array:
 static func export_problem(to: String, replace: bool) -> String:
 	var path := to.replace("\\", "/")
 	if not path.is_absolute_path() or path.begins_with("res://") or path.begins_with("user://"):
-		return "`to` must be a full path, such as C:/Users/you/Documents/My Yard.agworld."
+		return "`to` must be a full path, such as %s." % ("/Users/you/Documents/My Yard.agworld" if OS.get_name() == "macOS" else "C:/Users/you/Documents/My Yard.agworld")
 	if path.split("/").has(".."):
 		return "`to` can't contain `..`."
 	if not path.to_lower().ends_with(WorldPackage.EXT):
