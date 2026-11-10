@@ -241,6 +241,9 @@ jobs:
           ditto -x -k build/AgentGuildBuilders-macos.zip .smoke
           codesign --verify --deep --strict .smoke/AgentGuildBuilders.app
           if ($LASTEXITCODE -ne 0) { throw 'The packaged app is not validly signed.' }
+          $iconFile = & /usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' .smoke/AgentGuildBuilders.app/Contents/Info.plist
+          if (-not [IO.Path]::GetExtension($iconFile)) { $iconFile += '.icns' }
+          if ((Get-FileHash ".smoke/AgentGuildBuilders.app/Contents/Resources/$iconFile").Hash -ne (Get-FileHash data/brand/icon.icns).Hash) { throw 'The packaged app does not use data/brand/icon.icns.' }
           $exe = '.smoke/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders'
           $world = Join-Path $PWD '.smoke/world'
           & $exe --headless -- --new=meadow --title=Smoke "--save=$world"
