@@ -1,4 +1,4 @@
-param([string]$Godot = 'godot')
+param([string]$Godot = 'godot', [ValidateSet('Windows', 'macOS')][string]$Platform = 'Windows')
 
 $ErrorActionPreference = 'Stop'
 $project = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -47,14 +47,17 @@ foreach ($file in $files) {
 
 New-Item -ItemType Directory -Path $build -Force | Out-Null
 $stage = Join-Path $build ('package-' + [guid]::NewGuid().ToString('N'))
-$bundle = Join-Path $stage 'AgentGuildBuilders'
-New-Item -ItemType Directory -Path $bundle -Force | Out-Null
+# On a Mac the kits and licence go inside the app, where res:// points.
+$mac = $Platform -eq 'macOS'
+$app = Join-Path $stage 'AgentGuildBuilders.app'
+$bundle = if ($mac) { Join-Path $app 'Contents/Resources' } else { Join-Path $stage 'AgentGuildBuilders' }
+New-Item -ItemType Directory -Path $(if ($mac) { $stage } else { $bundle }) -Force | Out-Null
 try {
     $importLog = & $Godot --headless --path $project --editor --import --quit 2>&1
     $importExit = $LASTEXITCODE
     $importLog | Write-Output
     if ($importExit -ne 0 -or ($importLog -match 'SCRIPT ERROR:')) { throw 'Godot import failed.' }
-    $exportLog = & $Godot --headless --path $project --export-release Windows (Join-Path $bundle 'AgentGuildBuilders.exe') 2>&1
+    $exportLog = & $Godot --headless --path $project --export-release $Platform $(if ($mac) { $app } else { Join-Path $bundle 'AgentGuildBuilders.exe' }) 2>&1
     $exportExit = $LASTEXITCODE
     $exportLog | Write-Output
     if ($exportExit -ne 0 -or ($exportLog -match 'SCRIPT ERROR:')) { throw 'Godot export failed.' }
@@ -64,9 +67,21 @@ try {
         New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
         Copy-Item -LiteralPath (Join-Path $project $file) -Destination $destination
     }
-    $zip = Join-Path $stage 'AgentGuildBuilders-windows.zip'
-    Compress-Archive -LiteralPath $bundle -DestinationPath $zip
-    $output = Join-Path $build 'AgentGuildBuilders-windows.zip'
+    $name = "AgentGuildBuilders-$($Platform.ToLower()).zip"
+    $zip = Join-Path $stage $name
+    if ($mac) {
+        # Adding the kits broke the export's ad-hoc signature, and Apple
+        # Silicon won't run an app without a valid one, so sign it again.
+        & codesign --force --sign - --preserve-metadata=identifier,entitlements,flags,runtime $app
+        if ($LASTEXITCODE -ne 0) { throw 'Signing the app failed.' }
+        & codesign --verify --deep --strict $app
+        if ($LASTEXITCODE -ne 0) { throw 'The signed app does not verify.' }
+        & ditto -c -k --keepParent $app $zip
+        if ($LASTEXITCODE -ne 0) { throw 'Zipping the app failed.' }
+    } else {
+        Compress-Archive -LiteralPath $bundle -DestinationPath $zip
+    }
+    $output = Join-Path $build $name
     Move-Item -LiteralPath $zip -Destination $output -Force
     Write-Output "Packaged $output"
 } finally {

@@ -1,5 +1,6 @@
 // Drives the packaged app's MCP server the way an agent's client does:
 // node tests/mcp_smoke.mjs path/to/AgentGuildBuilders.exe [--windowed]
+// (on a Mac, the executable inside AgentGuildBuilders.app/Contents/MacOS)
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -9,7 +10,8 @@ const [exe, ...flags] = process.argv.slice(2);
 const windowed = flags.includes('--windowed');
 const appData = fs.mkdtempSync(path.join(os.tmpdir(), 'agb-mcp-'));
 const args = [...(windowed ? [] : ['--headless']), '--', '--mcp'];
-const child = spawn(exe, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, APPDATA: appData } });
+// Builders keeps its data under APPDATA on Windows and under HOME on a Mac.
+const child = spawn(exe, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, APPDATA: appData, ...(process.platform === 'darwin' ? { HOME: appData } : {}) } });
 const lines = [];
 const waiting = new Map();
 let buffer = '';

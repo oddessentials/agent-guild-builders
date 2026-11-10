@@ -85,7 +85,7 @@ jobs:
       - name: File lock checks
         run: ./tests/file_locks.ps1 -Godot $env:GODOT
       - name: Package
-        run: ./tools/package_windows.ps1 -Godot $env:GODOT
+        run: ./tools/package.ps1 -Godot $env:GODOT
       - name: Run the packaged app
         run: |
           Expand-Archive build/AgentGuildBuilders-windows.zip .smoke
@@ -102,9 +102,86 @@ jobs:
           compression-level: 0
           retention-days: 1
 
+  build-macos:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      AGENT_GUILD_CHECKOUT: ${{ github.workspace }}/.agent-guild
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: oddessentials/agent-guild
+          ref: ${{ env.AGENT_GUILD_COMMIT }}
+          path: .agent-guild
+          sparse-checkout: web/yard/assets/gnomeland
+      - name: Find Godot's folders
+        run: |
+          Add-Content $env:GITHUB_ENV "TEMPLATES=$HOME/Library/Application Support/Godot/export_templates"
+          Add-Content $env:GITHUB_ENV "GODOT=$PWD/.godot-bin/Godot.app/Contents/MacOS/Godot"
+      - uses: actions/cache@v4
+        id: godot
+        with:
+          path: |
+            .godot-bin
+            ${{ env.TEMPLATES }}
+          key: godot-${{ env.GODOT_VERSION }}-macos
+      - name: Install Godot
+        if: steps.godot.outputs.cache-hit != 'true'
+        run: |
+          $base = "https://github.com/godotengine/godot/releases/download/$env:GODOT_VERSION-stable"
+          Invoke-WebRequest "$base/Godot_v$env:GODOT_VERSION-stable_macos.universal.zip" -OutFile editor.zip
+          ditto -x -k editor.zip .godot-bin
+          Remove-Item editor.zip
+          Invoke-WebRequest "$base/Godot_v$env:GODOT_VERSION-stable_export_templates.tpz" -OutFile templates.zip
+          $dest = "$env:TEMPLATES/$env:GODOT_VERSION.stable"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          unzip -j templates.zip templates/macos.zip templates/version.txt -d $dest
+          if ($LASTEXITCODE -ne 0) { throw 'Extracting the macOS template failed.' }
+          Remove-Item templates.zip
+      - uses: actions/cache@v4
+        with:
+          path: build/kit-*.tar.gz
+          key: kit-${{ hashFiles('kits/kit-lock.json') }}
+      - name: Fetch the kit
+        run: python3 tools/fetch_kit.py
+      - name: Import
+        run: |
+          & $env:GODOT --headless --path . --editor --import --quit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test
+        run: |
+          foreach ($suite in 'run', 'hardening', 'clearance_hardening', 'package_hardening', 'site_commands') {
+            & $env:GODOT --headless --path . --script "res://tests/$suite.gd"
+            if ($LASTEXITCODE -ne 0) { throw "$suite failed" }
+          }
+      - name: Package
+        run: ./tools/package.ps1 -Godot $env:GODOT -Platform macOS
+      - name: Run the packaged app
+        run: |
+          ditto -x -k build/AgentGuildBuilders-macos.zip .smoke
+          codesign --verify --deep --strict .smoke/AgentGuildBuilders.app
+          if ($LASTEXITCODE -ne 0) { throw 'The packaged app is not validly signed.' }
+          $exe = '.smoke/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders'
+          $world = Join-Path $PWD '.smoke/world'
+          & $exe --headless -- --new=meadow --title=Smoke "--save=$world"
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path "$world/world.json")) { throw 'The packaged app did not create a world.' }
+          node tests/mcp_smoke.mjs $exe
+          if ($LASTEXITCODE -ne 0) { throw 'The packaged app did not serve MCP.' }
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push'
+        with:
+          name: macos-zip
+          path: build/AgentGuildBuilders-macos.zip
+          compression-level: 0
+          retention-days: 1
+
   release:
     if: github.event_name == 'push'
-    needs: build
+    needs: [build, build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -112,10 +189,13 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: windows-zip
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-zip
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "build-${{ github.run_number }}" AgentGuildBuilders-windows.zip \
+          gh release create "build-${{ github.run_number }}" AgentGuildBuilders-windows.zip AgentGuildBuilders-macos.zip \
             --repo "${{ github.repository }}" --target "${{ github.sha }}" \
             --title "Build ${{ github.run_number }}" --generate-notes --latest

@@ -1,10 +1,10 @@
 # Set up Agent Guild: Builders
 
-Agent Guild: Builders makes environments for Agent Guild Yards. It runs on Windows 10 or 11 (64-bit) and opens a window the person can watch while you build.
+Agent Guild: Builders makes environments for Agent Guild Yards. It runs on Windows 10 or 11 (64-bit) or macOS 13 or later, and opens a window the person can watch while you build.
 
 Agent Guild itself: [agentguild.oddessentials.ai/agents](https://agentguild.oddessentials.ai/agents/). Characters and companions for Agent Guild: World: [oddessentials.github.io/agent-guild-steam](https://oddessentials.github.io/agent-guild-steam/).
 
-Follow these steps in order. Run each block in PowerShell. If your shell isn't PowerShell, save the block as a `.ps1` file and run `powershell -NoProfile -ExecutionPolicy Bypass -File <file>`.
+On a Mac, follow the Mac steps further down instead. On Windows, follow these steps in order. Run each block in PowerShell. If your shell isn't PowerShell, save the block as a `.ps1` file and run `powershell -NoProfile -ExecutionPolicy Bypass -File <file>`.
 
 ## 1. Choose the folder
 
@@ -98,3 +98,86 @@ Builders is now set up. Its tools explain how to build.
 ## Update
 
 Run step 2 again with the same folder. The connection and the person's worlds are kept. Then start a new session, so the Builders tools load again.
+
+## On a Mac
+
+Follow these steps in order. Run each block in Terminal's shell, zsh, or in bash.
+
+## Mac 1. Choose the folder
+
+Every block below starts with this line, which puts Builders in `~/Applications`:
+
+```zsh
+dest="$HOME/Applications"
+```
+
+Change that line in every block, to `dest='<folder>'` with any `'` in the folder written as `'\''`, if:
+
+- the person named a folder: use it.
+- Builders is already connected to you or another agent: use the folder that contains its `AgentGuildBuilders.app`. Find the connected path as in step 1 above.
+
+Don't move Builders after connecting it.
+
+## Mac 2. Download and install
+
+If Builders is already running, ask the person to close its window first. The download is large.
+
+```zsh
+dest="$HOME/Applications"
+tmp="$(mktemp -d)" &&
+curl -fsSL -o "$tmp/AgentGuildBuilders-macos.zip" 'https://github.com/oddessentials/agent-guild-builders/releases/latest/download/AgentGuildBuilders-macos.zip' &&
+ditto -x -k "$tmp/AgentGuildBuilders-macos.zip" "$tmp" &&
+mkdir -p "$dest" &&
+rm -rf "$dest/AgentGuildBuilders.app" &&
+mv "$tmp/AgentGuildBuilders.app" "$dest/" &&
+rm -rf "$tmp" &&
+echo "$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
+```
+
+It prints the full path of the app's executable. Installed this way, macOS doesn't ask the person before Builders first opens.
+
+## Mac 3. Connect
+
+Skip this step if Builders is already connected to you. Otherwise run the block for the agent you are.
+
+Claude Code:
+
+```zsh
+dest="$HOME/Applications"
+exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
+claude mcp add -s user agent-guild-builders "--" "$exe" --no-header "--" --mcp
+```
+
+Codex CLI:
+
+```zsh
+dest="$HOME/Applications"
+exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
+codex mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+```
+
+Antigravity CLI:
+
+```zsh
+dest="$HOME/Applications"
+exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
+agy mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+```
+
+Grok Build:
+
+```zsh
+dest="$HOME/Applications"
+exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
+grok mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+```
+
+Docker Agent: add the toolset shown in step 3 above, with `<exe>` the path Mac step 2 printed.
+
+## Mac 4. Check that it works
+
+Follow step 4 above.
+
+## Mac update
+
+Run Mac step 2 again with the same folder. The connection and the person's worlds are kept. Then start a new session, so the Builders tools load again.

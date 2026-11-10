@@ -381,7 +381,7 @@ func _build_ui() -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot_row.add_child(_status)
 	_result_button = Button.new()
-	_result_button.text = "Show in folder"
+	_result_button.text = "Show in Finder" if OS.get_name() == "macOS" else "Show in folder"
 	_result_button.visible = false
 	_result_button.pressed.connect(func(): OS.shell_show_in_file_manager(_result_path))
 	foot_row.add_child(_result_button)
@@ -2006,8 +2006,9 @@ func _update_undo_buttons() -> void:
 	var locked := _exporting
 	_undo_button.disabled = locked or not history.can_undo()
 	_redo_button.disabled = locked or not history.can_redo()
-	_undo_button.tooltip_text = "Undo: %s (Ctrl+Z)" % history.undo_label() if history.can_undo() else "Nothing to undo"
-	_redo_button.tooltip_text = "Redo: %s (Ctrl+Y)" % history.redo_label() if history.can_redo() else "Nothing to redo"
+	var mac := OS.get_name() == "macOS"
+	_undo_button.tooltip_text = "Undo: %s (%s)" % [history.undo_label(), "⌘Z" if mac else "Ctrl+Z"] if history.can_undo() else "Nothing to undo"
+	_redo_button.tooltip_text = "Redo: %s (%s)" % [history.redo_label(), "⇧⌘Z" if mac else "Ctrl+Y"] if history.can_redo() else "Nothing to redo"
 
 func _mark_dirty() -> void:
 	_dirty_at = Time.get_ticks_msec() / 1000.0
@@ -2034,7 +2035,8 @@ func _commit_title() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.pressed or event.echo:
 		return
-	if event.ctrl_pressed:
+	# Cmd on a Mac, Ctrl elsewhere.
+	if event.is_command_or_control_pressed():
 		match event.keycode:
 			KEY_Z:
 				if event.shift_pressed:

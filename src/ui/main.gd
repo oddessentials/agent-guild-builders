@@ -320,7 +320,7 @@ func _world_card(w: Dictionary) -> Control:
 	var menu := more.get_popup()
 	menu.add_item("Rename…", 0)
 	menu.add_item("Duplicate", 1)
-	menu.add_item("Move to Recycle Bin…", 2)
+	menu.add_item("Move to %s…" % trash_name(), 2)
 	menu.id_pressed.connect(func(id): _on_world_menu(id, w))
 	row.add_child(more)
 	return box
@@ -368,15 +368,18 @@ func _rename_dialog(w: Dictionary) -> void:
 	box.grab_focus()
 	box.select_all()
 
+static func trash_name() -> String:
+	return "Trash" if OS.get_name() == "macOS" else "Recycle Bin"
+
 func _delete_dialog(w: Dictionary) -> void:
 	var ask := ConfirmationDialog.new()
-	ask.title = "Move to Recycle Bin"
-	ask.dialog_text = "Move “%s” to the Recycle Bin?" % w.title
-	ask.ok_button_text = "Move to Recycle Bin"
+	ask.title = "Move to " + trash_name()
+	ask.dialog_text = "Move “%s” to the %s?" % [w.title, trash_name()]
+	ask.ok_button_text = "Move to " + trash_name()
 	add_child(ask)
 	ask.confirmed.connect(func():
 		if WorldLibrary.delete_world(w.path) != OK:
-			_notice = "That world couldn't be moved to the Recycle Bin."
+			_notice = "That world couldn't be moved to the %s." % trash_name()
 		_start_screen())
 	ask.canceled.connect(ask.queue_free)
 	ask.popup_centered()
@@ -546,10 +549,11 @@ func agent_disconnected() -> void:
 	else:
 		get_tree().quit()
 
-static func connect_commands(exe: String, before: Array) -> Array:
+## For PowerShell on Windows, and for Terminal's shell (zsh) elsewhere.
+static func connect_commands(exe: String, before: Array, posix := OS.get_name() != "Windows") -> Array:
 	var args := before + ["--no-header", "--", "--mcp"]
-	var shell_args := " ".join(args.map(func(a): return _shell_quote(str(a))))
-	var line := "%s %s" % [_shell_quote(exe), shell_args]
+	var shell_args := " ".join(args.map(func(a): return _shell_quote(str(a), posix)))
+	var line := "%s %s" % [_shell_quote(exe, posix), shell_args]
 	var yaml_args := ", ".join(args.map(func(a): return "'%s'" % str(a).replace("'", "''")))
 	return [
 		["Claude Code", "claude mcp add -s user agent-guild-builders \"--\" " + line],
@@ -559,15 +563,16 @@ static func connect_commands(exe: String, before: Array) -> Array:
 		["Docker Agent", "agents:\n  root:\n    toolsets:\n      - type: mcp\n        command: '%s'\n        args: [%s]" % [exe.replace("'", "''"), yaml_args]],
 	]
 
-## Quoted for PowerShell: paths always in single quotes, which PowerShell
-## takes literally. A bare -- would be dropped by PowerShell when the agent's
-## command is an npm .ps1 wrapper, so it's always quoted.
-static func _shell_quote(text: String) -> String:
+## Paths always in single quotes, which PowerShell and POSIX shells both take
+## literally; they differ only in how a ' inside is written. A bare -- would be
+## dropped by PowerShell when the agent's command is an npm .ps1 wrapper, so
+## it's always quoted.
+static func _shell_quote(text: String, posix := false) -> String:
 	if text == "--":
 		return "\"--\""
 	if text.begins_with("--") and text.substr(2).replace("-", "").is_valid_identifier():
 		return text
-	return "'%s'" % text.replace("'", "''")
+	return "'%s'" % text.replace("'", "'\\''" if posix else "''")
 
 func _connect_dialog(exe := OS.get_executable_path()) -> void:
 	var ask := AcceptDialog.new()
@@ -577,7 +582,7 @@ func _connect_dialog(exe := OS.get_executable_path()) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	ask.add_child(box)
-	var intro := ProTheme.note("Run one of these once in PowerShell. Afterwards your agent opens its own Builders window whenever it needs one, and you can watch and undo everything it does. If you move this app to another folder, run the command again.")
+	var intro := ProTheme.note("Run one of these once in %s. Afterwards your agent opens its own Builders window whenever it needs one, and you can watch and undo everything it does. If you move this app to another folder, run the command again." % ("Terminal" if OS.get_name() == "macOS" else "PowerShell"))
 	intro.custom_minimum_size = Vector2(CONNECT_WIDTH, 0)
 	box.add_child(intro)
 	var scroll := ScrollContainer.new()

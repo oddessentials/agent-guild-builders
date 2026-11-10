@@ -84,6 +84,6 @@ static func duplicate_world(path: String) -> String:
 		DirAccess.copy_absolute(path.path_join(WorldDoc.THUMB), folder.path_join(WorldDoc.THUMB))
 	return folder
 
-## Goes to the Recycle Bin, so a mistake can be undone.
+## Goes to the Recycle Bin, or the Trash on a Mac, so a mistake can be undone.
 static func delete_world(path: String) -> Error:
 	return OS.move_to_trash(path)
