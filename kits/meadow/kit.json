@@ -2150,6 +2150,2700 @@
    "licence": "AGPL-3.0-only (Agent Guild: Builders)",
    "bytes": 58928
   },
+  "clay_wall": {
+   "label": "Wall",
+   "group": "clay",
+   "spacing": 8,
+   "height": 6.1,
+   "radius": 4.0,
+   "triangles": 324,
+   "source": "clay_wall",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 7736,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_short": {
+   "label": "Short wall",
+   "group": "clay",
+   "spacing": 4,
+   "height": 6.1,
+   "radius": 2.0,
+   "triangles": 324,
+   "source": "clay_wall_short",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 7748,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_window": {
+   "label": "Window wall",
+   "group": "clay",
+   "spacing": 8,
+   "height": 6.1,
+   "radius": 4.0,
+   "triangles": 1644,
+   "source": "clay_wall_window",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 34552,
+   "joints": [
+    [
+     -4.0,
+     -0.04,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.04,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_door": {
+   "label": "Door wall",
+   "group": "clay",
+   "spacing": 8,
+   "height": 6.1,
+   "radius": 4.0,
+   "triangles": 1620,
+   "source": "clay_wall_door",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 31156,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_corner": {
+   "label": "Wall corner",
+   "group": "clay",
+   "spacing": 2,
+   "height": 6.1,
+   "radius": 0.23,
+   "triangles": 216,
+   "source": "clay_wall_corner",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 5064,
+   "joints": [
+    [
+     -0.2,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     0.0,
+     -0.2,
+     0.0,
+     -1.0,
+     0
+    ],
+    [
+     0.0,
+     0.2,
+     0.0,
+     1.0,
+     0
+    ],
+    [
+     0.2,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_partition": {
+   "label": "Glass partition",
+   "group": "clay",
+   "spacing": 4,
+   "height": 2.7,
+   "radius": 2.0,
+   "triangles": 672,
+   "source": "clay_partition",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 15644,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_column": {
+   "label": "Column",
+   "group": "clay",
+   "spacing": 4,
+   "height": 6.02,
+   "radius": 0.38,
+   "triangles": 324,
+   "source": "clay_column",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 7844
+  },
+  "clay_wall_art": {
+   "label": "Framed prints",
+   "group": "clay",
+   "spacing": 4,
+   "height": 2.9,
+   "radius": 1.72,
+   "triangles": 1620,
+   "source": "clay_wall_art",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 28768,
+   "modular": true
+  },
+  "clay_wall_shelf": {
+   "label": "Wall shelves",
+   "group": "clay",
+   "spacing": 3,
+   "height": 2.4988,
+   "radius": 1.1,
+   "triangles": 5800,
+   "source": "clay_wall_shelf",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 111672,
+   "modular": true
+  },
+  "clay_wall_clock": {
+   "label": "Wall clock",
+   "group": "clay",
+   "spacing": 2,
+   "height": 2.96,
+   "radius": 0.36,
+   "triangles": 2188,
+   "source": "clay_wall_clock",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 42940,
+   "modular": true
+  },
+  "clay_wall_display": {
+   "label": "Wall display",
+   "group": "clay",
+   "spacing": 4,
+   "height": 3.3,
+   "radius": 1.6,
+   "triangles": 1500,
+   "source": "clay_wall_display",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30548,
+   "light": {
+    "watts": 160.0,
+    "color": [
+     0.5,
+     0.75,
+     1.0
+    ],
+    "height": 3.45
+   },
+   "modular": true
+  },
+  "clay_neon_sign": {
+   "label": "Neon sign",
+   "group": "clay",
+   "spacing": 4,
+   "height": 3.55,
+   "radius": 1.3,
+   "triangles": 576,
+   "source": "clay_neon_sign",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13336,
+   "light": {
+    "watts": 140.0,
+    "color": [
+     1.0,
+     0.45,
+     0.3
+    ],
+    "height": 3.7
+   },
+   "modular": true
+  },
+  "clay_desk_single": {
+   "label": "Desk",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.28,
+   "radius": 0.8,
+   "triangles": 3212,
+   "source": "clay_desk_single",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 63588
+  },
+  "clay_desk_row": {
+   "label": "Desk row",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.28,
+   "radius": 2.44,
+   "triangles": 9636,
+   "source": "clay_desk_row",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 180408,
+   "light": {
+    "watts": 90.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.3
+   }
+  },
+  "clay_desk_pod": {
+   "label": "Desk pod",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.28,
+   "radius": 1.62,
+   "triangles": 15800,
+   "source": "clay_desk_pod",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 299376,
+   "light": {
+    "watts": 110.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.3
+   }
+  },
+  "clay_desk_pod_six": {
+   "label": "Desk pod of six",
+   "group": "clay",
+   "spacing": 7,
+   "height": 1.28,
+   "radius": 2.44,
+   "triangles": 20636,
+   "source": "clay_desk_pod_six",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 390344,
+   "light": {
+    "watts": 140.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.3
+   }
+  },
+  "clay_desk_standing": {
+   "label": "Standing desk",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.35,
+   "radius": 0.7,
+   "triangles": 1376,
+   "source": "clay_desk_standing",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 28092
+  },
+  "clay_office_chair": {
+   "label": "Office chair",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 1.03,
+   "radius": 0.29,
+   "triangles": 1404,
+   "source": "clay_office_chair",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 27872
+  },
+  "clay_meeting_table": {
+   "label": "Meeting table",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.06,
+   "radius": 2.56,
+   "triangles": 15080,
+   "source": "clay_meeting_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 284048
+  },
+  "clay_whiteboard": {
+   "label": "Whiteboard",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.95,
+   "radius": 0.99,
+   "triangles": 1252,
+   "source": "clay_whiteboard",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 36380
+  },
+  "clay_screen": {
+   "label": "Presentation screen",
+   "group": "clay",
+   "spacing": 4,
+   "height": 2.28,
+   "radius": 1.25,
+   "triangles": 1944,
+   "source": "clay_screen",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 36060,
+   "light": {
+    "watts": 120.0,
+    "color": [
+     0.5,
+     0.75,
+     1.0
+    ],
+    "height": 2.4
+   }
+  },
+  "clay_reception": {
+   "label": "Reception desk",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.38,
+   "radius": 2.14,
+   "triangles": 7988,
+   "source": "clay_reception",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 150436,
+   "light": {
+    "watts": 220.0,
+    "color": [
+     1.0,
+     0.76,
+     0.5
+    ],
+    "height": 1.6
+   }
+  },
+  "clay_phone_booth": {
+   "label": "Focus booth",
+   "group": "clay",
+   "spacing": 3,
+   "height": 2.41,
+   "radius": 0.69,
+   "triangles": 1944,
+   "source": "clay_phone_booth",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 36260,
+   "light": {
+    "watts": 60.0,
+    "color": [
+     1.0,
+     0.8,
+     0.55
+    ],
+    "height": 2.0
+   }
+  },
+  "clay_sofa": {
+   "label": "Sofa",
+   "group": "clay",
+   "spacing": 3,
+   "height": 0.91,
+   "radius": 1.09,
+   "triangles": 1040,
+   "source": "clay_sofa",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 22768
+  },
+  "clay_armchair": {
+   "label": "Armchair",
+   "group": "clay",
+   "spacing": 2,
+   "height": 0.91,
+   "radius": 0.52,
+   "triangles": 824,
+   "source": "clay_armchair",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 17988
+  },
+  "clay_coffee_table": {
+   "label": "Coffee table",
+   "group": "clay",
+   "spacing": 2,
+   "height": 0.7,
+   "radius": 0.55,
+   "triangles": 2400,
+   "source": "clay_coffee_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 50740
+  },
+  "clay_rug": {
+   "label": "Round rug",
+   "group": "clay",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 3056,
+   "source": "clay_rug",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 53052
+  },
+  "clay_rug_large": {
+   "label": "Large rug",
+   "group": "clay",
+   "spacing": 5,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 432,
+   "source": "clay_rug_large",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 9720
+  },
+  "clay_beanbag": {
+   "label": "Beanbag",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 0.83,
+   "radius": 0.55,
+   "triangles": 660,
+   "source": "clay_beanbag",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13176
+  },
+  "clay_bleachers": {
+   "label": "Stepped seating",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.43,
+   "radius": 2.19,
+   "triangles": 2672,
+   "source": "clay_bleachers",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 49132
+  },
+  "clay_bookshelf": {
+   "label": "Bookshelf",
+   "group": "clay",
+   "spacing": 3,
+   "height": 2.2,
+   "radius": 1.0,
+   "triangles": 17272,
+   "source": "clay_bookshelf",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 314952
+  },
+  "clay_cabinet": {
+   "label": "Sideboard",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.13,
+   "radius": 0.93,
+   "triangles": 2860,
+   "source": "clay_cabinet",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 58684
+  },
+  "clay_server_rack": {
+   "label": "Server rack",
+   "group": "clay",
+   "spacing": 2,
+   "height": 2.07,
+   "radius": 0.51,
+   "triangles": 2184,
+   "source": "clay_server_rack",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 64148
+  },
+  "clay_printer": {
+   "label": "Printer",
+   "group": "clay",
+   "spacing": 2,
+   "height": 1.04,
+   "radius": 0.38,
+   "triangles": 672,
+   "source": "clay_printer",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 15976
+  },
+  "clay_kitchen": {
+   "label": "Kitchenette",
+   "group": "clay",
+   "spacing": 5,
+   "height": 1.93,
+   "radius": 1.92,
+   "triangles": 5676,
+   "source": "clay_kitchen",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 112800,
+   "light": {
+    "watts": 260.0,
+    "color": [
+     1.0,
+     0.76,
+     0.5
+    ],
+    "height": 1.6
+   }
+  },
+  "clay_cafe_table": {
+   "label": "Caf\u00e9 table",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.17,
+   "radius": 0.84,
+   "triangles": 3468,
+   "source": "clay_cafe_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 67356
+  },
+  "clay_water_cooler": {
+   "label": "Water cooler",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 1.42,
+   "radius": 0.27,
+   "triangles": 1072,
+   "source": "clay_water_cooler",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 23196
+  },
+  "clay_plant": {
+   "label": "Office plant",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 1.27,
+   "radius": 0.47,
+   "triangles": 1652,
+   "source": "clay_plant",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 33948
+  },
+  "clay_plant_tall": {
+   "label": "Tall office plant",
+   "group": "clay",
+   "spacing": 2,
+   "height": 2.35,
+   "radius": 0.75,
+   "triangles": 1608,
+   "source": "clay_plant_tall",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 33932
+  },
+  "clay_planter": {
+   "label": "Plant divider",
+   "group": "clay",
+   "spacing": 3,
+   "height": 0.92,
+   "radius": 1.2,
+   "triangles": 2576,
+   "source": "clay_planter",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 45696
+  },
+  "clay_floor_lamp": {
+   "label": "Floor lamp",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.82,
+   "radius": 0.25,
+   "triangles": 792,
+   "source": "clay_floor_lamp",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 16524,
+   "light": {
+    "watts": 420.0,
+    "color": [
+     1.0,
+     0.72,
+     0.45
+    ],
+    "height": 1.95
+   }
+  },
+  "clay_ping_pong": {
+   "label": "Table tennis",
+   "group": "clay",
+   "spacing": 5,
+   "height": 0.94,
+   "radius": 1.38,
+   "triangles": 2028,
+   "source": "clay_ping_pong",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 44972
+  },
+  "clay_slide": {
+   "label": "Slide",
+   "group": "clay",
+   "spacing": 7,
+   "height": 3.23,
+   "radius": 4.9,
+   "triangles": 7368,
+   "source": "clay_slide",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 140300
+  },
+  "clay_mezzanine": {
+   "label": "Mezzanine",
+   "group": "clay",
+   "spacing": 12,
+   "height": 4.58,
+   "radius": 4.72,
+   "triangles": 19060,
+   "source": "clay_mezzanine",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 361232,
+   "light": {
+    "watts": 320.0,
+    "color": [
+     1.0,
+     0.74,
+     0.48
+    ],
+    "height": 3.9
+   }
+  },
+  "glade_tree_oak": {
+   "label": "Oak",
+   "group": "glade",
+   "spacing": 7,
+   "height": 9.25,
+   "radius": 3.44,
+   "triangles": 22620,
+   "source": "glade_tree_oak",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1226884
+  },
+  "glade_tree_pine": {
+   "label": "Pine",
+   "group": "glade",
+   "spacing": 5,
+   "height": 14.0,
+   "radius": 2.56,
+   "triangles": 29972,
+   "source": "glade_tree_pine",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1623176
+  },
+  "glade_tree_ancient": {
+   "label": "Ancient tree",
+   "group": "glade",
+   "spacing": 12,
+   "height": 14.62,
+   "radius": 5.69,
+   "triangles": 86300,
+   "source": "glade_tree_ancient",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 4668588
+  },
+  "glade_tree_dead": {
+   "label": "Bare tree",
+   "group": "glade",
+   "spacing": 5,
+   "height": 5.62,
+   "radius": 2.25,
+   "triangles": 3128,
+   "source": "glade_tree_dead",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 171396
+  },
+  "glade_bush": {
+   "label": "Bush",
+   "group": "glade",
+   "spacing": 2.5,
+   "height": 1.5,
+   "radius": 1.31,
+   "triangles": 2358,
+   "source": "glade_bush",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 131208
+  },
+  "glade_grass": {
+   "label": "Grass tuft",
+   "group": "glade",
+   "spacing": 1.2,
+   "height": 0.62,
+   "radius": 0.81,
+   "triangles": 1060,
+   "source": "glade_grass",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 59724
+  },
+  "glade_flowers": {
+   "label": "Wildflowers",
+   "group": "glade",
+   "spacing": 1.2,
+   "height": 0.62,
+   "radius": 0.81,
+   "triangles": 940,
+   "source": "glade_flowers",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 55360
+  },
+  "glade_mushrooms": {
+   "label": "Toadstools",
+   "group": "glade",
+   "spacing": 1.5,
+   "height": 0.88,
+   "radius": 0.88,
+   "triangles": 824,
+   "source": "glade_mushrooms",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 47684
+  },
+  "glade_glow_mushrooms": {
+   "label": "Glowing mushrooms",
+   "group": "glade",
+   "spacing": 1.5,
+   "height": 0.88,
+   "radius": 0.82,
+   "triangles": 832,
+   "source": "glade_glow_mushrooms",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 46764
+  },
+  "glade_rock": {
+   "label": "Rock",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.38,
+   "radius": 1.13,
+   "triangles": 1648,
+   "source": "glade_rock",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 93556
+  },
+  "glade_boulder": {
+   "label": "Mossy boulder",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.5,
+   "radius": 2.06,
+   "triangles": 5050,
+   "source": "glade_boulder",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 277316
+  },
+  "glade_log": {
+   "label": "Fallen log",
+   "group": "glade",
+   "spacing": 4,
+   "height": 1.12,
+   "radius": 2.12,
+   "triangles": 2216,
+   "source": "glade_log",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 127780
+  },
+  "glade_stump": {
+   "label": "Stump",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.75,
+   "radius": 0.75,
+   "triangles": 592,
+   "source": "glade_stump",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 37232
+  },
+  "glade_dais": {
+   "label": "Rune dais",
+   "group": "glade",
+   "spacing": 8,
+   "height": 1.12,
+   "radius": 3.48,
+   "triangles": 12592,
+   "source": "glade_dais",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 686156,
+   "light": {
+    "watts": 300.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_shrine": {
+   "label": "Crystal shrine",
+   "group": "glade",
+   "spacing": 9,
+   "height": 5.38,
+   "radius": 3.5,
+   "triangles": 23048,
+   "source": "glade_shrine",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1250828,
+   "light": {
+    "watts": 900.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 5.6
+   }
+  },
+  "glade_portal": {
+   "label": "Portal arch",
+   "group": "glade",
+   "spacing": 5,
+   "height": 5.75,
+   "radius": 2.19,
+   "triangles": 9180,
+   "source": "glade_portal",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 502684,
+   "light": {
+    "watts": 600.0,
+    "color": [
+     0.62,
+     0.42,
+     1.0
+    ],
+    "height": 6.0
+   }
+  },
+  "glade_tower": {
+   "label": "Ruined tower",
+   "group": "glade",
+   "spacing": 6,
+   "height": 7.38,
+   "radius": 2.0,
+   "triangles": 26376,
+   "source": "glade_tower",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1435500,
+   "light": {
+    "watts": 400.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 3.6
+   }
+  },
+  "glade_wall_ruin": {
+   "label": "Ruined wall",
+   "group": "glade",
+   "spacing": 5,
+   "height": 2.12,
+   "radius": 2.74,
+   "triangles": 4228,
+   "source": "glade_wall_ruin",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 235096
+  },
+  "glade_pillar": {
+   "label": "Pillar",
+   "group": "glade",
+   "spacing": 2,
+   "height": 3.75,
+   "radius": 0.5,
+   "triangles": 1908,
+   "source": "glade_pillar",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 107584
+  },
+  "glade_pillar_broken": {
+   "label": "Broken pillar",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.62,
+   "radius": 1.25,
+   "triangles": 1510,
+   "source": "glade_pillar_broken",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 86140
+  },
+  "glade_statue": {
+   "label": "Guardian statue",
+   "group": "glade",
+   "spacing": 3,
+   "height": 3.38,
+   "radius": 0.75,
+   "triangles": 2364,
+   "source": "glade_statue",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 133020
+  },
+  "glade_obelisk": {
+   "label": "Rune stone",
+   "group": "glade",
+   "spacing": 3,
+   "height": 3.25,
+   "radius": 0.75,
+   "triangles": 1648,
+   "source": "glade_obelisk",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 95132,
+   "light": {
+    "watts": 300.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 3.6
+   }
+  },
+  "glade_well": {
+   "label": "Well",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.88,
+   "radius": 1.25,
+   "triangles": 4336,
+   "source": "glade_well",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 243804
+  },
+  "glade_path": {
+   "label": "Stepping stones",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.12,
+   "radius": 1.38,
+   "triangles": 930,
+   "source": "glade_path",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 54084
+  },
+  "glade_brazier": {
+   "label": "Brazier",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.88,
+   "radius": 0.44,
+   "triangles": 458,
+   "source": "glade_brazier",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30400,
+   "light": {
+    "watts": 700.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 1.5
+   }
+  },
+  "glade_torch": {
+   "label": "Torch",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.25,
+   "radius": 0.31,
+   "triangles": 490,
+   "source": "glade_torch",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 34368,
+   "light": {
+    "watts": 800.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 2.8
+   }
+  },
+  "glade_lantern_post": {
+   "label": "Lantern post",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.62,
+   "radius": 0.69,
+   "triangles": 828,
+   "source": "glade_lantern_post",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 52196,
+   "light": {
+    "watts": 600.0,
+    "color": [
+     1.0,
+     0.7,
+     0.35
+    ],
+    "height": 1.7
+   }
+  },
+  "glade_campfire": {
+   "label": "Campfire",
+   "group": "glade",
+   "spacing": 4,
+   "height": 0.88,
+   "radius": 0.88,
+   "triangles": 982,
+   "source": "glade_campfire",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 61356,
+   "light": {
+    "watts": 1000.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_crystal": {
+   "label": "Crystals",
+   "group": "glade",
+   "spacing": 3,
+   "height": 2.5,
+   "radius": 1.06,
+   "triangles": 2368,
+   "source": "glade_crystal",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 132624,
+   "light": {
+    "watts": 400.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 3.0
+   }
+  },
+  "glade_crystal_small": {
+   "label": "Small crystals",
+   "group": "glade",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.62,
+   "triangles": 514,
+   "source": "glade_crystal_small",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 32472
+  },
+  "glade_forge": {
+   "label": "Forge",
+   "group": "glade",
+   "spacing": 5,
+   "height": 3.25,
+   "radius": 1.75,
+   "triangles": 3462,
+   "source": "glade_forge",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 197544,
+   "light": {
+    "watts": 600.0,
+    "color": [
+     1.0,
+     0.55,
+     0.22
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_alchemy": {
+   "label": "Alchemy bench",
+   "group": "glade",
+   "spacing": 5,
+   "height": 1.88,
+   "radius": 1.94,
+   "triangles": 3076,
+   "source": "glade_alchemy",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 175184,
+   "light": {
+    "watts": 350.0,
+    "color": [
+     0.62,
+     0.42,
+     1.0
+    ],
+    "height": 2.0
+   }
+  },
+  "glade_library": {
+   "label": "Library",
+   "group": "glade",
+   "spacing": 4,
+   "height": 2.5,
+   "radius": 1.5,
+   "triangles": 4516,
+   "source": "glade_library",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 253716,
+   "light": {
+    "watts": 250.0,
+    "color": [
+     1.0,
+     0.7,
+     0.35
+    ],
+    "height": 1.6
+   }
+  },
+  "glade_scrying": {
+   "label": "Scrying orb",
+   "group": "glade",
+   "spacing": 3,
+   "height": 2.12,
+   "radius": 0.87,
+   "triangles": 1704,
+   "source": "glade_scrying",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 98160,
+   "light": {
+    "watts": 500.0,
+    "color": [
+     0.62,
+     0.42,
+     1.0
+    ],
+    "height": 2.3
+   }
+  },
+  "glade_map_table": {
+   "label": "Map table",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.88,
+   "radius": 1.01,
+   "triangles": 1328,
+   "source": "glade_map_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 76816
+  },
+  "glade_meeting_stones": {
+   "label": "Meeting stones",
+   "group": "glade",
+   "spacing": 6,
+   "height": 0.75,
+   "radius": 2.12,
+   "triangles": 2592,
+   "source": "glade_meeting_stones",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 146952,
+   "light": {
+    "watts": 400.0,
+    "color": [
+     0.3,
+     1.0,
+     0.92
+    ],
+    "height": 0.6
+   }
+  },
+  "glade_tent": {
+   "label": "Tent",
+   "group": "glade",
+   "spacing": 5,
+   "height": 2.38,
+   "radius": 1.75,
+   "triangles": 7612,
+   "source": "glade_tent",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 417788
+  },
+  "glade_banner": {
+   "label": "Banner",
+   "group": "glade",
+   "spacing": 3,
+   "height": 3.38,
+   "radius": 0.63,
+   "triangles": 948,
+   "source": "glade_banner",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 58572
+  },
+  "glade_signpost": {
+   "label": "Signpost",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.88,
+   "radius": 0.75,
+   "triangles": 472,
+   "source": "glade_signpost",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30472
+  },
+  "glade_chest": {
+   "label": "Chest",
+   "group": "glade",
+   "spacing": 2,
+   "height": 0.88,
+   "radius": 0.63,
+   "triangles": 616,
+   "source": "glade_chest",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 37156
+  },
+  "glade_supplies": {
+   "label": "Supplies",
+   "group": "glade",
+   "spacing": 3,
+   "height": 0.88,
+   "radius": 1.26,
+   "triangles": 1124,
+   "source": "glade_supplies",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 64580
+  },
+  "glade_weapon_rack": {
+   "label": "Weapon rack",
+   "group": "glade",
+   "spacing": 3,
+   "height": 1.88,
+   "radius": 1.25,
+   "triangles": 1336,
+   "source": "glade_weapon_rack",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 76728
+  },
+  "glade_fence": {
+   "label": "Fence",
+   "group": "glade",
+   "spacing": 2.2,
+   "height": 0.88,
+   "radius": 1.13,
+   "triangles": 536,
+   "source": "glade_fence",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 31384
+  },
+  "retro_wall_plain": {
+   "label": "Wall",
+   "group": "retro",
+   "spacing": 8,
+   "height": 5.0,
+   "radius": 4.0,
+   "triangles": 11104,
+   "source": "retro_wall_plain",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 602084,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "retro_wall_window": {
+   "label": "Window wall",
+   "group": "retro",
+   "spacing": 8,
+   "height": 5.0,
+   "radius": 4.0,
+   "triangles": 11568,
+   "source": "retro_wall_window",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 628576,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "retro_wall_door": {
+   "label": "Door wall",
+   "group": "retro",
+   "spacing": 8,
+   "height": 5.0,
+   "radius": 4.0,
+   "triangles": 11244,
+   "source": "retro_wall_door",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 613984,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "retro_wall_posters": {
+   "label": "Poster wall",
+   "group": "retro",
+   "spacing": 8,
+   "height": 5.0,
+   "radius": 4.0,
+   "triangles": 11104,
+   "source": "retro_wall_posters",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 606464,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "retro_wall_short": {
+   "label": "Short wall",
+   "group": "retro",
+   "spacing": 4,
+   "height": 5.0,
+   "radius": 2.0,
+   "triangles": 5792,
+   "source": "retro_wall_short",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 315228,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "retro_wall_corner": {
+   "label": "Wall corner",
+   "group": "retro",
+   "spacing": 2,
+   "height": 5.0,
+   "radius": 0.19,
+   "triangles": 978,
+   "source": "retro_wall_corner",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 55284,
+   "joints": [
+    [
+     -0.1875,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     0.0,
+     -0.1875,
+     0.0,
+     -1.0,
+     0
+    ],
+    [
+     0.0,
+     0.1875,
+     0.0,
+     1.0,
+     0
+    ],
+    [
+     0.1875,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "retro_partition": {
+   "label": "Partition",
+   "group": "retro",
+   "spacing": 4,
+   "height": 1.5,
+   "radius": 2.0,
+   "triangles": 1760,
+   "source": "retro_partition",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 96784,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "retro_desk_single": {
+   "label": "Desk",
+   "group": "retro",
+   "spacing": 3,
+   "height": 1.38,
+   "radius": 0.75,
+   "triangles": 1070,
+   "source": "retro_desk_single",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 65280
+  },
+  "retro_desk_row": {
+   "label": "Desk row",
+   "group": "retro",
+   "spacing": 6,
+   "height": 1.38,
+   "radius": 2.38,
+   "triangles": 3210,
+   "source": "retro_desk_row",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 182828,
+   "light": {
+    "watts": 90.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.6
+   }
+  },
+  "retro_cubicles": {
+   "label": "Cubicles",
+   "group": "retro",
+   "spacing": 6,
+   "height": 1.25,
+   "radius": 2.25,
+   "triangles": 7124,
+   "source": "retro_cubicles",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 395748,
+   "light": {
+    "watts": 140.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.7
+   }
+  },
+  "retro_boss_desk": {
+   "label": "Boss desk",
+   "group": "retro",
+   "spacing": 4,
+   "height": 1.38,
+   "radius": 1.38,
+   "triangles": 2268,
+   "source": "retro_boss_desk",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 132184,
+   "light": {
+    "watts": 120.0,
+    "color": [
+     0.8,
+     1.0,
+     0.7
+    ],
+    "height": 1.7
+   }
+  },
+  "retro_office_chair": {
+   "label": "Office chair",
+   "group": "retro",
+   "spacing": 1.5,
+   "height": 1.0,
+   "radius": 0.25,
+   "triangles": 234,
+   "source": "retro_office_chair",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 15060
+  },
+  "retro_meeting_table": {
+   "label": "Meeting table",
+   "group": "retro",
+   "spacing": 6,
+   "height": 1.0,
+   "radius": 1.5,
+   "triangles": 3100,
+   "source": "retro_meeting_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 168884
+  },
+  "retro_whiteboard": {
+   "label": "Whiteboard",
+   "group": "retro",
+   "spacing": 3,
+   "height": 1.88,
+   "radius": 1.13,
+   "triangles": 1068,
+   "source": "retro_whiteboard",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 62744
+  },
+  "retro_reception": {
+   "label": "Reception desk",
+   "group": "retro",
+   "spacing": 5,
+   "height": 1.38,
+   "radius": 1.76,
+   "triangles": 2522,
+   "source": "retro_reception",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 145384,
+   "light": {
+    "watts": 200.0,
+    "color": [
+     1.0,
+     0.76,
+     0.5
+    ],
+    "height": 1.6
+   }
+  },
+  "retro_mainframe": {
+   "label": "Mainframe",
+   "group": "retro",
+   "spacing": 4,
+   "height": 2.12,
+   "radius": 1.75,
+   "triangles": 2806,
+   "source": "retro_mainframe",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 159192,
+   "light": {
+    "watts": 120.0,
+    "color": [
+     0.4,
+     1.0,
+     0.5
+    ],
+    "height": 2.3
+   }
+  },
+  "retro_printer": {
+   "label": "Printer",
+   "group": "retro",
+   "spacing": 2,
+   "height": 1.25,
+   "radius": 0.5,
+   "triangles": 612,
+   "source": "retro_printer",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 38408
+  },
+  "retro_copier": {
+   "label": "Copier",
+   "group": "retro",
+   "spacing": 2.5,
+   "height": 1.25,
+   "radius": 0.75,
+   "triangles": 848,
+   "source": "retro_copier",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 50456
+  },
+  "retro_tv": {
+   "label": "Television",
+   "group": "retro",
+   "spacing": 2.5,
+   "height": 1.62,
+   "radius": 0.75,
+   "triangles": 864,
+   "source": "retro_tv",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 53944,
+   "light": {
+    "watts": 140.0,
+    "color": [
+     0.6,
+     0.75,
+     1.0
+    ],
+    "height": 1.8
+   }
+  },
+  "retro_arcade": {
+   "label": "Arcade cabinet",
+   "group": "retro",
+   "spacing": 2,
+   "height": 2.0,
+   "radius": 0.5,
+   "triangles": 1224,
+   "source": "retro_arcade",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 73696,
+   "light": {
+    "watts": 160.0,
+    "color": [
+     0.4,
+     0.6,
+     1.0
+    ],
+    "height": 2.2
+   }
+  },
+  "retro_vending": {
+   "label": "Vending machine",
+   "group": "retro",
+   "spacing": 2,
+   "height": 2.0,
+   "radius": 0.56,
+   "triangles": 1150,
+   "source": "retro_vending",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 71876,
+   "light": {
+    "watts": 200.0,
+    "color": [
+     1.0,
+     0.9,
+     0.7
+    ],
+    "height": 2.2
+   }
+  },
+  "retro_table_football": {
+   "label": "Table football",
+   "group": "retro",
+   "spacing": 4,
+   "height": 0.88,
+   "radius": 1.01,
+   "triangles": 1416,
+   "source": "retro_table_football",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 81984
+  },
+  "retro_coffee_corner": {
+   "label": "Coffee corner",
+   "group": "retro",
+   "spacing": 5,
+   "height": 1.88,
+   "radius": 1.88,
+   "triangles": 2414,
+   "source": "retro_coffee_corner",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 138848,
+   "light": {
+    "watts": 220.0,
+    "color": [
+     1.0,
+     0.76,
+     0.5
+    ],
+    "height": 2.1
+   }
+  },
+  "retro_water_cooler": {
+   "label": "Water cooler",
+   "group": "retro",
+   "spacing": 1.5,
+   "height": 1.5,
+   "radius": 0.25,
+   "triangles": 384,
+   "source": "retro_water_cooler",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 24408
+  },
+  "retro_sofa": {
+   "label": "Sofa",
+   "group": "retro",
+   "spacing": 3,
+   "height": 1.0,
+   "radius": 1.12,
+   "triangles": 1068,
+   "source": "retro_sofa",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 60572
+  },
+  "retro_armchair": {
+   "label": "Armchair",
+   "group": "retro",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.56,
+   "triangles": 646,
+   "source": "retro_armchair",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 37352
+  },
+  "retro_coffee_table": {
+   "label": "Coffee table",
+   "group": "retro",
+   "spacing": 2,
+   "height": 0.5,
+   "radius": 0.62,
+   "triangles": 392,
+   "source": "retro_coffee_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 24356
+  },
+  "retro_rug": {
+   "label": "Rug",
+   "group": "retro",
+   "spacing": 4,
+   "height": 0.12,
+   "radius": 0.5,
+   "triangles": 928,
+   "source": "retro_rug",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 52544
+  },
+  "retro_rug_large": {
+   "label": "Large rug",
+   "group": "retro",
+   "spacing": 6,
+   "height": 0.12,
+   "radius": 0.5,
+   "triangles": 2512,
+   "source": "retro_rug_large",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 138100
+  },
+  "retro_bookshelf": {
+   "label": "Bookshelf",
+   "group": "retro",
+   "spacing": 2.5,
+   "height": 2.12,
+   "radius": 1.0,
+   "triangles": 2592,
+   "source": "retro_bookshelf",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 148148
+  },
+  "retro_filing": {
+   "label": "Filing cabinets",
+   "group": "retro",
+   "spacing": 2.5,
+   "height": 1.5,
+   "radius": 0.88,
+   "triangles": 1268,
+   "source": "retro_filing",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 75196
+  },
+  "retro_lockers": {
+   "label": "Lockers",
+   "group": "retro",
+   "spacing": 2.5,
+   "height": 1.88,
+   "radius": 1.0,
+   "triangles": 1420,
+   "source": "retro_lockers",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 80112
+  },
+  "retro_boxes": {
+   "label": "Boxes",
+   "group": "retro",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.75,
+   "triangles": 704,
+   "source": "retro_boxes",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 39760
+  },
+  "retro_bin": {
+   "label": "Bin",
+   "group": "retro",
+   "spacing": 1,
+   "height": 0.5,
+   "radius": 0.25,
+   "triangles": 142,
+   "source": "retro_bin",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 9376
+  },
+  "retro_plant": {
+   "label": "Pot plant",
+   "group": "retro",
+   "spacing": 1.5,
+   "height": 1.25,
+   "radius": 0.5,
+   "triangles": 776,
+   "source": "retro_plant",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 45044
+  },
+  "retro_plant_tall": {
+   "label": "Tall plant",
+   "group": "retro",
+   "spacing": 2,
+   "height": 2.25,
+   "radius": 0.75,
+   "triangles": 2050,
+   "source": "retro_plant_tall",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 115280
+  },
+  "retro_planter": {
+   "label": "Flower box",
+   "group": "retro",
+   "spacing": 2.5,
+   "height": 1.0,
+   "radius": 1.12,
+   "triangles": 1052,
+   "source": "retro_planter",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 62776
+  },
+  "retro_cactus": {
+   "label": "Cactus",
+   "group": "retro",
+   "spacing": 1.2,
+   "height": 1.0,
+   "radius": 0.38,
+   "triangles": 288,
+   "source": "retro_cactus",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 18660
+  },
+  "retro_floor_lamp": {
+   "label": "Floor lamp",
+   "group": "retro",
+   "spacing": 3,
+   "height": 1.88,
+   "radius": 0.31,
+   "triangles": 360,
+   "source": "retro_floor_lamp",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 21964,
+   "light": {
+    "watts": 420.0,
+    "color": [
+     1.0,
+     0.8,
+     0.5
+    ],
+    "height": 2.1
+   }
+  },
+  "toy_floor_white": {
+   "label": "White floor",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 12,
+   "source": "toy_floor_white",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1672,
+   "modular": true
+  },
+  "toy_floor_purple": {
+   "label": "Purple floor",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 12,
+   "source": "toy_floor_purple",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1676,
+   "modular": true
+  },
+  "toy_floor_teal": {
+   "label": "Teal floor",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 12,
+   "source": "toy_floor_teal",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1672,
+   "modular": true
+  },
+  "toy_floor_coral": {
+   "label": "Coral floor",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 12,
+   "source": "toy_floor_coral",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1652,
+   "modular": true
+  },
+  "toy_floor_yellow": {
+   "label": "Yellow floor",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 12,
+   "source": "toy_floor_yellow",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1656,
+   "modular": true
+  },
+  "toy_floor_blue": {
+   "label": "Blue floor",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 12,
+   "source": "toy_floor_blue",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1652,
+   "modular": true
+  },
+  "toy_floor_green": {
+   "label": "Green floor",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 0.5,
+   "triangles": 12,
+   "source": "toy_floor_green",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 1672,
+   "modular": true
+  },
+  "toy_wall": {
+   "label": "Low wall",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.905,
+   "radius": 2.0,
+   "triangles": 216,
+   "source": "toy_wall",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 5016,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "toy_wall_short": {
+   "label": "Short low wall",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.905,
+   "radius": 1.0,
+   "triangles": 216,
+   "source": "toy_wall_short",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 5028,
+   "joints": [
+    [
+     -1.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     1.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "toy_wall_glass": {
+   "label": "Low glass wall",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.905,
+   "radius": 2.0,
+   "triangles": 552,
+   "source": "toy_wall_glass",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13200,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "toy_wall_post": {
+   "label": "Wall post",
+   "group": "toy",
+   "spacing": 1,
+   "height": 0.965,
+   "radius": 0.2,
+   "triangles": 216,
+   "source": "toy_wall_post",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 5100,
+   "joints": [
+    [
+     -0.17,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     0.0,
+     -0.17,
+     0.0,
+     -1.0,
+     0
+    ],
+    [
+     0.0,
+     0.17,
+     0.0,
+     1.0,
+     0
+    ],
+    [
+     0.17,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "toy_desk_single": {
+   "label": "Desk",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.98,
+   "radius": 0.7,
+   "triangles": 1484,
+   "source": "toy_desk_single",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30976
+  },
+  "toy_desk_pod": {
+   "label": "Desk pod",
+   "group": "toy",
+   "spacing": 5,
+   "height": 0.98,
+   "radius": 1.46,
+   "triangles": 6044,
+   "source": "toy_desk_pod",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 114760,
+   "light": {
+    "watts": 110.0,
+    "color": [
+     0.6,
+     0.8,
+     1.0
+    ],
+    "height": 1.2
+   }
+  },
+  "toy_desk_long": {
+   "label": "Desk row",
+   "group": "toy",
+   "spacing": 5,
+   "height": 0.98,
+   "radius": 2.21,
+   "triangles": 4452,
+   "source": "toy_desk_long",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 86364
+  },
+  "toy_drawing_table": {
+   "label": "Drawing table",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 1.0,
+   "radius": 0.72,
+   "triangles": 1292,
+   "source": "toy_drawing_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30972
+  },
+  "toy_meeting_table": {
+   "label": "Meeting table",
+   "group": "toy",
+   "spacing": 5,
+   "height": 0.9,
+   "radius": 2.23,
+   "triangles": 4432,
+   "source": "toy_meeting_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 82812
+  },
+  "toy_whiteboard": {
+   "label": "Easel board",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.97,
+   "radius": 0.6,
+   "triangles": 972,
+   "source": "toy_whiteboard",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 19900
+  },
+  "toy_screen": {
+   "label": "Screen",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.99,
+   "radius": 0.65,
+   "triangles": 972,
+   "source": "toy_screen",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 19904,
+   "light": {
+    "watts": 100.0,
+    "color": [
+     0.6,
+     0.8,
+     1.0
+    ],
+    "height": 1.2
+   }
+  },
+  "toy_reception": {
+   "label": "Reception desk",
+   "group": "toy",
+   "spacing": 5,
+   "height": 0.99,
+   "radius": 1.86,
+   "triangles": 4140,
+   "source": "toy_reception",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 82256
+  },
+  "toy_printer": {
+   "label": "Printer",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.93,
+   "radius": 0.37,
+   "triangles": 540,
+   "source": "toy_printer",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 11892
+  },
+  "toy_server": {
+   "label": "Server",
+   "group": "toy",
+   "spacing": 1.5,
+   "height": 1.0,
+   "radius": 0.41,
+   "triangles": 852,
+   "source": "toy_server",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 26544
+  },
+  "toy_boxes": {
+   "label": "Boxes",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.83,
+   "radius": 0.63,
+   "triangles": 360,
+   "source": "toy_boxes",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 9844
+  },
+  "toy_sofa": {
+   "label": "Sofa",
+   "group": "toy",
+   "spacing": 3,
+   "height": 0.78,
+   "radius": 1.05,
+   "triangles": 716,
+   "source": "toy_sofa",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 16000
+  },
+  "toy_armchair": {
+   "label": "Armchair",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.78,
+   "radius": 0.52,
+   "triangles": 716,
+   "source": "toy_armchair",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 16008
+  },
+  "toy_beanbag": {
+   "label": "Beanbag",
+   "group": "toy",
+   "spacing": 1.5,
+   "height": 0.83,
+   "radius": 0.55,
+   "triangles": 640,
+   "source": "toy_beanbag",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 12748
+  },
+  "toy_coffee_table": {
+   "label": "Coffee table",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.5,
+   "radius": 0.55,
+   "triangles": 1144,
+   "source": "toy_coffee_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 24332
+  },
+  "toy_rug_round": {
+   "label": "Round rug",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.04,
+   "radius": 0.5,
+   "triangles": 3820,
+   "source": "toy_rug_round",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 62988
+  },
+  "toy_bookcase_low": {
+   "label": "Low bookcase",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 1.0,
+   "radius": 0.85,
+   "triangles": 3912,
+   "source": "toy_bookcase_low",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 74856
+  },
+  "toy_bookcase_tall": {
+   "label": "Tall bookcase",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 2.0,
+   "radius": 0.85,
+   "triangles": 7608,
+   "source": "toy_bookcase_tall",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 141440
+  },
+  "toy_kitchen": {
+   "label": "Kitchen counter",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.99,
+   "radius": 1.56,
+   "triangles": 1776,
+   "source": "toy_kitchen",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 35960
+  },
+  "toy_cafe_table": {
+   "label": "Caf\u00e9 table",
+   "group": "toy",
+   "spacing": 3,
+   "height": 0.86,
+   "radius": 0.9,
+   "triangles": 2612,
+   "source": "toy_cafe_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 49808
+  },
+  "toy_fridge": {
+   "label": "Fridge",
+   "group": "toy",
+   "spacing": 1.5,
+   "height": 1.69,
+   "radius": 0.4,
+   "triangles": 456,
+   "source": "toy_fridge",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 11964
+  },
+  "toy_ping_pong": {
+   "label": "Table tennis",
+   "group": "toy",
+   "spacing": 5,
+   "height": 0.93,
+   "radius": 1.38,
+   "triangles": 1076,
+   "source": "toy_ping_pong",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 24960
+  },
+  "toy_table_football": {
+   "label": "Table football",
+   "group": "toy",
+   "spacing": 3,
+   "height": 0.99,
+   "radius": 0.75,
+   "triangles": 1384,
+   "source": "toy_table_football",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 28672
+  },
+  "toy_arcade": {
+   "label": "Arcade cabinet",
+   "group": "toy",
+   "spacing": 1.5,
+   "height": 1.7,
+   "radius": 0.52,
+   "triangles": 1516,
+   "source": "toy_arcade",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 33060,
+   "light": {
+    "watts": 140.0,
+    "color": [
+     0.6,
+     0.8,
+     1.0
+    ],
+    "height": 1.9
+   }
+  },
+  "toy_basketball": {
+   "label": "Basketball hoop",
+   "group": "toy",
+   "spacing": 3,
+   "height": 3.35,
+   "radius": 0.76,
+   "triangles": 1392,
+   "source": "toy_basketball",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 31064
+  },
+  "toy_treadmill": {
+   "label": "Treadmill",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.99,
+   "radius": 0.85,
+   "triangles": 768,
+   "source": "toy_treadmill",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 18156
+  },
+  "toy_exercise_bike": {
+   "label": "Exercise bike",
+   "group": "toy",
+   "spacing": 2,
+   "height": 1.0,
+   "radius": 0.55,
+   "triangles": 756,
+   "source": "toy_exercise_bike",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 16592
+  },
+  "toy_weights": {
+   "label": "Weights rack",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.87,
+   "radius": 0.75,
+   "triangles": 4112,
+   "source": "toy_weights",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 69328
+  },
+  "toy_yoga_mat": {
+   "label": "Yoga mat",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.6,
+   "radius": 0.91,
+   "triangles": 640,
+   "source": "toy_yoga_mat",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 14312
+  },
+  "toy_plant": {
+   "label": "Pot plant",
+   "group": "toy",
+   "spacing": 1.5,
+   "height": 0.96,
+   "radius": 0.38,
+   "triangles": 680,
+   "source": "toy_plant",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 15960
+  },
+  "toy_tree": {
+   "label": "Lollipop tree",
+   "group": "toy",
+   "spacing": 4,
+   "height": 3.99,
+   "radius": 1.28,
+   "triangles": 840,
+   "source": "toy_tree",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 17768
+  },
+  "toy_planter": {
+   "label": "Flower box",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.81,
+   "radius": 1.01,
+   "triangles": 908,
+   "source": "toy_planter",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 20744
+  },
+  "toy_flowerbed": {
+   "label": "Flower bed",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.47,
+   "radius": 0.9,
+   "triangles": 1756,
+   "source": "toy_flowerbed",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 36520
+  },
+  "toy_bench": {
+   "label": "Bench",
+   "group": "toy",
+   "spacing": 2.5,
+   "height": 0.87,
+   "radius": 0.9,
+   "triangles": 864,
+   "source": "toy_bench",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 17812
+  },
+  "toy_fountain": {
+   "label": "Fountain",
+   "group": "toy",
+   "spacing": 4,
+   "height": 0.98,
+   "radius": 1.3,
+   "triangles": 1748,
+   "source": "toy_fountain",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 33904,
+   "light": {
+    "watts": 120.0,
+    "color": [
+     0.4,
+     0.75,
+     1.0
+    ],
+    "height": 1.25
+   }
+  },
+  "toy_lamp": {
+   "label": "Floor lamp",
+   "group": "toy",
+   "spacing": 3,
+   "height": 1.81,
+   "radius": 0.29,
+   "triangles": 756,
+   "source": "toy_lamp",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 16564,
+   "light": {
+    "watts": 420.0,
+    "color": [
+     1.0,
+     0.8,
+     0.5
+    ],
+    "height": 2.0
+   }
+  },
+  "toy_lamp_low": {
+   "label": "Globe lamp",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.89,
+   "radius": 0.3,
+   "triangles": 792,
+   "source": "toy_lamp_low",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 16440,
+   "light": {
+    "watts": 520.0,
+    "color": [
+     1.0,
+     0.8,
+     0.5
+    ],
+    "height": 1.1
+   }
+  },
+  "toy_flag": {
+   "label": "Flag",
+   "group": "toy",
+   "spacing": 2,
+   "height": 3.11,
+   "radius": 0.62,
+   "triangles": 528,
+   "source": "toy_flag",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13592
+  },
+  "toy_rocket": {
+   "label": "Rocket",
+   "group": "toy",
+   "spacing": 5,
+   "height": 5.9,
+   "radius": 1.68,
+   "triangles": 3384,
+   "source": "toy_rocket",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 66456,
+   "light": {
+    "watts": 260.0,
+    "color": [
+     0.6,
+     0.8,
+     1.0
+    ],
+    "height": 6.3
+   }
+  },
+  "toy_duck": {
+   "label": "Rubber duck",
+   "group": "toy",
+   "spacing": 2,
+   "height": 0.99,
+   "radius": 0.69,
+   "triangles": 1028,
+   "source": "toy_duck",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 21592
+  },
   "car_sedan": {
    "label": "Sedan",
    "group": "city",
@@ -3021,6 +5715,106 @@
    "label": "Concrete pavers",
    "source": "concrete_pavers_02",
    "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "clay_planks": {
+   "label": "Oak planks",
+   "source": "made_clay_planks",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "clay_carpet": {
+   "label": "Cream carpet",
+   "source": "made_clay_carpet",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "clay_sage": {
+   "label": "Sage carpet",
+   "source": "made_clay_sage",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "clay_tiles": {
+   "label": "White tiles",
+   "source": "made_clay_tiles",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "plaza_terrazzo": {
+   "label": "Terrazzo",
+   "source": "made_terrazzo",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_grass": {
+   "label": "Pixel grass",
+   "source": "made_glade_grass",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_floor": {
+   "label": "Pixel forest floor",
+   "source": "made_glade_floor",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_stone": {
+   "label": "Pixel flagstones",
+   "source": "made_glade_stone",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "glade_dirt": {
+   "label": "Pixel dirt",
+   "source": "made_glade_dirt",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "plaza_glade": {
+   "label": "Pixel paving",
+   "source": "made_glade_paving",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "retro_checker": {
+   "label": "Checkered tiles",
+   "source": "made_retro_checker",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "retro_carpet": {
+   "label": "Office carpet",
+   "source": "made_retro_carpet",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "retro_planks": {
+   "label": "Pixel planks",
+   "source": "made_retro_planks",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "retro_slate": {
+   "label": "Dark tiles",
+   "source": "made_retro_slate",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "plaza_retro": {
+   "label": "Pixel tiles",
+   "source": "made_retro_paving",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "toy_grid": {
+   "label": "Blueprint grid",
+   "source": "made_toy_grid",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "toy_white": {
+   "label": "White floor",
+   "source": "made_toy_white",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "toy_grey": {
+   "label": "Grey floor",
+   "source": "made_toy_grey",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "toy_wood": {
+   "label": "Pale wood",
+   "source": "made_toy_wood",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "plaza_toy": {
+   "label": "White slabs",
+   "source": "made_toy_paving",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
   }
  },
  "skies": {
@@ -3095,6 +5889,18 @@
    "strength": 1.0,
    "source": "yard-env/orbital-dusk",
    "licence": "AGPL-3.0-only (Agent Guild)"
+  },
+  "studio": {
+   "label": "Studio light",
+   "strength": 1.0,
+   "source": "made_studio_day",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "studio_night": {
+   "label": "Studio night",
+   "strength": 1.0,
+   "source": "made_studio_night",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
   }
  },
  "lands": {
@@ -3243,6 +6049,109 @@
      0.025
     ],
     "clear": 0.55
+   }
+  },
+  "clay": {
+   "label": "Clay office",
+   "grounds": [
+    "clay_planks",
+    "clay_carpet",
+    "clay_sage",
+    "clay_tiles"
+   ],
+   "plaza": "plaza_terrazzo",
+   "scale": [
+    2,
+    1,
+    1,
+    1
+   ],
+   "water": {
+    "shallow": [
+     0.012,
+     0.012,
+     0.014
+    ],
+    "deep": [
+     0.012,
+     0.012,
+     0.014
+    ],
+    "clear": 0.0
+   }
+  },
+  "retro": {
+   "label": "Pixel office",
+   "grounds": [
+    "retro_checker",
+    "retro_carpet",
+    "retro_planks",
+    "retro_slate"
+   ],
+   "plaza": "plaza_retro",
+   "scale": [
+    2.6667,
+    2.6667,
+    2.6667,
+    2.6667
+   ],
+   "water": {
+    "shallow": [
+     0.012,
+     0.012,
+     0.014
+    ],
+    "deep": [
+     0.012,
+     0.012,
+     0.014
+    ],
+    "clear": 0.0
+   }
+  },
+  "toy": {
+   "label": "Toy office",
+   "grounds": [
+    "toy_grid",
+    "toy_white",
+    "toy_grey",
+    "toy_wood"
+   ],
+   "plaza": "plaza_toy",
+   "scale": [
+    2.6667,
+    1,
+    1,
+    1
+   ]
+  },
+  "glade": {
+   "label": "Pixel glade",
+   "grounds": [
+    "glade_grass",
+    "glade_floor",
+    "glade_stone",
+    "glade_dirt"
+   ],
+   "plaza": "plaza_glade",
+   "scale": [
+    2.6667,
+    2.6667,
+    2.6667,
+    2.6667
+   ],
+   "water": {
+    "shallow": [
+     0.05,
+     0.3,
+     0.3
+    ],
+    "deep": [
+     0.01,
+     0.1,
+     0.14
+    ],
+    "clear": 0.35
    }
   }
  }

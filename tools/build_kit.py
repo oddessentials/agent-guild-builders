@@ -138,8 +138,83 @@ MODELS = {
     'moon_rock': ('moon_rock_01', None, 'Moon rock', 'rocks', 3),
     'moon_boulder': ('moon_rock_03', None, 'Moon boulder', 'rocks', 6),
 }
-MODULAR = {key for key in MODELS if key.startswith('fort_')} | {'castle_door'}
-JOINS = MODULAR - {'castle_door', 'fort_thick_corner_b', 'fort_walkway_corner_b'}
+# id: (label, scatter spacing in metres), built by tools/build_clay.py
+CLAY = {
+    'clay_wall': ('Wall', 8), 'clay_wall_short': ('Short wall', 4), 'clay_wall_window': ('Window wall', 8), 'clay_wall_door': ('Door wall', 8),
+    'clay_wall_corner': ('Wall corner', 2), 'clay_partition': ('Glass partition', 4), 'clay_column': ('Column', 4),
+    'clay_wall_art': ('Framed prints', 4), 'clay_wall_shelf': ('Wall shelves', 3), 'clay_wall_clock': ('Wall clock', 2),
+    'clay_wall_display': ('Wall display', 4), 'clay_neon_sign': ('Neon sign', 4),
+    'clay_desk_single': ('Desk', 3), 'clay_desk_row': ('Desk row', 6), 'clay_desk_pod': ('Desk pod', 6), 'clay_desk_pod_six': ('Desk pod of six', 7), 'clay_desk_standing': ('Standing desk', 3),
+    'clay_office_chair': ('Office chair', 1.5), 'clay_meeting_table': ('Meeting table', 6), 'clay_whiteboard': ('Whiteboard', 3),
+    'clay_screen': ('Presentation screen', 4), 'clay_reception': ('Reception desk', 6), 'clay_phone_booth': ('Focus booth', 3),
+    'clay_sofa': ('Sofa', 3), 'clay_armchair': ('Armchair', 2), 'clay_coffee_table': ('Coffee table', 2), 'clay_rug': ('Round rug', 4), 'clay_rug_large': ('Large rug', 5),
+    'clay_beanbag': ('Beanbag', 1.5), 'clay_bleachers': ('Stepped seating', 6),
+    'clay_bookshelf': ('Bookshelf', 3), 'clay_cabinet': ('Sideboard', 3), 'clay_server_rack': ('Server rack', 2), 'clay_printer': ('Printer', 2),
+    'clay_kitchen': ('Kitchenette', 5), 'clay_cafe_table': ('Caf\u00e9 table', 3), 'clay_water_cooler': ('Water cooler', 1.5),
+    'clay_plant': ('Office plant', 1.5), 'clay_plant_tall': ('Tall office plant', 2), 'clay_planter': ('Plant divider', 3),
+    'clay_floor_lamp': ('Floor lamp', 3), 'clay_ping_pong': ('Table tennis', 5), 'clay_slide': ('Slide', 7), 'clay_mezzanine': ('Mezzanine', 12),
+}
+# id: (label, scatter spacing in metres), built by tools/build_glade.py
+GLADE = {
+    'glade_tree_oak': ('Oak', 7), 'glade_tree_pine': ('Pine', 5), 'glade_tree_ancient': ('Ancient tree', 12), 'glade_tree_dead': ('Bare tree', 5),
+    'glade_bush': ('Bush', 2.5), 'glade_grass': ('Grass tuft', 1.2), 'glade_flowers': ('Wildflowers', 1.2),
+    'glade_mushrooms': ('Toadstools', 1.5), 'glade_glow_mushrooms': ('Glowing mushrooms', 1.5),
+    'glade_rock': ('Rock', 3), 'glade_boulder': ('Mossy boulder', 4), 'glade_log': ('Fallen log', 4), 'glade_stump': ('Stump', 3),
+    'glade_dais': ('Rune dais', 8), 'glade_shrine': ('Crystal shrine', 9), 'glade_portal': ('Portal arch', 5), 'glade_tower': ('Ruined tower', 6),
+    'glade_wall_ruin': ('Ruined wall', 5), 'glade_pillar': ('Pillar', 2), 'glade_pillar_broken': ('Broken pillar', 3),
+    'glade_statue': ('Guardian statue', 3), 'glade_obelisk': ('Rune stone', 3), 'glade_well': ('Well', 4), 'glade_path': ('Stepping stones', 3),
+    'glade_brazier': ('Brazier', 3), 'glade_torch': ('Torch', 4), 'glade_lantern_post': ('Lantern post', 4), 'glade_campfire': ('Campfire', 4),
+    'glade_crystal': ('Crystals', 3), 'glade_crystal_small': ('Small crystals', 2),
+    'glade_forge': ('Forge', 5), 'glade_alchemy': ('Alchemy bench', 5), 'glade_library': ('Library', 4), 'glade_scrying': ('Scrying orb', 3),
+    'glade_map_table': ('Map table', 3), 'glade_meeting_stones': ('Meeting stones', 6),
+    'glade_tent': ('Tent', 5), 'glade_banner': ('Banner', 3), 'glade_signpost': ('Signpost', 3), 'glade_chest': ('Chest', 2),
+    'glade_supplies': ('Supplies', 3), 'glade_weapon_rack': ('Weapon rack', 3), 'glade_fence': ('Fence', 2.2),
+}
+# id: (label, scatter spacing in metres), built by tools/build_retro.py
+RETRO = {
+    'retro_wall_plain': ('Wall', 8), 'retro_wall_window': ('Window wall', 8), 'retro_wall_door': ('Door wall', 8), 'retro_wall_posters': ('Poster wall', 8),
+    'retro_wall_short': ('Short wall', 4), 'retro_wall_corner': ('Wall corner', 2), 'retro_partition': ('Partition', 4),
+    'retro_desk_single': ('Desk', 3), 'retro_desk_row': ('Desk row', 6), 'retro_cubicles': ('Cubicles', 6), 'retro_boss_desk': ('Boss desk', 4),
+    'retro_office_chair': ('Office chair', 1.5), 'retro_meeting_table': ('Meeting table', 6), 'retro_whiteboard': ('Whiteboard', 3),
+    'retro_reception': ('Reception desk', 5),
+    'retro_mainframe': ('Mainframe', 4), 'retro_printer': ('Printer', 2), 'retro_copier': ('Copier', 2.5), 'retro_tv': ('Television', 2.5),
+    'retro_arcade': ('Arcade cabinet', 2), 'retro_vending': ('Vending machine', 2), 'retro_table_football': ('Table football', 4),
+    'retro_coffee_corner': ('Coffee corner', 5), 'retro_water_cooler': ('Water cooler', 1.5),
+    'retro_sofa': ('Sofa', 3), 'retro_armchair': ('Armchair', 2), 'retro_coffee_table': ('Coffee table', 2), 'retro_rug': ('Rug', 4),
+    'retro_rug_large': ('Large rug', 6),
+    'retro_bookshelf': ('Bookshelf', 2.5), 'retro_filing': ('Filing cabinets', 2.5), 'retro_lockers': ('Lockers', 2.5), 'retro_boxes': ('Boxes', 2),
+    'retro_bin': ('Bin', 1),
+    'retro_plant': ('Pot plant', 1.5), 'retro_plant_tall': ('Tall plant', 2), 'retro_planter': ('Flower box', 2.5), 'retro_cactus': ('Cactus', 1.2),
+    'retro_floor_lamp': ('Floor lamp', 3),
+}
+# id: (label, scatter spacing in metres), built by tools/build_toy.py
+TOY = {
+    'toy_floor_white': ('White floor', 4), 'toy_floor_purple': ('Purple floor', 4), 'toy_floor_teal': ('Teal floor', 4), 'toy_floor_coral': ('Coral floor', 4),
+    'toy_floor_yellow': ('Yellow floor', 4), 'toy_floor_blue': ('Blue floor', 4), 'toy_floor_green': ('Green floor', 4),
+    'toy_wall': ('Low wall', 4), 'toy_wall_short': ('Short low wall', 2), 'toy_wall_glass': ('Low glass wall', 4), 'toy_wall_post': ('Wall post', 1),
+    'toy_desk_single': ('Desk', 2.5), 'toy_desk_pod': ('Desk pod', 5), 'toy_desk_long': ('Desk row', 5), 'toy_drawing_table': ('Drawing table', 2.5),
+    'toy_meeting_table': ('Meeting table', 5), 'toy_whiteboard': ('Easel board', 2), 'toy_screen': ('Screen', 2.5), 'toy_reception': ('Reception desk', 5),
+    'toy_printer': ('Printer', 2), 'toy_server': ('Server', 1.5), 'toy_boxes': ('Boxes', 2),
+    'toy_sofa': ('Sofa', 3), 'toy_armchair': ('Armchair', 2), 'toy_beanbag': ('Beanbag', 1.5), 'toy_coffee_table': ('Coffee table', 2),
+    'toy_rug_round': ('Round rug', 4), 'toy_bookcase_low': ('Low bookcase', 2.5), 'toy_bookcase_tall': ('Tall bookcase', 2.5),
+    'toy_kitchen': ('Kitchen counter', 4), 'toy_cafe_table': ('Caf\u00e9 table', 3), 'toy_fridge': ('Fridge', 1.5),
+    'toy_ping_pong': ('Table tennis', 5), 'toy_table_football': ('Table football', 3), 'toy_arcade': ('Arcade cabinet', 1.5), 'toy_basketball': ('Basketball hoop', 3),
+    'toy_treadmill': ('Treadmill', 2.5), 'toy_exercise_bike': ('Exercise bike', 2), 'toy_weights': ('Weights rack', 2.5), 'toy_yoga_mat': ('Yoga mat', 2.5),
+    'toy_plant': ('Pot plant', 1.5), 'toy_tree': ('Lollipop tree', 4), 'toy_planter': ('Flower box', 2.5), 'toy_flowerbed': ('Flower bed', 2.5),
+    'toy_bench': ('Bench', 2.5), 'toy_fountain': ('Fountain', 4),
+    'toy_lamp': ('Floor lamp', 3), 'toy_lamp_low': ('Globe lamp', 2), 'toy_flag': ('Flag', 2), 'toy_rocket': ('Rocket', 5), 'toy_duck': ('Rubber duck', 2),
+}
+TOY_JOINS = {'toy_wall', 'toy_wall_short', 'toy_wall_glass', 'toy_wall_post'}
+TOY_FLOORS = {key for key in TOY if key.startswith('toy_floor_')}
+# Floor coverings have a small footprint, so things can stand on them and be picked there.
+FLAT = TOY_FLOORS | {'toy_rug_round', 'clay_rug', 'clay_rug_large', 'retro_rug', 'retro_rug_large'}
+MADE_SETS = {'clay': CLAY, 'glade': GLADE, 'retro': RETRO, 'toy': TOY}
+RETRO_JOINS = {'retro_wall_plain', 'retro_wall_window', 'retro_wall_door', 'retro_wall_posters', 'retro_wall_short', 'retro_wall_corner', 'retro_partition'}
+CLAY_JOINS = {'clay_wall', 'clay_wall_short', 'clay_wall_window', 'clay_wall_door', 'clay_wall_corner', 'clay_partition'}
+CLAY_FIXED = CLAY_JOINS | {'clay_wall_art', 'clay_wall_shelf', 'clay_wall_clock', 'clay_wall_display', 'clay_neon_sign'}
+FORT = {key for key in MODELS if key.startswith('fort_')}
+MODULAR = FORT | {'castle_door'} | CLAY_FIXED | RETRO_JOINS | TOY_JOINS | TOY_FLOORS
+JOINS = FORT - {'fort_thick_corner_b', 'fort_walkway_corner_b'} | CLAY_JOINS | RETRO_JOINS | TOY_JOINS
 SEATED_GROUPS = {'city', 'medieval', 'gnomes', 'goblins', 'forest', 'space'}
 MADE_HERE = {
     'xmas_tree': ('Christmas tree', 8), 'gift_red': ('Red gift', 2), 'gift_green': ('Green gift', 2), 'gift_pile': ('Pile of gifts', 4),
@@ -226,7 +301,50 @@ LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'cauldron': {'watts': 60.0, 'color': [0.35, 1.0, 0.4], 'height': 1.15},
           'wreath_arch': {'watts': 80.0, 'color': [1.0, 0.72, 0.4], 'height': 3.3},
           'paper_lanterns': {'watts': 70.0, 'color': [1.0, 0.45, 0.2], 'height': 1.9},
-          'stone_lantern': {'watts': 160.0, 'color': [1.0, 0.6, 0.3], 'height': 1.28}}
+          'stone_lantern': {'watts': 160.0, 'color': [1.0, 0.6, 0.3], 'height': 1.28},
+          'glade_brazier': {'watts': 700.0, 'color': [1.0, 0.55, 0.22], 'height': 1.5},
+          'glade_torch': {'watts': 800.0, 'color': [1.0, 0.55, 0.22], 'height': 2.8},
+          'glade_campfire': {'watts': 1000.0, 'color': [1.0, 0.55, 0.22], 'height': 1.6},
+          'glade_lantern_post': {'watts': 600.0, 'color': [1.0, 0.7, 0.35], 'height': 1.7},
+          'glade_crystal': {'watts': 400.0, 'color': [0.3, 1.0, 0.92], 'height': 3.0},
+          'glade_shrine': {'watts': 900.0, 'color': [0.3, 1.0, 0.92], 'height': 5.6},
+          'glade_dais': {'watts': 300.0, 'color': [0.3, 1.0, 0.92], 'height': 1.6},
+          'glade_obelisk': {'watts': 300.0, 'color': [0.3, 1.0, 0.92], 'height': 3.6},
+          'glade_meeting_stones': {'watts': 400.0, 'color': [0.3, 1.0, 0.92], 'height': 0.6},
+          'glade_portal': {'watts': 600.0, 'color': [0.62, 0.42, 1.0], 'height': 6.0},
+          'glade_scrying': {'watts': 500.0, 'color': [0.62, 0.42, 1.0], 'height': 2.3},
+          'glade_alchemy': {'watts': 350.0, 'color': [0.62, 0.42, 1.0], 'height': 2.0},
+          'glade_tower': {'watts': 400.0, 'color': [1.0, 0.55, 0.22], 'height': 3.6},
+          'glade_forge': {'watts': 600.0, 'color': [1.0, 0.55, 0.22], 'height': 1.6},
+          'glade_library': {'watts': 250.0, 'color': [1.0, 0.7, 0.35], 'height': 1.6},
+          'retro_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.8, 0.5], 'height': 2.1},
+          'retro_cubicles': {'watts': 140.0, 'color': [0.72, 0.84, 1.0], 'height': 1.7},
+          'retro_desk_row': {'watts': 90.0, 'color': [0.72, 0.84, 1.0], 'height': 1.6},
+          'retro_mainframe': {'watts': 120.0, 'color': [0.4, 1.0, 0.5], 'height': 2.3},
+          'retro_arcade': {'watts': 160.0, 'color': [0.4, 0.6, 1.0], 'height': 2.2},
+          'retro_vending': {'watts': 200.0, 'color': [1.0, 0.9, 0.7], 'height': 2.2},
+          'retro_tv': {'watts': 140.0, 'color': [0.6, 0.75, 1.0], 'height': 1.8},
+          'retro_coffee_corner': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 2.1},
+          'retro_reception': {'watts': 200.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
+          'retro_boss_desk': {'watts': 120.0, 'color': [0.8, 1.0, 0.7], 'height': 1.7},
+          'toy_lamp': {'watts': 420.0, 'color': [1.0, 0.8, 0.5], 'height': 2.0},
+          'toy_lamp_low': {'watts': 520.0, 'color': [1.0, 0.8, 0.5], 'height': 1.1},
+          'toy_screen': {'watts': 100.0, 'color': [0.6, 0.8, 1.0], 'height': 1.2},
+          'toy_rocket': {'watts': 260.0, 'color': [0.6, 0.8, 1.0], 'height': 6.3},
+          'toy_arcade': {'watts': 140.0, 'color': [0.6, 0.8, 1.0], 'height': 1.9},
+          'toy_desk_pod': {'watts': 110.0, 'color': [0.6, 0.8, 1.0], 'height': 1.2},
+          'toy_fountain': {'watts': 120.0, 'color': [0.4, 0.75, 1.0], 'height': 1.25},
+          'clay_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.72, 0.45], 'height': 1.95},
+          'clay_kitchen': {'watts': 260.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
+          'clay_reception': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
+          'clay_mezzanine': {'watts': 320.0, 'color': [1.0, 0.74, 0.48], 'height': 3.9},
+          'clay_phone_booth': {'watts': 60.0, 'color': [1.0, 0.8, 0.55], 'height': 2.0},
+          'clay_neon_sign': {'watts': 140.0, 'color': [1.0, 0.45, 0.3], 'height': 3.7},
+          'clay_wall_display': {'watts': 160.0, 'color': [0.5, 0.75, 1.0], 'height': 3.45},
+          'clay_screen': {'watts': 120.0, 'color': [0.5, 0.75, 1.0], 'height': 2.4},
+          'clay_desk_pod': {'watts': 110.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3},
+          'clay_desk_pod_six': {'watts': 140.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3},
+          'clay_desk_row': {'watts': 90.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3}}
 GROUNDS = {
     'grass': ('leafy_grass', 'Meadow grass'), 'dirt': ('forest_ground_04', 'Forest floor'),
     'rock': ('rocky_trail', 'Rocky ground'), 'gravel': ('gravel_floor', 'Gravel'),
@@ -244,6 +362,18 @@ GROUNDS = {
     'plaza_panels': ('granite_tile', 'Stone panels'),
     'plaza_sandstone': ('white_sandstone_blocks_02', 'White sandstone'), 'plaza_basalt': ('volcanic_rock_tiles', 'Basalt tiles'),
     'plaza_slate': ('large_grey_tiles', 'Grey flagstones'), 'plaza_concrete': ('concrete_pavers_02', 'Concrete pavers'),
+    'clay_planks': ('made_clay_planks', 'Oak planks'), 'clay_carpet': ('made_clay_carpet', 'Cream carpet'),
+    'clay_sage': ('made_clay_sage', 'Sage carpet'), 'clay_tiles': ('made_clay_tiles', 'White tiles'),
+    'plaza_terrazzo': ('made_terrazzo', 'Terrazzo'),
+    'glade_grass': ('made_glade_grass', 'Pixel grass'), 'glade_floor': ('made_glade_floor', 'Pixel forest floor'),
+    'glade_stone': ('made_glade_stone', 'Pixel flagstones'), 'glade_dirt': ('made_glade_dirt', 'Pixel dirt'),
+    'plaza_glade': ('made_glade_paving', 'Pixel paving'),
+    'retro_checker': ('made_retro_checker', 'Checkered tiles'), 'retro_carpet': ('made_retro_carpet', 'Office carpet'),
+    'retro_planks': ('made_retro_planks', 'Pixel planks'), 'retro_slate': ('made_retro_slate', 'Dark tiles'),
+    'plaza_retro': ('made_retro_paving', 'Pixel tiles'),
+    'toy_grid': ('made_toy_grid', 'Blueprint grid'), 'toy_white': ('made_toy_white', 'White floor'),
+    'toy_grey': ('made_toy_grey', 'Grey floor'), 'toy_wood': ('made_toy_wood', 'Pale wood'),
+    'plaza_toy': ('made_toy_paving', 'White slabs'),
 }
 # A world's four painted grounds and its plaza. Per ground: metres per repeat as a
 # multiple of the land shader's, glow from within, and side projection on steep land.
@@ -260,6 +390,13 @@ LANDS = {
                 'scale': [2, 1.5, 3, 6], 'glow': [0, 0, 0, 9], 'glow_power': [1, 1, 1, 1.6], 'triplanar': True},
     'garden': {'label': 'Garden', 'grounds': ['grass', 'raked', 'mossy_stone', 'pebbles'], 'plaza': 'plaza_slate', 'grass': True,
                'grass_tint': [0.5, 0.78, 0.42], 'water': {'shallow': [0.08, 0.16, 0.1], 'deep': [0.006, 0.03, 0.025], 'clear': 0.55}},
+    'clay': {'label': 'Clay office', 'grounds': ['clay_planks', 'clay_carpet', 'clay_sage', 'clay_tiles'], 'plaza': 'plaza_terrazzo',
+             'scale': [2, 1, 1, 1], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
+    'retro': {'label': 'Pixel office', 'grounds': ['retro_checker', 'retro_carpet', 'retro_planks', 'retro_slate'], 'plaza': 'plaza_retro',
+              'scale': [2.6667, 2.6667, 2.6667, 2.6667], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
+    'toy': {'label': 'Toy office', 'grounds': ['toy_grid', 'toy_white', 'toy_grey', 'toy_wood'], 'plaza': 'plaza_toy', 'scale': [2.6667, 1, 1, 1]},
+    'glade': {'label': 'Pixel glade', 'grounds': ['glade_grass', 'glade_floor', 'glade_stone', 'glade_dirt'], 'plaza': 'plaza_glade',
+              'scale': [2.6667, 2.6667, 2.6667, 2.6667], 'water': {'shallow': [0.05, 0.3, 0.3], 'deep': [0.01, 0.1, 0.14], 'clear': 0.35}},
 }
 SKIES = {
     'day': ('kloofendal_48d_partly_cloudy_puresky', 'Clear day', 0.9),
@@ -274,6 +411,8 @@ SKIES = {
     'mars_dusk': ('made_mars_dusk', 'Mars blue dusk', 0.9),
     'orbit_day': ('yard-env/orbital-day', 'Orbit', 1.0),
     'orbit_dusk': ('yard-env/orbital-dusk', 'Orbit dusk', 1.0),
+    'studio': ('made_studio_day', 'Studio light', 1.0),
+    'studio_night': ('made_studio_night', 'Studio night', 1.0),
 }
 
 
@@ -417,7 +556,14 @@ JOINT_WIDTHS = (2.55, 3.12, 3.54, 4.17)
 # In the piece's own Blender frame: its wall side is x = 0 and it runs to y = -length.
 AUTHORED_JOINTS = {
     'fort_stairs_straight': [((0, 0), (-1, 0), 1), ((0, -14.819), (-1, 0), 1), ((0, -14.819), (0, -1), 0)],
+    'clay_wall_corner': [((0.2, 0), (1, 0), 0), ((-0.2, 0), (-1, 0), 0), ((0, 0.2), (0, 1), 0), ((0, -0.2), (0, -1), 0)],
 }
+AUTHORED_JOINTS['toy_wall_post'] = [((0.17, 0), (1, 0), 0), ((-0.17, 0), (-1, 0), 0), ((0, 0.17), (0, 1), 0), ((0, -0.17), (0, -1), 0)]
+AUTHORED_JOINTS['retro_wall_corner'] = [((0.1875, 0), (1, 0), 0), ((-0.1875, 0), (-1, 0), 0), ((0, 0.1875), (0, 1), 0), ((0, -0.1875), (0, -1), 0)]
+AUTHORED_JOINTS.update({key: [((half, 0), (1, 0), 0), ((-half, 0), (-1, 0), 0)]
+                        for key, half in (('clay_wall', 4), ('clay_wall_window', 4), ('clay_wall_door', 4), ('clay_wall_short', 2), ('clay_partition', 2),
+                                          ('retro_wall_plain', 4), ('retro_wall_window', 4), ('retro_wall_door', 4), ('retro_wall_posters', 4),
+                                          ('retro_wall_short', 2), ('retro_partition', 2), ('toy_wall', 2), ('toy_wall_glass', 2), ('toy_wall_short', 1))})
 TOWER_REACH = 7.0
 
 
@@ -483,6 +629,8 @@ def joints_of(kit_id, parts):
 
 def described(entry, kit_id, spec):
     entry.update({'label': spec[2], 'group': spec[3], 'spacing': spec[4]})
+    if kit_id in FLAT:
+        entry['radius'] = 0.5
     for key, on in (('light', kit_id in LIGHTS), ('modular', kit_id in MODULAR), ('joins', kit_id in JOINS), ('seated', spec[3] in SEATED_GROUPS)):
         entry.pop(key, None)
         if on:
@@ -524,7 +672,7 @@ def export_model(kit_id, spec):
                               export_image_quality=85, export_animations=False, export_cameras=False, export_lights=False)
     size = max(high.z if kit_id in MODULAR else high.z - min(low.z, 0), .001)
     target = TARGET.get(kit_id, round(size, 4 if kit_id in MODULAR else 2))
-    licence = MADE_LICENCE if kit_id in MADE_HERE else GUILD_LICENCE if kit_id in GUILD else LICENCE
+    licence = MADE_LICENCE if kit_id in MADE_HERE or any(kit_id in ids for ids in MADE_SETS.values()) else GUILD_LICENCE if kit_id in GUILD else LICENCE
     entry = {'label': label, 'group': group, 'spacing': spacing, 'height': target,
              'radius': round(max(high.x - low.x, high.y - low.y) / 2 * target / size, 2), 'triangles': tris,
              'source': f'{name} {lod}' if kit_id in GUILD and lod else name, 'licence': licence, 'bytes': out.stat().st_size}
@@ -575,6 +723,8 @@ def main():
     built = json.loads((KIT / 'kit.json').read_text(encoding='utf-8')) if (KIT / 'kit.json').exists() else {}
     kit = {'id': 'meadow', 'title': 'Meadow', 'models': {}, 'grounds': {}, 'skies': {}}
     made = {key: (key, None, label, 'holiday', spacing) for key, (label, spacing) in MADE_HERE.items()}
+    for group, ids in MADE_SETS.items():
+        made.update({key: (key, None, label, group, spacing) for key, (label, spacing) in ids.items()})
     for key, spec in {**MODELS, **made, **GUILD}.items():
         if key in built.get('models', {}) and (KIT / 'models' / f'{key}.glb').exists():
             kit['models'][key] = described(built['models'][key], key, spec)

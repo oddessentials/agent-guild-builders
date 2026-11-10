@@ -1,7 +1,7 @@
 import math, sys
 from pathlib import Path
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 if len(sys.argv) < 3:
     raise SystemExit('Usage: python tools/make_sources.py <output folder> <folders holding Poly Haven sources...>')
@@ -104,6 +104,54 @@ def stars(name):
     flat_maps(name, 0.92)
 
 
+def speckled(rng, colour, amount, falloff=0.4):
+    return np.array(colour, np.float32) + periodic_noise(rng, SIZE, falloff)[..., None] * amount
+
+
+def rough_map(name, rough):
+    save_jpg(np.full((256, 256, 3), (0.5, rough, 0.5)), OUT / name / f'{name}_rough_2k.jpg')
+    save_jpg(np.full((256, 256, 3), (0.5, 0.5, 1.0)), OUT / name / f'{name}_nor_gl_2k.jpg')
+
+
+def clay_grounds():
+    rng = np.random.default_rng(20261110)
+    planks = speckled(rng, (0.78, 0.6, 0.42), 0.012)
+    width = SIZE // 16
+    for row in range(16):
+        rows = slice(row * width, (row + 1) * width)
+        cuts = np.sort(rng.choice(np.arange(64, SIZE - 64), 3, replace=False))
+        for a, b in zip(np.r_[0, cuts], np.r_[cuts, SIZE]):
+            planks[rows, a:b] *= 1.0 + rng.uniform(-0.045, 0.045)
+            planks[rows, max(a - 1, 0):a + 1] *= 0.86
+        planks[row * width:row * width + 2] *= 0.86
+    save_jpg(planks.transpose(1, 0, 2), OUT / 'made_clay_planks' / 'made_clay_planks_diff_2k.jpg')
+    rough_map('made_clay_planks', 0.8)
+    save_jpg(speckled(rng, (0.86, 0.81, 0.73), 0.014, 0.2), OUT / 'made_clay_carpet' / 'made_clay_carpet_diff_2k.jpg')
+    rough_map('made_clay_carpet', 0.97)
+    save_jpg(speckled(rng, (0.63, 0.7, 0.6), 0.014, 0.2), OUT / 'made_clay_sage' / 'made_clay_sage_diff_2k.jpg')
+    rough_map('made_clay_sage', 0.97)
+    tiles = speckled(rng, (0.94, 0.92, 0.87), 0.006)
+    side = SIZE // 8
+    for k in range(8):
+        tiles[k * side:k * side + 3] = (0.79, 0.76, 0.71)
+        tiles[:, k * side:k * side + 3] = (0.79, 0.76, 0.71)
+    save_jpg(tiles, OUT / 'made_clay_tiles' / 'made_clay_tiles_diff_2k.jpg')
+    rough_map('made_clay_tiles', 0.45)
+    wide = Image.fromarray(np.clip(speckled(rng, (0.9, 0.86, 0.79), 0.008) * 255.0 + 0.5, 0, 255).astype(np.uint8))
+    draw = ImageDraw.Draw(wide)
+    chips = [(184, 173, 158), (204, 168, 128), (247, 245, 237), (214, 158, 133), (115, 102, 92), (160, 176, 152)]
+    for _ in range(5200):
+        x, y = rng.uniform(0, SIZE, 2)
+        w, h = rng.uniform(3, 13, 2)
+        colour = chips[int(rng.choice(len(chips), p=[0.3, 0.24, 0.24, 0.1, 0.06, 0.06]))]
+        for dx in (-SIZE, 0, SIZE):
+            for dy in (-SIZE, 0, SIZE):
+                draw.ellipse((x + dx - w, y + dy - h, x + dx + w, y + dy + h), fill=colour)
+    (OUT / 'made_terrazzo').mkdir(parents=True, exist_ok=True)
+    wide.save(OUT / 'made_terrazzo' / 'made_terrazzo_diff_2k.jpg', quality=92)
+    rough_map('made_terrazzo', 0.5)
+
+
 def write_hdr(pixels, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     h, w, _ = pixels.shape
@@ -146,12 +194,126 @@ def gradient_sky(name, sun_at, zenith, horizon, ground, halo):
     write_hdr(sky.astype(np.float32), OUT / name / f'{name}_1k.hdr')
 
 
+def pixel_map(name, pixels, rough):
+    big = np.repeat(np.repeat(pixels, SIZE // pixels.shape[0], 0), SIZE // pixels.shape[1], 1)
+    save_jpg(big, OUT / name / f'{name}_diff_2k.jpg')
+    rough_map(name, rough)
+
+
+def scattered(rng, field, shades, noise=0.5):
+    """Picks a shade for each pixel from a smooth field, with ragged borders."""
+    t = (field - field.min()) / (field.max() - field.min()) + rng.uniform(-noise, noise, field.shape) / len(shades)
+    return np.array(shades, np.float32)[np.clip((t * len(shades)).astype(int), 0, len(shades) - 1)]
+
+
+def flagstones(rng, side, wide, tall, shades, mortar, moss):
+    out = np.zeros((side, side, 3), np.float32)
+    for row in range(side // tall):
+        shift = (wide // 2) * (row % 2)
+        for col in range(side // wide):
+            shade = np.array(shades[rng.integers(len(shades))]) * rng.uniform(0.94, 1.06)
+            for y in range(tall):
+                for x in range(wide):
+                    edge = x == 0 or y == 0
+                    pixel = mortar if edge else shade
+                    if rng.random() < (0.3 if edge else 0.04):
+                        pixel = moss[rng.integers(len(moss))]
+                    out[row * tall + y, (col * wide + x + shift) % side] = pixel
+    return out
+
+
+def glade_grounds():
+    rng = np.random.default_rng(20261111)
+    side = 64
+    grass = scattered(rng, periodic_noise(rng, side, 1.6), [(0.12, 0.29, 0.2), (0.16, 0.36, 0.23), (0.21, 0.43, 0.26), (0.28, 0.5, 0.28)])
+    grass[rng.random((side, side)) < 0.02] = (0.42, 0.62, 0.32)
+    grass[rng.random((side, side)) < 0.004] = (0.93, 0.85, 0.45)
+    pixel_map('made_glade_grass', grass, 0.95)
+    floor = scattered(rng, periodic_noise(rng, side, 1.6), [(0.09, 0.19, 0.17), (0.12, 0.24, 0.19), (0.16, 0.27, 0.18)])
+    floor[rng.random((side, side)) < 0.05] = (0.3, 0.22, 0.15)
+    floor[rng.random((side, side)) < 0.02] = (0.42, 0.3, 0.17)
+    pixel_map('made_glade_floor', floor, 0.95)
+    dirt = scattered(rng, periodic_noise(rng, side, 1.4), [(0.23, 0.17, 0.14), (0.3, 0.22, 0.17), (0.37, 0.28, 0.2)])
+    dirt[rng.random((side, side)) < 0.025] = (0.5, 0.48, 0.44)
+    pixel_map('made_glade_dirt', dirt, 0.95)
+    stones = [(0.36, 0.39, 0.4), (0.44, 0.47, 0.47), (0.52, 0.55, 0.53)]
+    mosses = [(0.22, 0.36, 0.21), (0.33, 0.47, 0.24)]
+    pixel_map('made_glade_stone', flagstones(rng, side, 8, 4, stones, (0.17, 0.2, 0.21), mosses), 0.9)
+    pixel_map('made_glade_paving', flagstones(rng, 32, 8, 4, stones, (0.17, 0.2, 0.21), mosses), 0.3)
+
+
+def retro_grounds():
+    rng = np.random.default_rng(20261112)
+    side = 64
+    y, x = np.indices((side, side))
+    checker = np.where((((x // 4) + (y // 4)) % 2 == 0)[..., None], (0.93, 0.86, 0.68), (0.8, 0.67, 0.47)).astype(np.float32)
+    pixel_map('made_retro_checker', checker, 0.6)
+    pixel_map('made_retro_carpet', scattered(rng, rng.uniform(0, 1, (side, side)), [(0.3, 0.38, 0.55), (0.34, 0.43, 0.6), (0.39, 0.48, 0.65)], 0.0), 0.97)
+    planks = np.zeros((side, side, 3), np.float32)
+    for row in range(side // 2):
+        shift = int(rng.integers(0, 16))
+        for col in range(side):
+            board = (col + shift) // 16
+            shade = [(0.6, 0.39, 0.23), (0.66, 0.44, 0.26), (0.55, 0.35, 0.2)][(board + row) % 3]
+            planks[row * 2:row * 2 + 2, col] = (0.4, 0.25, 0.15) if (col + shift) % 16 == 0 else shade
+        planks[row * 2 + 1] *= 0.93
+    pixel_map('made_retro_planks', planks, 0.8)
+    slate = np.where((((x // 4) + (y // 4)) % 2 == 0)[..., None], (0.26, 0.28, 0.36), (0.2, 0.22, 0.3)).astype(np.float32)
+    pixel_map('made_retro_slate', slate, 0.5)
+    paving = np.full((32, 32, 3), (0.62, 0.66, 0.74), np.float32)
+    paving[::8] = paving[:, ::8] = (0.42, 0.46, 0.56)
+    paving[1::8] = paving[:, 1::8] = (0.74, 0.78, 0.85)
+    paving[::8] = (0.42, 0.46, 0.56)
+    paving[:, ::8] = (0.42, 0.46, 0.56)
+    pixel_map('made_retro_paving', paving, 0.3)
+
+
+def toy_grounds():
+    rng = np.random.default_rng(20261113)
+    grid = np.full((SIZE, SIZE, 3), (0.105, 0.12, 0.19), np.float32)
+    metre = SIZE // 8
+    for k in range(8):
+        grid[k * metre:k * metre + 6] = grid[:, k * metre:k * metre + 6] = (0.2, 0.24, 0.36)
+    grid[:6] = (0.2, 0.24, 0.36)
+    grid[:, :6] = (0.2, 0.24, 0.36)
+    save_jpg(grid, OUT / 'made_toy_grid' / 'made_toy_grid_diff_2k.jpg')
+    rough_map('made_toy_grid', 0.7)
+    for name, colour, rough in (('made_toy_white', (0.93, 0.93, 0.95), 0.6), ('made_toy_grey', (0.62, 0.65, 0.72), 0.6), ('made_toy_wood', (0.88, 0.74, 0.54), 0.6)):
+        save_jpg(speckled(rng, colour, 0.004), OUT / name / f'{name}_diff_2k.jpg')
+        rough_map(name, rough)
+    slabs = speckled(rng, (0.93, 0.93, 0.96), 0.004)
+    half = SIZE // 2
+    for k in range(2):
+        slabs[k * half:k * half + 8] = slabs[:, k * half:k * half + 8] = (0.78, 0.79, 0.86)
+    slabs[:8] = (0.78, 0.79, 0.86)
+    slabs[:, :8] = (0.78, 0.79, 0.86)
+    save_jpg(slabs, OUT / 'made_toy_paving' / 'made_toy_paving_diff_2k.jpg')
+    rough_map('made_toy_paving', 0.3)
+
+
+def studio_sky(name, top, fill):
+    """Soft light from overhead, and dark where the Yard's camera sees the sky mirrored in water."""
+    d = directions(1024, 512)
+    up = d[..., 1]
+    overhead = np.clip((up - 0.6) / 0.34, 0, 1)
+    overhead = overhead * overhead * (3 - 2 * overhead)
+    sky = np.array(fill) + (np.array(top) - np.array(fill)) * overhead[..., None]
+    sky = np.where(up[..., None] >= 0, sky, np.array(fill) * 0.5)
+    mirrored = unit((-0.43611949136464423, 0.5508877785658665, -0.7115633806475775))
+    sky = sky * (1 - np.exp((np.clip(d @ mirrored, -1, 1) - 1) / 0.12))[..., None]
+    write_hdr(sky.astype(np.float32), OUT / name / f'{name}_1k.hdr')
+
+
 def main():
     for name, (source, ramp, keep) in GRADED.items():
         graded(name, source, ramp, keep)
         print('made', name, flush=True)
     stars('made_stars')
     raked('made_raked_gravel')
+    clay_grounds()
+    glade_grounds()
+    retro_grounds()
+    toy_grounds()
     print('made made_stars', flush=True)
     gradient_sky('made_mars_day', SUN_LIGHT, [0.42, 0.27, 0.17], [0.98, 0.7, 0.46], [0.3, 0.18, 0.11],
                  [(0.9, 0.06, [1.0, 0.86, 0.7]), (0.25, 0.5, [1.0, 0.86, 0.7])])
@@ -159,6 +321,8 @@ def main():
                  [(1.6, 0.035, [0.35, 0.62, 1.0]), (0.5, 0.2, [0.35, 0.62, 1.0])])
     gradient_sky('made_haze_day', SUN_LIGHT, [0.5, 0.42, 0.36], [0.92, 0.66, 0.44], [0.24, 0.17, 0.13],
                  [(0.6, 0.08, [1.0, 0.8, 0.6]), (0.3, 0.6, [1.0, 0.7, 0.5])])
+    studio_sky('made_studio_day', [2.6, 2.5, 2.3], [0.62, 0.58, 0.52])
+    studio_sky('made_studio_night', [0.42, 0.36, 0.3], [0.1, 0.09, 0.09])
     print('made skies')
 
 
