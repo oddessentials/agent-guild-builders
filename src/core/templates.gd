@@ -16,6 +16,7 @@ const LIST := {
 	"garden": {"label": "Zen Garden", "note": "Raked gravel, koi ponds and stone lanterns under cherry blossom"},
 	"volcano": {"label": "Volcanic Caldera", "note": "Black basalt above glowing rivers of lava"},
 	"salt": {"label": "Salt Flats", "note": "White salt crust and turquoise brine pools below distant peaks"},
+	"clay_office": {"label": "Clay Office", "note": "A sunlit open-plan office in soft clay, set on black glass"},
 }
 
 const LAKE_CENTRE := Vector2(-30.0, -44.0)
@@ -86,6 +87,9 @@ static func create(template: String, base: String, title: String, seed_value: in
 			return doc
 		"salt":
 			_salt(doc, rng, noise)
+			return doc
+		"clay_office":
+			_clay_office(doc, rng)
 			return doc
 		"lakeside":
 			_shape(doc, noise, 7.0, 34.0)
@@ -662,3 +666,146 @@ static func _salt(doc: WorldDoc, rng: Rng, noise: ValueNoise) -> void:
 				kind = 2
 			doc.ground[o] = kind
 	_scatter(doc, rng, noise, ["stone"], 30, 20.0, 120.0, 0.4, 1.0)
+
+static func _stand(doc: WorldDoc, kind: String, x: float, z: float, turn: float) -> bool:
+	var height := float(WorldScene.load_kit().get("models", {}).get(kind, {}).get("height", 1.0))
+	if Clearance.refuse(x, z, doc.height_at(x, z) + height) != "":
+		return false
+	doc.add_thing(kind, x, z, turn, 1.0)
+	return true
+
+static func _pick(rng: Rng, options: Array) -> Variant:
+	return options[int(rng.next() * options.size()) % options.size()]
+
+## An open-plan office with its two near walls cut away. The floor ends in a clean
+## edge because shallow dark water covers the land just outside it.
+static func _clay_office(doc: WorldDoc, rng: Rng) -> void:
+	_surface(doc, "clay")
+	_mood(doc, ["studio", 1.0, 2.6, [1.0, 0.95, 0.88]], ["studio_night", 1.0, 0.35, [0.55, 0.68, 1.0]])
+	doc.data.water_level = -0.12
+	const LEFT := -28.0
+	const BACK := -24.0
+	const RIGHT := 28.0
+	const FRONT := 44.0
+	const SIDEWAYS := PI / 2.0
+	var res := WorldDoc.TERRAIN_RES
+	for j in res:
+		for i in res:
+			var p := WorldDoc.cell_to_world(i, j)
+			var inside := p.x > LEFT - 0.5 and p.x < RIGHT + 0.5 and p.y > BACK - 0.5 and p.y < FRONT + 0.75
+			doc.heights[j * res + i] = 0.0 if inside else -0.4
+	var on_back := BACK + 0.03
+	var on_left := LEFT + 0.03
+
+	_stand(doc, "clay_wall_corner", LEFT - 0.2, BACK - 0.2, 0.0)
+	var back_wall := ["clay_wall", "clay_wall_window", "clay_wall", "clay_wall_door", "clay_wall", "clay_wall", "clay_wall_window"]
+	for k in back_wall.size():
+		_stand(doc, back_wall[k], LEFT + 4.0 + 8.0 * k, BACK - 0.2, 0.0)
+	var left_wall := ["clay_wall", "clay_wall_window", "clay_wall_window", "clay_wall", "clay_wall_window", "clay_wall", "clay_wall", "clay_wall_window"]
+	for k in left_wall.size():
+		_stand(doc, left_wall[k], LEFT - 0.2, BACK + 4.0 + 8.0 * k, SIDEWAYS)
+	_stand(doc, "clay_wall_short", LEFT - 0.2, BACK + 66.0, SIDEWAYS)
+
+	_stand(doc, "clay_mezzanine", -23.2, -19.5, SIDEWAYS)
+	for k in 3:
+		_stand(doc, "clay_server_rack", -27.2, -22.6 + k * 1.3, SIDEWAYS)
+	_stand(doc, "clay_beanbag", -25.0, -17.2, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_beanbag", -24.2, -18.8, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_cabinet", -27.4, -12.6, SIDEWAYS)
+
+	_stand(doc, "clay_kitchen", -9.6, -23.25, 0.0)
+	_stand(doc, "clay_wall_shelf", -10.6, on_back, 0.0)
+	_stand(doc, "clay_wall_clock", -5.4, on_back, 0.0)
+	_stand(doc, "clay_water_cooler", -6.4, -23.4, 0.0)
+	for spot in [Vector2(-13.0, -20.2), Vector2(-9.6, -19.4), Vector2(-6.0, -20.4)]:
+		_stand(doc, "clay_cafe_table", spot.x + rng.range_f(-0.4, 0.4), spot.y + rng.range_f(-0.4, 0.4), rng.range_f(0.0, TAU))
+	for side in [-1.0, 1.0]:
+		_stand(doc, "clay_plant_tall", side * 2.2, -23.2, rng.range_f(0.0, TAU))
+
+	_stand(doc, "clay_bookshelf", 4.5, -23.7, 0.0)
+	_stand(doc, "clay_bookshelf", 6.7, -23.7, 0.0)
+	_stand(doc, "clay_cabinet", 9.6, -23.6, 0.0)
+	_stand(doc, _pick(rng, ["clay_wall_art", "clay_neon_sign"]), 9.6, on_back, 0.0)
+	_stand(doc, "clay_rug_large", 5.6, -19.0, 0.0)
+	_stand(doc, "clay_sofa", 5.6, -21.0, 0.0)
+	_stand(doc, "clay_armchair", 2.6, -18.8, SIDEWAYS + rng.range_f(-0.3, 0.3))
+	_stand(doc, "clay_armchair", 8.6, -18.8, -SIDEWAYS + rng.range_f(-0.3, 0.3))
+	_stand(doc, "clay_coffee_table", 5.6, -18.8, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_floor_lamp", 8.2, -21.4, 0.0)
+
+	_stand(doc, "clay_partition", 12.2, -22.0, SIDEWAYS)
+	_stand(doc, "clay_partition", 12.2, -18.0, SIDEWAYS)
+	_stand(doc, "clay_wall_display", 17.6, on_back, 0.0)
+	_stand(doc, "clay_meeting_table", 17.6, -19.6, 0.0)
+	_stand(doc, "clay_whiteboard", 23.8, -20.8, -0.5)
+	_stand(doc, "clay_plant", 26.6, -22.6, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_floor_lamp", 13.4, -23.0, 0.0)
+
+	var pods := ["clay_desk_pod", "clay_desk_pod", "clay_desk_pod_six"]
+	for row in 5:
+		for column in 2:
+			_stand(doc, _pick(rng, pods), -24.6 + column * 5.4, -8.2 + row * 5.7, SIDEWAYS)
+	_stand(doc, _pick(rng, ["clay_wall_art", "clay_wall_shelf"]), on_left, 4.0, SIDEWAYS)
+	_stand(doc, "clay_wall_art", on_left, 20.0, SIDEWAYS)
+	_stand(doc, "clay_printer", -27.3, 17.8, SIDEWAYS)
+
+	_stand(doc, "clay_bleachers", -26.4, 23.6, SIDEWAYS)
+	_stand(doc, "clay_bleachers", -26.4, 28.4, SIDEWAYS)
+	_stand(doc, "clay_neon_sign", on_left, 28.0, SIDEWAYS)
+	_stand(doc, "clay_rug", -21.4, 26.0, 0.0)
+	_stand(doc, "clay_beanbag", -21.8, 25.2, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_beanbag", -20.8, 27.0, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_plant_tall", -27.0, 31.8, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_slide", -23.4, 37.6, 0.0)
+	_stand(doc, "clay_ping_pong", -17.6, 39.4, rng.range_f(-0.3, 0.3))
+	_stand(doc, "clay_whiteboard", -18.4, 33.0, 0.3)
+
+	var rows := ["clay_desk_row", "clay_desk_row", "clay_desk_pod"]
+	for row in 3:
+		for column in 2:
+			_stand(doc, _pick(rng, rows), 20.8 + column * 4.4, -7.6 + row * 5.6, SIDEWAYS)
+	_stand(doc, "clay_rug", 23.0, 16.2, 0.0)
+	_stand(doc, "clay_coffee_table", 23.0, 16.2, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_sofa", 23.0, 13.4, 0.0)
+	_stand(doc, "clay_sofa", 20.2, 16.4, SIDEWAYS)
+	_stand(doc, "clay_armchair", 25.6, 17.6, -SIDEWAYS - 0.4)
+	_stand(doc, "clay_armchair", 22.6, 19.2, PI - 0.3)
+	_stand(doc, "clay_floor_lamp", 20.4, 13.2, 0.0)
+	_stand(doc, "clay_plant_tall", 26.4, 11.6, rng.range_f(0.0, TAU))
+	for k in 3:
+		_stand(doc, "clay_desk_standing", 20.4 + k * 2.4, 25.6, SIDEWAYS)
+	_stand(doc, "clay_phone_booth", 21.4, 31.0, 0.0)
+	_stand(doc, "clay_phone_booth", 23.0, 31.0, 0.0)
+	_stand(doc, "clay_bookshelf", 25.8, 30.8, 0.0)
+
+	_stand(doc, "clay_reception", 0.0, 41.2, PI)
+	_stand(doc, "clay_plant", -3.6, 42.4, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_plant", 3.6, 42.4, rng.range_f(0.0, TAU))
+	for spot in [Vector2(9.0, 40.6), Vector2(13.4, 41.6), Vector2(-9.2, 41.0)]:
+		_stand(doc, "clay_cafe_table", spot.x + rng.range_f(-0.5, 0.5), spot.y + rng.range_f(-0.5, 0.5), rng.range_f(0.0, TAU))
+	_stand(doc, "clay_rug_large", 22.4, 39.6, SIDEWAYS)
+	_stand(doc, "clay_sofa", 20.4, 39.6, SIDEWAYS)
+	_stand(doc, "clay_sofa", 22.4, 37.0, 0.0)
+	_stand(doc, "clay_coffee_table", 22.6, 39.6, rng.range_f(0.0, TAU))
+	_stand(doc, "clay_beanbag", 24.6, 40.6, rng.range_f(0.0, TAU))
+
+	for k in 5:
+		for side in [-1.0, 1.0]:
+			if rng.next() < 0.85:
+				_stand(doc, "clay_planter", side * 15.6, 3.0 + k * 6.5, SIDEWAYS)
+	for k in 7:
+		var a := deg_to_rad(205.0 + k * 21.7)
+		if k != 3 and rng.next() < 0.85:
+			_stand(doc, "clay_planter", cos(a) * 15.8, sin(a) * 15.8, -a - SIDEWAYS)
+	for x in [-9.6, -3.4, 3.4, 9.6]:
+		_stand(doc, "clay_planter", x, 34.0, 0.0)
+	for k in 9:
+		if rng.next() < 0.8:
+			_stand(doc, "clay_planter", RIGHT - 0.2, -20.0 + k * 7.0 + rng.range_f(-1.0, 1.0), SIDEWAYS)
+	for k in 8:
+		if rng.next() < 0.8:
+			_stand(doc, "clay_planter", -24.0 + k * 6.6 + rng.range_f(-1.0, 1.0), FRONT + 0.1, 0.0)
+	var spots := [Vector2(-17.0, -16.4), Vector2(16.0, -15.6), Vector2(-16.6, 21.4), Vector2(-15.8, 35.6), Vector2(11.0, -15.4), Vector2(-27.0, -9.8), Vector2(-27.0, 20.8), Vector2(-13.4, 38.2), Vector2(18.6, 9.4), Vector2(18.8, 22.6), Vector2(19.6, 34.8), Vector2(26.8, 43.0), Vector2(-27.0, 43.0), Vector2(26.6, 22.4), Vector2(-16.4, 8.8)]
+	for spot in spots:
+		if rng.next() < 0.75:
+			_stand(doc, _pick(rng, ["clay_plant", "clay_plant", "clay_plant_tall", "clay_floor_lamp"]), spot.x + rng.range_f(-0.4, 0.4), spot.y + rng.range_f(-0.4, 0.4), rng.range_f(0.0, TAU))

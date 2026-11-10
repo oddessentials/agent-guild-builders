@@ -138,8 +138,27 @@ MODELS = {
     'moon_rock': ('moon_rock_01', None, 'Moon rock', 'rocks', 3),
     'moon_boulder': ('moon_rock_03', None, 'Moon boulder', 'rocks', 6),
 }
-MODULAR = {key for key in MODELS if key.startswith('fort_')} | {'castle_door'}
-JOINS = MODULAR - {'castle_door', 'fort_thick_corner_b', 'fort_walkway_corner_b'}
+# id: (label, scatter spacing in metres), built by tools/build_clay.py
+CLAY = {
+    'clay_wall': ('Wall', 8), 'clay_wall_short': ('Short wall', 4), 'clay_wall_window': ('Window wall', 8), 'clay_wall_door': ('Door wall', 8),
+    'clay_wall_corner': ('Wall corner', 2), 'clay_partition': ('Glass partition', 4), 'clay_column': ('Column', 4),
+    'clay_wall_art': ('Framed prints', 4), 'clay_wall_shelf': ('Wall shelves', 3), 'clay_wall_clock': ('Wall clock', 2),
+    'clay_wall_display': ('Wall display', 4), 'clay_neon_sign': ('Neon sign', 4),
+    'clay_desk_single': ('Desk', 3), 'clay_desk_row': ('Desk row', 6), 'clay_desk_pod': ('Desk pod', 6), 'clay_desk_pod_six': ('Desk pod of six', 7), 'clay_desk_standing': ('Standing desk', 3),
+    'clay_office_chair': ('Office chair', 1.5), 'clay_meeting_table': ('Meeting table', 6), 'clay_whiteboard': ('Whiteboard', 3),
+    'clay_screen': ('Presentation screen', 4), 'clay_reception': ('Reception desk', 6), 'clay_phone_booth': ('Focus booth', 3),
+    'clay_sofa': ('Sofa', 3), 'clay_armchair': ('Armchair', 2), 'clay_coffee_table': ('Coffee table', 2), 'clay_rug': ('Round rug', 4), 'clay_rug_large': ('Large rug', 5),
+    'clay_beanbag': ('Beanbag', 1.5), 'clay_bleachers': ('Stepped seating', 6),
+    'clay_bookshelf': ('Bookshelf', 3), 'clay_cabinet': ('Sideboard', 3), 'clay_server_rack': ('Server rack', 2), 'clay_printer': ('Printer', 2),
+    'clay_kitchen': ('Kitchenette', 5), 'clay_cafe_table': ('Caf\u00e9 table', 3), 'clay_water_cooler': ('Water cooler', 1.5),
+    'clay_plant': ('Office plant', 1.5), 'clay_plant_tall': ('Tall office plant', 2), 'clay_planter': ('Plant divider', 3),
+    'clay_floor_lamp': ('Floor lamp', 3), 'clay_ping_pong': ('Table tennis', 5), 'clay_slide': ('Slide', 7), 'clay_mezzanine': ('Mezzanine', 12),
+}
+CLAY_JOINS = {'clay_wall', 'clay_wall_short', 'clay_wall_window', 'clay_wall_door', 'clay_wall_corner', 'clay_partition'}
+CLAY_FIXED = CLAY_JOINS | {'clay_wall_art', 'clay_wall_shelf', 'clay_wall_clock', 'clay_wall_display', 'clay_neon_sign'}
+FORT = {key for key in MODELS if key.startswith('fort_')}
+MODULAR = FORT | {'castle_door'} | CLAY_FIXED
+JOINS = FORT - {'fort_thick_corner_b', 'fort_walkway_corner_b'} | CLAY_JOINS
 SEATED_GROUPS = {'city', 'medieval', 'gnomes', 'goblins', 'forest', 'space'}
 MADE_HERE = {
     'xmas_tree': ('Christmas tree', 8), 'gift_red': ('Red gift', 2), 'gift_green': ('Green gift', 2), 'gift_pile': ('Pile of gifts', 4),
@@ -226,7 +245,18 @@ LIGHTS = {'lantern': {'watts': 60.0, 'color': [1.0, 0.6, 0.3], 'height': 0.3},
           'cauldron': {'watts': 60.0, 'color': [0.35, 1.0, 0.4], 'height': 1.15},
           'wreath_arch': {'watts': 80.0, 'color': [1.0, 0.72, 0.4], 'height': 3.3},
           'paper_lanterns': {'watts': 70.0, 'color': [1.0, 0.45, 0.2], 'height': 1.9},
-          'stone_lantern': {'watts': 160.0, 'color': [1.0, 0.6, 0.3], 'height': 1.28}}
+          'stone_lantern': {'watts': 160.0, 'color': [1.0, 0.6, 0.3], 'height': 1.28},
+          'clay_floor_lamp': {'watts': 420.0, 'color': [1.0, 0.72, 0.45], 'height': 1.6},
+          'clay_kitchen': {'watts': 260.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
+          'clay_reception': {'watts': 220.0, 'color': [1.0, 0.76, 0.5], 'height': 1.6},
+          'clay_mezzanine': {'watts': 320.0, 'color': [1.0, 0.74, 0.48], 'height': 3.9},
+          'clay_phone_booth': {'watts': 60.0, 'color': [1.0, 0.8, 0.55], 'height': 2.0},
+          'clay_neon_sign': {'watts': 140.0, 'color': [1.0, 0.45, 0.3], 'height': 3.0},
+          'clay_wall_display': {'watts': 160.0, 'color': [0.5, 0.75, 1.0], 'height': 2.4},
+          'clay_screen': {'watts': 120.0, 'color': [0.5, 0.75, 1.0], 'height': 1.55},
+          'clay_desk_pod': {'watts': 110.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3},
+          'clay_desk_pod_six': {'watts': 140.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3},
+          'clay_desk_row': {'watts': 90.0, 'color': [0.72, 0.84, 1.0], 'height': 1.3}}
 GROUNDS = {
     'grass': ('leafy_grass', 'Meadow grass'), 'dirt': ('forest_ground_04', 'Forest floor'),
     'rock': ('rocky_trail', 'Rocky ground'), 'gravel': ('gravel_floor', 'Gravel'),
@@ -244,6 +274,9 @@ GROUNDS = {
     'plaza_panels': ('granite_tile', 'Stone panels'),
     'plaza_sandstone': ('white_sandstone_blocks_02', 'White sandstone'), 'plaza_basalt': ('volcanic_rock_tiles', 'Basalt tiles'),
     'plaza_slate': ('large_grey_tiles', 'Grey flagstones'), 'plaza_concrete': ('concrete_pavers_02', 'Concrete pavers'),
+    'clay_planks': ('made_clay_planks', 'Oak planks'), 'clay_carpet': ('made_clay_carpet', 'Cream carpet'),
+    'clay_sage': ('made_clay_sage', 'Sage carpet'), 'clay_tiles': ('made_clay_tiles', 'White tiles'),
+    'plaza_terrazzo': ('made_terrazzo', 'Terrazzo'),
 }
 # A world's four painted grounds and its plaza. Per ground: metres per repeat as a
 # multiple of the land shader's, glow from within, and side projection on steep land.
@@ -260,6 +293,8 @@ LANDS = {
                 'scale': [2, 1.5, 3, 6], 'glow': [0, 0, 0, 9], 'glow_power': [1, 1, 1, 1.6], 'triplanar': True},
     'garden': {'label': 'Garden', 'grounds': ['grass', 'raked', 'mossy_stone', 'pebbles'], 'plaza': 'plaza_slate', 'grass': True,
                'grass_tint': [0.5, 0.78, 0.42], 'water': {'shallow': [0.08, 0.16, 0.1], 'deep': [0.006, 0.03, 0.025], 'clear': 0.55}},
+    'clay': {'label': 'Clay office', 'grounds': ['clay_planks', 'clay_carpet', 'clay_sage', 'clay_tiles'], 'plaza': 'plaza_terrazzo',
+             'scale': [2, 1, 1, 1], 'water': {'shallow': [0.012, 0.012, 0.014], 'deep': [0.012, 0.012, 0.014], 'clear': 0.0}},
 }
 SKIES = {
     'day': ('kloofendal_48d_partly_cloudy_puresky', 'Clear day', 0.9),
@@ -274,6 +309,8 @@ SKIES = {
     'mars_dusk': ('made_mars_dusk', 'Mars blue dusk', 0.9),
     'orbit_day': ('yard-env/orbital-day', 'Orbit', 1.0),
     'orbit_dusk': ('yard-env/orbital-dusk', 'Orbit dusk', 1.0),
+    'studio': ('made_studio_day', 'Studio light', 1.0),
+    'studio_night': ('made_studio_night', 'Studio night', 1.0),
 }
 
 
@@ -417,7 +454,10 @@ JOINT_WIDTHS = (2.55, 3.12, 3.54, 4.17)
 # In the piece's own Blender frame: its wall side is x = 0 and it runs to y = -length.
 AUTHORED_JOINTS = {
     'fort_stairs_straight': [((0, 0), (-1, 0), 1), ((0, -14.819), (-1, 0), 1), ((0, -14.819), (0, -1), 0)],
+    'clay_wall_corner': [((0.2, 0), (1, 0), 0), ((-0.2, 0), (-1, 0), 0), ((0, 0.2), (0, 1), 0), ((0, -0.2), (0, -1), 0)],
 }
+AUTHORED_JOINTS.update({key: [((half, 0), (1, 0), 0), ((-half, 0), (-1, 0), 0)]
+                        for key, half in (('clay_wall', 4), ('clay_wall_window', 4), ('clay_wall_door', 4), ('clay_wall_short', 2), ('clay_partition', 2))})
 TOWER_REACH = 7.0
 
 
@@ -524,7 +564,7 @@ def export_model(kit_id, spec):
                               export_image_quality=85, export_animations=False, export_cameras=False, export_lights=False)
     size = max(high.z if kit_id in MODULAR else high.z - min(low.z, 0), .001)
     target = TARGET.get(kit_id, round(size, 4 if kit_id in MODULAR else 2))
-    licence = MADE_LICENCE if kit_id in MADE_HERE else GUILD_LICENCE if kit_id in GUILD else LICENCE
+    licence = MADE_LICENCE if kit_id in MADE_HERE or kit_id in CLAY else GUILD_LICENCE if kit_id in GUILD else LICENCE
     entry = {'label': label, 'group': group, 'spacing': spacing, 'height': target,
              'radius': round(max(high.x - low.x, high.y - low.y) / 2 * target / size, 2), 'triangles': tris,
              'source': f'{name} {lod}' if kit_id in GUILD and lod else name, 'licence': licence, 'bytes': out.stat().st_size}
@@ -575,6 +615,7 @@ def main():
     built = json.loads((KIT / 'kit.json').read_text(encoding='utf-8')) if (KIT / 'kit.json').exists() else {}
     kit = {'id': 'meadow', 'title': 'Meadow', 'models': {}, 'grounds': {}, 'skies': {}}
     made = {key: (key, None, label, 'holiday', spacing) for key, (label, spacing) in MADE_HERE.items()}
+    made.update({key: (key, None, label, 'clay', spacing) for key, (label, spacing) in CLAY.items()})
     for key, spec in {**MODELS, **made, **GUILD}.items():
         if key in built.get('models', {}) and (KIT / 'models' / f'{key}.glb').exists():
             kit['models'][key] = described(built['models'][key], key, spec)

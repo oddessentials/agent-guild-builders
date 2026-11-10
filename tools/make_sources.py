@@ -1,7 +1,7 @@
 import math, sys
 from pathlib import Path
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 if len(sys.argv) < 3:
     raise SystemExit('Usage: python tools/make_sources.py <output folder> <folders holding Poly Haven sources...>')
@@ -104,6 +104,54 @@ def stars(name):
     flat_maps(name, 0.92)
 
 
+def speckled(rng, colour, amount, falloff=0.4):
+    return np.array(colour, np.float32) + periodic_noise(rng, SIZE, falloff)[..., None] * amount
+
+
+def rough_map(name, rough):
+    save_jpg(np.full((256, 256, 3), (0.5, rough, 0.5)), OUT / name / f'{name}_rough_2k.jpg')
+    save_jpg(np.full((256, 256, 3), (0.5, 0.5, 1.0)), OUT / name / f'{name}_nor_gl_2k.jpg')
+
+
+def clay_grounds():
+    rng = np.random.default_rng(20261110)
+    planks = speckled(rng, (0.78, 0.6, 0.42), 0.012)
+    width = SIZE // 16
+    for row in range(16):
+        rows = slice(row * width, (row + 1) * width)
+        cuts = np.sort(rng.choice(np.arange(64, SIZE - 64), 3, replace=False))
+        for a, b in zip(np.r_[0, cuts], np.r_[cuts, SIZE]):
+            planks[rows, a:b] *= 1.0 + rng.uniform(-0.045, 0.045)
+            planks[rows, max(a - 1, 0):a + 1] *= 0.86
+        planks[row * width:row * width + 2] *= 0.86
+    save_jpg(planks.transpose(1, 0, 2), OUT / 'made_clay_planks' / 'made_clay_planks_diff_2k.jpg')
+    rough_map('made_clay_planks', 0.8)
+    save_jpg(speckled(rng, (0.86, 0.81, 0.73), 0.014, 0.2), OUT / 'made_clay_carpet' / 'made_clay_carpet_diff_2k.jpg')
+    rough_map('made_clay_carpet', 0.97)
+    save_jpg(speckled(rng, (0.63, 0.7, 0.6), 0.014, 0.2), OUT / 'made_clay_sage' / 'made_clay_sage_diff_2k.jpg')
+    rough_map('made_clay_sage', 0.97)
+    tiles = speckled(rng, (0.94, 0.92, 0.87), 0.006)
+    side = SIZE // 8
+    for k in range(8):
+        tiles[k * side:k * side + 3] = (0.79, 0.76, 0.71)
+        tiles[:, k * side:k * side + 3] = (0.79, 0.76, 0.71)
+    save_jpg(tiles, OUT / 'made_clay_tiles' / 'made_clay_tiles_diff_2k.jpg')
+    rough_map('made_clay_tiles', 0.45)
+    wide = Image.fromarray(np.clip(speckled(rng, (0.9, 0.86, 0.79), 0.008) * 255.0 + 0.5, 0, 255).astype(np.uint8))
+    draw = ImageDraw.Draw(wide)
+    chips = [(184, 173, 158), (204, 168, 128), (247, 245, 237), (214, 158, 133), (115, 102, 92), (160, 176, 152)]
+    for _ in range(5200):
+        x, y = rng.uniform(0, SIZE, 2)
+        w, h = rng.uniform(3, 13, 2)
+        colour = chips[int(rng.choice(len(chips), p=[0.3, 0.24, 0.24, 0.1, 0.06, 0.06]))]
+        for dx in (-SIZE, 0, SIZE):
+            for dy in (-SIZE, 0, SIZE):
+                draw.ellipse((x + dx - w, y + dy - h, x + dx + w, y + dy + h), fill=colour)
+    (OUT / 'made_terrazzo').mkdir(parents=True, exist_ok=True)
+    wide.save(OUT / 'made_terrazzo' / 'made_terrazzo_diff_2k.jpg', quality=92)
+    rough_map('made_terrazzo', 0.5)
+
+
 def write_hdr(pixels, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     h, w, _ = pixels.shape
@@ -146,12 +194,26 @@ def gradient_sky(name, sun_at, zenith, horizon, ground, halo):
     write_hdr(sky.astype(np.float32), OUT / name / f'{name}_1k.hdr')
 
 
+def studio_sky(name, top, fill):
+    """Soft light from overhead, and dark where the Yard's camera sees the sky mirrored in water."""
+    d = directions(1024, 512)
+    up = d[..., 1]
+    overhead = np.clip((up - 0.6) / 0.34, 0, 1)
+    overhead = overhead * overhead * (3 - 2 * overhead)
+    sky = np.array(fill) + (np.array(top) - np.array(fill)) * overhead[..., None]
+    sky = np.where(up[..., None] >= 0, sky, np.array(fill) * 0.5)
+    mirrored = unit((-0.43611949136464423, 0.5508877785658665, -0.7115633806475775))
+    sky = sky * (1 - np.exp((np.clip(d @ mirrored, -1, 1) - 1) / 0.12))[..., None]
+    write_hdr(sky.astype(np.float32), OUT / name / f'{name}_1k.hdr')
+
+
 def main():
     for name, (source, ramp, keep) in GRADED.items():
         graded(name, source, ramp, keep)
         print('made', name, flush=True)
     stars('made_stars')
     raked('made_raked_gravel')
+    clay_grounds()
     print('made made_stars', flush=True)
     gradient_sky('made_mars_day', SUN_LIGHT, [0.42, 0.27, 0.17], [0.98, 0.7, 0.46], [0.3, 0.18, 0.11],
                  [(0.9, 0.06, [1.0, 0.86, 0.7]), (0.25, 0.5, [1.0, 0.86, 0.7])])
@@ -159,6 +221,8 @@ def main():
                  [(1.6, 0.035, [0.35, 0.62, 1.0]), (0.5, 0.2, [0.35, 0.62, 1.0])])
     gradient_sky('made_haze_day', SUN_LIGHT, [0.5, 0.42, 0.36], [0.92, 0.66, 0.44], [0.24, 0.17, 0.13],
                  [(0.6, 0.08, [1.0, 0.8, 0.6]), (0.3, 0.6, [1.0, 0.7, 0.5])])
+    studio_sky('made_studio_day', [2.6, 2.5, 2.3], [0.62, 0.58, 0.52])
+    studio_sky('made_studio_night', [0.42, 0.36, 0.3], [0.1, 0.09, 0.09])
     print('made skies')
 
 

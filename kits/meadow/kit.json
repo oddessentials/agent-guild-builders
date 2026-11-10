@@ -2150,6 +2150,716 @@
    "licence": "AGPL-3.0-only (Agent Guild: Builders)",
    "bytes": 58928
   },
+  "clay_wall": {
+   "label": "Wall",
+   "group": "clay",
+   "spacing": 8,
+   "height": 6.1,
+   "radius": 4.0,
+   "triangles": 324,
+   "source": "clay_wall",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 7736,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_short": {
+   "label": "Short wall",
+   "group": "clay",
+   "spacing": 4,
+   "height": 6.1,
+   "radius": 2.0,
+   "triangles": 324,
+   "source": "clay_wall_short",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 7748,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_window": {
+   "label": "Window wall",
+   "group": "clay",
+   "spacing": 8,
+   "height": 6.1,
+   "radius": 4.0,
+   "triangles": 1644,
+   "source": "clay_wall_window",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 34552,
+   "joints": [
+    [
+     -4.0,
+     -0.04,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.04,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_door": {
+   "label": "Door wall",
+   "group": "clay",
+   "spacing": 8,
+   "height": 6.1,
+   "radius": 4.0,
+   "triangles": 1620,
+   "source": "clay_wall_door",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 31156,
+   "joints": [
+    [
+     -4.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     4.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_wall_corner": {
+   "label": "Wall corner",
+   "group": "clay",
+   "spacing": 2,
+   "height": 6.1,
+   "radius": 0.23,
+   "triangles": 216,
+   "source": "clay_wall_corner",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 5064,
+   "joints": [
+    [
+     -0.2,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     0.0,
+     -0.2,
+     0.0,
+     -1.0,
+     0
+    ],
+    [
+     0.0,
+     0.2,
+     0.0,
+     1.0,
+     0
+    ],
+    [
+     0.2,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_partition": {
+   "label": "Glass partition",
+   "group": "clay",
+   "spacing": 4,
+   "height": 2.7,
+   "radius": 2.0,
+   "triangles": 672,
+   "source": "clay_partition",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 15644,
+   "joints": [
+    [
+     -2.0,
+     -0.0,
+     -1.0,
+     -0.0,
+     0
+    ],
+    [
+     2.0,
+     -0.0,
+     1.0,
+     -0.0,
+     0
+    ]
+   ],
+   "modular": true,
+   "joins": true
+  },
+  "clay_column": {
+   "label": "Column",
+   "group": "clay",
+   "spacing": 4,
+   "height": 6.02,
+   "radius": 0.38,
+   "triangles": 324,
+   "source": "clay_column",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 7844
+  },
+  "clay_wall_art": {
+   "label": "Framed prints",
+   "group": "clay",
+   "spacing": 4,
+   "height": 2.9,
+   "radius": 1.72,
+   "triangles": 1620,
+   "source": "clay_wall_art",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 28768,
+   "modular": true
+  },
+  "clay_wall_shelf": {
+   "label": "Wall shelves",
+   "group": "clay",
+   "spacing": 3,
+   "height": 2.4988,
+   "radius": 1.1,
+   "triangles": 5800,
+   "source": "clay_wall_shelf",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 111672,
+   "modular": true
+  },
+  "clay_wall_clock": {
+   "label": "Wall clock",
+   "group": "clay",
+   "spacing": 2,
+   "height": 2.96,
+   "radius": 0.36,
+   "triangles": 2188,
+   "source": "clay_wall_clock",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 42940,
+   "modular": true
+  },
+  "clay_wall_display": {
+   "label": "Wall display",
+   "group": "clay",
+   "spacing": 4,
+   "height": 3.3,
+   "radius": 1.6,
+   "triangles": 1500,
+   "source": "clay_wall_display",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 30548,
+   "light": {
+    "watts": 160.0,
+    "color": [
+     0.5,
+     0.75,
+     1.0
+    ],
+    "height": 2.4
+   },
+   "modular": true
+  },
+  "clay_neon_sign": {
+   "label": "Neon sign",
+   "group": "clay",
+   "spacing": 4,
+   "height": 3.55,
+   "radius": 1.3,
+   "triangles": 576,
+   "source": "clay_neon_sign",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13336,
+   "light": {
+    "watts": 140.0,
+    "color": [
+     1.0,
+     0.45,
+     0.3
+    ],
+    "height": 3.0
+   },
+   "modular": true
+  },
+  "clay_desk_single": {
+   "label": "Desk",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.28,
+   "radius": 0.8,
+   "triangles": 3212,
+   "source": "clay_desk_single",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 63588
+  },
+  "clay_desk_row": {
+   "label": "Desk row",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.28,
+   "radius": 2.44,
+   "triangles": 9636,
+   "source": "clay_desk_row",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 180408,
+   "light": {
+    "watts": 90.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.3
+   }
+  },
+  "clay_desk_pod": {
+   "label": "Desk pod",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.28,
+   "radius": 1.62,
+   "triangles": 15800,
+   "source": "clay_desk_pod",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 299376,
+   "light": {
+    "watts": 110.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.3
+   }
+  },
+  "clay_desk_pod_six": {
+   "label": "Desk pod of six",
+   "group": "clay",
+   "spacing": 7,
+   "height": 1.28,
+   "radius": 2.44,
+   "triangles": 20636,
+   "source": "clay_desk_pod_six",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 390344,
+   "light": {
+    "watts": 140.0,
+    "color": [
+     0.72,
+     0.84,
+     1.0
+    ],
+    "height": 1.3
+   }
+  },
+  "clay_desk_standing": {
+   "label": "Standing desk",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.35,
+   "radius": 0.7,
+   "triangles": 1376,
+   "source": "clay_desk_standing",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 28092
+  },
+  "clay_office_chair": {
+   "label": "Office chair",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 1.03,
+   "radius": 0.29,
+   "triangles": 1404,
+   "source": "clay_office_chair",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 27872
+  },
+  "clay_meeting_table": {
+   "label": "Meeting table",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.06,
+   "radius": 2.56,
+   "triangles": 15080,
+   "source": "clay_meeting_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 284048
+  },
+  "clay_whiteboard": {
+   "label": "Whiteboard",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.95,
+   "radius": 0.99,
+   "triangles": 1252,
+   "source": "clay_whiteboard",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 36380
+  },
+  "clay_screen": {
+   "label": "Presentation screen",
+   "group": "clay",
+   "spacing": 4,
+   "height": 2.28,
+   "radius": 1.25,
+   "triangles": 1944,
+   "source": "clay_screen",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 36060,
+   "light": {
+    "watts": 120.0,
+    "color": [
+     0.5,
+     0.75,
+     1.0
+    ],
+    "height": 1.55
+   }
+  },
+  "clay_reception": {
+   "label": "Reception desk",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.38,
+   "radius": 2.14,
+   "triangles": 7988,
+   "source": "clay_reception",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 150436,
+   "light": {
+    "watts": 220.0,
+    "color": [
+     1.0,
+     0.76,
+     0.5
+    ],
+    "height": 1.6
+   }
+  },
+  "clay_phone_booth": {
+   "label": "Focus booth",
+   "group": "clay",
+   "spacing": 3,
+   "height": 2.41,
+   "radius": 0.69,
+   "triangles": 1944,
+   "source": "clay_phone_booth",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 36260,
+   "light": {
+    "watts": 60.0,
+    "color": [
+     1.0,
+     0.8,
+     0.55
+    ],
+    "height": 2.0
+   }
+  },
+  "clay_sofa": {
+   "label": "Sofa",
+   "group": "clay",
+   "spacing": 3,
+   "height": 0.91,
+   "radius": 1.09,
+   "triangles": 1040,
+   "source": "clay_sofa",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 22768
+  },
+  "clay_armchair": {
+   "label": "Armchair",
+   "group": "clay",
+   "spacing": 2,
+   "height": 0.91,
+   "radius": 0.52,
+   "triangles": 824,
+   "source": "clay_armchair",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 17988
+  },
+  "clay_coffee_table": {
+   "label": "Coffee table",
+   "group": "clay",
+   "spacing": 2,
+   "height": 0.7,
+   "radius": 0.55,
+   "triangles": 2400,
+   "source": "clay_coffee_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 50740
+  },
+  "clay_rug": {
+   "label": "Round rug",
+   "group": "clay",
+   "spacing": 4,
+   "height": 0.05,
+   "radius": 1.87,
+   "triangles": 3056,
+   "source": "clay_rug",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 53052
+  },
+  "clay_rug_large": {
+   "label": "Large rug",
+   "group": "clay",
+   "spacing": 5,
+   "height": 0.05,
+   "radius": 2.6,
+   "triangles": 432,
+   "source": "clay_rug_large",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 9720
+  },
+  "clay_beanbag": {
+   "label": "Beanbag",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 0.83,
+   "radius": 0.55,
+   "triangles": 660,
+   "source": "clay_beanbag",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 13176
+  },
+  "clay_bleachers": {
+   "label": "Stepped seating",
+   "group": "clay",
+   "spacing": 6,
+   "height": 1.43,
+   "radius": 2.19,
+   "triangles": 2672,
+   "source": "clay_bleachers",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 49132
+  },
+  "clay_bookshelf": {
+   "label": "Bookshelf",
+   "group": "clay",
+   "spacing": 3,
+   "height": 2.2,
+   "radius": 1.0,
+   "triangles": 17272,
+   "source": "clay_bookshelf",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 314952
+  },
+  "clay_cabinet": {
+   "label": "Sideboard",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.13,
+   "radius": 0.93,
+   "triangles": 2860,
+   "source": "clay_cabinet",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 58684
+  },
+  "clay_server_rack": {
+   "label": "Server rack",
+   "group": "clay",
+   "spacing": 2,
+   "height": 2.07,
+   "radius": 0.51,
+   "triangles": 2184,
+   "source": "clay_server_rack",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 64148
+  },
+  "clay_printer": {
+   "label": "Printer",
+   "group": "clay",
+   "spacing": 2,
+   "height": 1.04,
+   "radius": 0.38,
+   "triangles": 672,
+   "source": "clay_printer",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 15976
+  },
+  "clay_kitchen": {
+   "label": "Kitchenette",
+   "group": "clay",
+   "spacing": 5,
+   "height": 1.93,
+   "radius": 1.92,
+   "triangles": 5676,
+   "source": "clay_kitchen",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 112800,
+   "light": {
+    "watts": 260.0,
+    "color": [
+     1.0,
+     0.76,
+     0.5
+    ],
+    "height": 1.6
+   }
+  },
+  "clay_cafe_table": {
+   "label": "Caf\u00e9 table",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.17,
+   "radius": 0.84,
+   "triangles": 3468,
+   "source": "clay_cafe_table",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 67356
+  },
+  "clay_water_cooler": {
+   "label": "Water cooler",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 1.42,
+   "radius": 0.27,
+   "triangles": 1072,
+   "source": "clay_water_cooler",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 23196
+  },
+  "clay_plant": {
+   "label": "Office plant",
+   "group": "clay",
+   "spacing": 1.5,
+   "height": 1.27,
+   "radius": 0.47,
+   "triangles": 1652,
+   "source": "clay_plant",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 33948
+  },
+  "clay_plant_tall": {
+   "label": "Tall office plant",
+   "group": "clay",
+   "spacing": 2,
+   "height": 2.35,
+   "radius": 0.75,
+   "triangles": 1608,
+   "source": "clay_plant_tall",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 33932
+  },
+  "clay_planter": {
+   "label": "Plant divider",
+   "group": "clay",
+   "spacing": 3,
+   "height": 0.92,
+   "radius": 1.2,
+   "triangles": 2576,
+   "source": "clay_planter",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 45696
+  },
+  "clay_floor_lamp": {
+   "label": "Floor lamp",
+   "group": "clay",
+   "spacing": 3,
+   "height": 1.82,
+   "radius": 0.25,
+   "triangles": 792,
+   "source": "clay_floor_lamp",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 16524,
+   "light": {
+    "watts": 420.0,
+    "color": [
+     1.0,
+     0.72,
+     0.45
+    ],
+    "height": 1.6
+   }
+  },
+  "clay_ping_pong": {
+   "label": "Table tennis",
+   "group": "clay",
+   "spacing": 5,
+   "height": 0.94,
+   "radius": 1.38,
+   "triangles": 2028,
+   "source": "clay_ping_pong",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 44972
+  },
+  "clay_slide": {
+   "label": "Slide",
+   "group": "clay",
+   "spacing": 7,
+   "height": 3.23,
+   "radius": 4.9,
+   "triangles": 7368,
+   "source": "clay_slide",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 140300
+  },
+  "clay_mezzanine": {
+   "label": "Mezzanine",
+   "group": "clay",
+   "spacing": 12,
+   "height": 4.58,
+   "radius": 4.72,
+   "triangles": 19060,
+   "source": "clay_mezzanine",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)",
+   "bytes": 361232,
+   "light": {
+    "watts": 320.0,
+    "color": [
+     1.0,
+     0.74,
+     0.48
+    ],
+    "height": 3.9
+   }
+  },
   "car_sedan": {
    "label": "Sedan",
    "group": "city",
@@ -3021,6 +3731,31 @@
    "label": "Concrete pavers",
    "source": "concrete_pavers_02",
    "licence": "CC0-1.0 (Poly Haven)"
+  },
+  "clay_planks": {
+   "label": "Oak planks",
+   "source": "made_clay_planks",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "clay_carpet": {
+   "label": "Cream carpet",
+   "source": "made_clay_carpet",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "clay_sage": {
+   "label": "Sage carpet",
+   "source": "made_clay_sage",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "clay_tiles": {
+   "label": "White tiles",
+   "source": "made_clay_tiles",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "plaza_terrazzo": {
+   "label": "Terrazzo",
+   "source": "made_terrazzo",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
   }
  },
  "skies": {
@@ -3095,6 +3830,18 @@
    "strength": 1.0,
    "source": "yard-env/orbital-dusk",
    "licence": "AGPL-3.0-only (Agent Guild)"
+  },
+  "studio": {
+   "label": "Studio light",
+   "strength": 1.0,
+   "source": "made_studio_day",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
+  },
+  "studio_night": {
+   "label": "Studio night",
+   "strength": 1.0,
+   "source": "made_studio_night",
+   "licence": "AGPL-3.0-only (Agent Guild: Builders)"
   }
  },
  "lands": {
@@ -3243,6 +3990,35 @@
      0.025
     ],
     "clear": 0.55
+   }
+  },
+  "clay": {
+   "label": "Clay office",
+   "grounds": [
+    "clay_planks",
+    "clay_carpet",
+    "clay_sage",
+    "clay_tiles"
+   ],
+   "plaza": "plaza_terrazzo",
+   "scale": [
+    2,
+    1,
+    1,
+    1
+   ],
+   "water": {
+    "shallow": [
+     0.012,
+     0.012,
+     0.014
+    ],
+    "deep": [
+     0.012,
+     0.012,
+     0.014
+    ],
+    "clear": 0.0
    }
   }
  }

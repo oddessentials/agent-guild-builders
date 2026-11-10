@@ -157,7 +157,7 @@ func _templates() -> bool:
 					flat = false
 		check(flat, key + ": the ground crews stand on is flat")
 		check(Clearance.check_world(a).get("valid", false), key + ": a new world is ready to export")
-		if float(a.data.water_level) > -50.0 and key not in ["island", "salt"]:
+		if float(a.data.water_level) > -50.0 and key not in ["island", "salt", "clay_office"]:
 			var wet := 0
 			for h in a.heights:
 				if h < float(a.data.water_level):
@@ -224,6 +224,11 @@ func _templates() -> bool:
 		if h < float(salt.data.water_level):
 			wet += 1
 	check(float(wet) / salt.heights.size() > 0.15 and salt.height_at(0.0, 10.0) > float(salt.data.water_level), "salt: brine pools all round, and a dry Yard")
+	var office := Templates.create("clay_office", "guild", "T", 42)
+	var walls: Array = office.data.things.filter(func(t): return str(t.kind).begins_with("clay_wall"))
+	check(office.data.land == "clay" and walls.size() >= 17 and walls.all(func(t): return is_inf(Clearance.max_elevation(t.x, t.z))), "clay office: walls stand only behind the Yard")
+	var level := float(office.data.water_level)
+	check(office.height_at(20.0, 20.0) == 0.0 and office.height_at(40.0, 20.0) < level and office.height_at(0.0, 60.0) < level, "clay office: a level floor that ends in dark water")
 	return true
 
 func _lands() -> bool:
