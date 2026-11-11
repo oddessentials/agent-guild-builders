@@ -39,6 +39,7 @@ var _window := {}
 var _window_open := false
 var _window_initializing := false
 var _window_threads: Array = []
+var _exited_windows: Array = []
 var _forwarded := {}
 
 func _ready() -> void:
@@ -82,6 +83,8 @@ func _exit_tree() -> void:
 		_thread.wait_to_finish()
 
 func _process(_delta: float) -> void:
+	if not _exited_windows.is_empty():
+		_exited_windows = _exited_windows.filter(OS.is_process_running)
 	if not _queue.is_empty():
 		_pump()
 
@@ -328,7 +331,10 @@ func _window_closed() -> void:
 	for thread in _window_threads:
 		thread.wait_to_finish()
 	_window_threads.clear()
+	if _window.has("pid") and OS.is_process_running(_window.pid):
+		_exited_windows.append(_window.pid)
 	_window = {}
+	WorldScene.refresh_custom()
 	var waiting := _forwarded.values()
 	_forwarded.clear()
 	for ctx in waiting:

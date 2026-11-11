@@ -2250,7 +2250,10 @@ func _mcp_relay() -> void:
 	check(sent.back().method == "notifications/cancelled", "mcp: a cancel goes to the window")
 	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
 	lines.clear()
+	var stale := CustomItems.PREFIX + "gone-after-the-window"
+	WorldScene.load_kit().models[stale] = {"label": "Gone", "group": "custom"}
 	relay._window_closed()
+	check(not WorldScene.load_kit().models.has(stale), "mcp: closing the window reloads custom items the window may have changed")
 	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 6 and JSON.parse_string(lines[0]).result.isError and lines[0].contains("closed"), "mcp: closing the window fails its calls, but not cancelled ones")
 	sent.clear()
 	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
