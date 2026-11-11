@@ -2133,7 +2133,7 @@ func _mcp() -> bool:
 	check(modern_init.get("error", {}).get("code") == McpServer.METHOD_NOT_FOUND, "mcp: initialize isn't part of 2026-07-28")
 	var listed := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "d6", "method": "tools/list", "params": {"_meta": meta}})
 	var names: Array = listed.get("result", {}).get("tools", []).map(func(t): return t.name)
-	check(names == ["list_worlds", "create_world", "open_world", "describe_world", "list_items", "place_items", "paint_area", "move_items", "remove_items", "shape_land", "paint_ground", "set_look", "undo", "redo", "render_preview", "export_world"], "mcp: lists the planned tools")
+	check(names == ["list_worlds", "create_world", "open_world", "describe_world", "list_items", "place_items", "paint_area", "move_items", "remove_items", "shape_land", "paint_ground", "set_look", "undo", "redo", "render_preview", "export_world", "show_window"], "mcp: lists the planned tools")
 	check(listed.result.tools.all(func(t): return t.inputSchema.type == "object" and t.annotations.has("readOnlyHint") and t.has("description")), "mcp: every tool has a schema, hints and a description")
 	check(listed.result.resultType == "complete", "mcp: 2026-07-28 results carry resultType")
 	var unknown := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "fly", "arguments": {}}})
@@ -2173,6 +2173,7 @@ func _mcp() -> bool:
 	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": 16, "method": "ping"}))
 	check(lines.is_empty(), "mcp: nothing is answered after stdin closes")
 	stub.free()
+	await _mcp_relay()
 
 	var outside := OS.get_user_data_dir().path_join("mcp-export-test")
 	DirAccess.make_dir_recursive_absolute(outside)
@@ -2195,15 +2196,15 @@ func _mcp() -> bool:
 
 	var commands: Array = load("res://src/ui/main.gd").connect_commands("C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe", [], false)
 	check(commands.map(func(c): return c[0]) == ["Claude Code", "Codex CLI", "Antigravity CLI", "Grok Build", "Docker Agent"], "mcp: connect commands cover every Agent Guild provider")
-	check(commands[0][1] == "claude mcp add -s user agent-guild-builders \"--\" 'C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe' --no-header \"--\" --mcp", "mcp: the Claude Code command quotes the path and every --")
+	check(commands[0][1] == "claude mcp add -s user agent-guild-builders \"--\" 'C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe' --headless --no-header \"--\" --mcp", "mcp: the Claude Code command quotes the path and every --")
 	var brackets: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps(Builders)/AgentGuildBuilders.exe", [], false)
 	check(brackets[0][1].contains(" 'C:/Apps(Builders)/AgentGuildBuilders.exe' "), "mcp: a path PowerShell would read as an expression is single-quoted")
 	check(commands[2][1].begins_with("agy mcp add agent-guild-builders \"--\" "), "mcp: Antigravity flags come before the name")
-	check(commands[4][1].contains("type: mcp") and commands[4][1].contains("'--no-header', '--', '--mcp'"), "mcp: the Docker Agent toolset has the server's arguments")
+	check(commands[4][1].contains("type: mcp") and commands[4][1].contains("'--headless', '--no-header', '--', '--mcp'"), "mcp: the Docker Agent toolset has the server's arguments")
 	var dollar: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps $x/it's/AgentGuildBuilders.exe", [], false)
 	check(dollar[1][1].contains("'C:/Apps $x/it''s/AgentGuildBuilders.exe'"), "mcp: paths PowerShell would expand are single-quoted")
 	var mac: Array = load("res://src/ui/main.gd").connect_commands("/Users/x/Bill's $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders", [], true)
-	check(mac[0][1] == "claude mcp add -s user agent-guild-builders \"--\" '/Users/x/Bill'\\''s $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders' --no-header \"--\" --mcp", "mcp: on a Mac the path is single-quoted for zsh, with a ' written as '\\''")
+	check(mac[0][1] == "claude mcp add -s user agent-guild-builders \"--\" '/Users/x/Bill'\\''s $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders' --headless --no-header \"--\" --mcp", "mcp: on a Mac the path is single-quoted for zsh, with a ' written as '\\''")
 	check(mac[4][1].contains("command: '/Users/x/Bill''s $x `y`/"), "mcp: the Docker Agent YAML quotes the path the same everywhere")
 	check(ProjectSettings.get_setting("application/run/flush_stdout_on_print"), "mcp: every reply is flushed at once, which release builds don't do by default")
 	var job := BakeJob.new()
@@ -2217,6 +2218,42 @@ func _mcp() -> bool:
 	check(await job.preview(WorldDoc.create("guild", "T", 1), "light") == null and job.error == BakeJob.NEEDS_WINDOW, "mcp: previewing without a window fails at once")
 	job.free()
 	return await _mcp_editor()
+
+func _mcp_relay() -> void:
+	var lines := []
+	var stub := McpStubHost.new()
+	root.add_child(stub)
+	var relay := _mcp_server(stub, lines)
+	relay.relay = true
+	var launched := []
+	var sent := []
+	relay.launch_window = func():
+		launched.append(true)
+		return true
+	relay.write_window = func(line: String): sent.append(JSON.parse_string(line))
+	await _rpc(relay, lines, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
+	var listed := await _call_tool(relay, lines, 2, "list_worlds", {})
+	var items := await _call_tool(relay, lines, 3, "list_items", {"search": "stone"})
+	check(listed.get("isError") == false and items.get("isError") == false and launched.is_empty() and sent.is_empty(), "mcp: the relay lists worlds and items without opening a window")
+	lines.clear()
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "create_world", "arguments": {"template": "blank", "title": "T"}}}))
+	check(launched.size() == 1 and sent.size() == 2 and sent[0].method == "initialize" and sent[0].params.protocolVersion == "2025-11-25" and sent[1].id == 4 and sent[1].params.name == "create_world" and lines.is_empty(), "mcp: create_world opens the window, initializes it and goes to it")
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/progress", "params": {"progressToken": 1, "progress": 1}}))
+	relay._from_window("{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"content\":[],\"isError\":false}}")
+	check(lines.size() == 2 and lines[0].contains("notifications/progress") and lines[1].contains("\"id\":4,"), "mcp: the window's replies pass through and its initialize stays hidden")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "list_worlds", "arguments": {}}}))
+	check(launched.size() == 1 and sent.back().id == 5, "mcp: while the window is open, every call goes to it")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 5}}))
+	check(sent.back().method == "notifications/cancelled", "mcp: a cancel goes to the window")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
+	lines.clear()
+	relay._window_closed()
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 6 and JSON.parse_string(lines[0]).result.isError and lines[0].contains("closed"), "mcp: closing the window fails its calls, but not cancelled ones")
+	sent.clear()
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
+	check(launched.size() == 2 and sent.size() == 2 and sent[0].method == "initialize" and sent[1].id == 7, "mcp: the next call opens the window again")
+	stub.free()
 
 ## The tools against the real app and editor, as an agent would use them.
 func _mcp_editor() -> bool:

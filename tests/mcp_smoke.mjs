@@ -9,7 +9,7 @@ import path from 'node:path';
 const [exe, ...flags] = process.argv.slice(2);
 const windowed = flags.includes('--windowed');
 const appData = fs.mkdtempSync(path.join(os.tmpdir(), 'agb-mcp-'));
-const args = [...(windowed ? [] : ['--headless']), '--', '--mcp'];
+const args = ['--headless', '--', windowed ? '--mcp' : '--mcp=headless'];
 // Builders keeps its data under APPDATA on Windows and under HOME on a Mac.
 const child = spawn(exe, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, APPDATA: appData, ...(process.platform === 'darwin' ? { HOME: appData } : {}) } });
 const lines = [];
@@ -50,7 +50,7 @@ try {
   const discover = await request('server/discover', { _meta: meta });
   check(discover.result?.supportedVersions?.includes('2026-07-28'), 'server/discover');
   const list = await request('tools/list', {});
-  check(list.result?.tools?.length === 16, 'tools/list has 16 tools');
+  check(list.result?.tools?.length === 17, 'tools/list has 17 tools');
   child.stdin.write('{not json\n');
   const made = await tool('create_world', { template: 'blank', title: 'Smoke', seed: 3 }, 120000);
   const world = made?.structuredContent?.world;

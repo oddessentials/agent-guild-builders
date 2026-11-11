@@ -1,6 +1,6 @@
 # Set up Agent Guild: Builders
 
-Agent Guild: Builders makes environments for Agent Guild Yards. It runs on Windows 10 or 11 (64-bit) or macOS 13 or later, and opens a window the person can watch while you build.
+Agent Guild: Builders makes environments for Agent Guild Yards. It runs on Windows 10 or 11 (64-bit) or macOS 13 or later.
 
 Agent Guild itself: [agentguild.oddessentials.ai/agents](https://agentguild.oddessentials.ai/agents/). Characters and companions for Agent Guild: World: [oddessentials.github.io/agent-guild-steam](https://oddessentials.github.io/agent-guild-steam/).
 
@@ -42,14 +42,14 @@ It prints the full path of `AgentGuildBuilders.exe`.
 
 ## 3. Connect
 
-Skip this step if Builders is already connected to you. Otherwise run the block for the agent you are.
+If Builders is already connected to you, remove that connection first. Then run the block for the agent you are.
 
 Claude Code:
 
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-claude mcp add -s user agent-guild-builders "--" $exe --no-header "--" --mcp
+claude mcp add -s user agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Codex CLI:
@@ -57,7 +57,7 @@ Codex CLI:
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-codex mcp add agent-guild-builders "--" $exe --no-header "--" --mcp
+codex mcp add agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Antigravity CLI:
@@ -65,7 +65,7 @@ Antigravity CLI:
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-agy mcp add agent-guild-builders "--" $exe --no-header "--" --mcp
+agy mcp add agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Grok Build:
@@ -73,7 +73,7 @@ Grok Build:
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-grok mcp add agent-guild-builders "--" $exe --no-header "--" --mcp
+grok mcp add agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Docker Agent: add this toolset to your agent in its YAML file, with `root` replaced by your agent's name and `<exe>` by the path step 2 printed. Write any `'` in the path as `''`.
@@ -84,20 +84,20 @@ agents:
     toolsets:
       - type: mcp
         command: '<exe>'
-        args: ['--no-header', '--', '--mcp']
+        args: ['--headless', '--no-header', '--', '--mcp']
 ```
 
 ## 4. Check that it works
 
 1. Claude Code: `claude mcp get agent-guild-builders` reports it connected. Grok Build: `grok mcp doctor agent-guild-builders` reports it healthy. Other agents: go to the next step.
-2. Start a new session, so the Builders tools load. The Builders window opens with them.
+2. Start a new session, so the Builders tools load.
 3. Call the `list_worlds` tool. It lists the worlds saved on this computer, which are kept outside the install folder.
 
 Builders is now set up. Its tools explain how to build.
 
 ## Update
 
-Run step 2 again with the same folder. The connection and the person's worlds are kept. Then start a new session, so the Builders tools load again.
+Run steps 2 and 3 again with the same folder. The person's worlds are kept. Then start a new session, so the Builders tools load again.
 
 ## On a Mac
 
@@ -138,14 +138,14 @@ It prints the full path of the app's executable. Installed this way, macOS doesn
 
 ## Mac 3. Connect
 
-Skip this step if Builders is already connected to you. Otherwise run the block for the agent you are.
+If Builders is already connected to you, remove that connection first. Then run the block for the agent you are.
 
 Claude Code:
 
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-claude mcp add -s user agent-guild-builders "--" "$exe" --no-header "--" --mcp
+claude mcp add -s user agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Codex CLI:
@@ -153,7 +153,7 @@ Codex CLI:
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-codex mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+codex mcp add agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Antigravity CLI:
@@ -161,7 +161,7 @@ Antigravity CLI:
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-agy mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+agy mcp add agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Grok Build:
@@ -169,7 +169,7 @@ Grok Build:
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-grok mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+grok mcp add agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Docker Agent: add the toolset shown in step 3 above, with `<exe>` the path Mac step 2 printed.
@@ -180,4 +180,4 @@ Follow step 4 above.
 
 ## Mac update
 
-Run Mac step 2 again with the same folder. The connection and the person's worlds are kept. Then start a new session, so the Builders tools load again.
+Run Mac steps 2 and 3 again with the same folder. The person's worlds are kept. Then start a new session, so the Builders tools load again.
