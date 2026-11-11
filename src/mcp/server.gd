@@ -14,7 +14,8 @@ const METHOD_NOT_FOUND := -32601
 const INVALID_PARAMS := -32602
 const UNSUPPORTED_VERSION := -32022
 const PERSON_WAIT_MS := 30000
-const WINDOW_INIT := "builders-window-initialize"
+const WINDOW_START := "builders-window-start"
+const WINDOW_RETRY_MS := 10000
 const WITHOUT_WINDOW := ["list_worlds", "list_items"]
 const INSTRUCTIONS := "Agent Guild: Builders makes environments for Agent Guild Yards.
 Start with list_worlds, then create_world or open_world. Every world tool takes the `world` value those return, and refuses if a different world is open.
@@ -37,7 +38,8 @@ var _waiting_since := -1
 var _closed := false
 var _window := {}
 var _window_open := false
-var _window_initializing := false
+var _window_starting := false
+var _window_failed_at := -1
 var _window_threads: Array = []
 var _exited_windows: Array = []
 var _forwarded := {}
@@ -247,6 +249,8 @@ func _dispatch(msg: Dictionary) -> void:
 			if relay and (_window_open or name not in WITHOUT_WINDOW):
 				_forward(ctx, msg)
 				return
+			if relay and name == "list_items":
+				WorldScene.refresh_custom()
 			if tools.is_async(name):
 				_active = {"ctx": ctx, "long": tools.is_long(name)}
 				await tools.call_tool(ctx, name, args)
@@ -282,13 +286,20 @@ func _send(msg: Dictionary) -> void:
 
 func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 	if not _window_open:
+		var wait := _window_failed_at + WINDOW_RETRY_MS - Time.get_ticks_msec() if _window_failed_at >= 0 else 0
+		if wait > 0:
+			respond(ctx, tools.failure("Builders' window failed to start. Try again in %d seconds." % ceili(wait / 1000.0)))
+			return
 		if not launch_window.call():
+			_window_failed_at = Time.get_ticks_msec()
 			respond(ctx, tools.failure("Builders couldn't open its window."))
 			return
 		_window_open = true
-		_window_initializing = _legacy_version != ""
-		if _window_initializing:
-			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_INIT, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
+		_window_starting = true
+		if _legacy_version != "":
+			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
+		else:
+			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "ping"}))
 	_forwarded[ctx.id] = ctx
 	msg["id"] = ctx.id
 	write_window.call(JSON.stringify(msg))
@@ -315,8 +326,9 @@ func _from_window(line: String) -> void:
 	if not msg is Dictionary:
 		return
 	if msg.has("id") and not msg.has("method"):
-		if _window_initializing:
-			_window_initializing = false
+		if _window_starting:
+			_window_starting = false
+			_window_failed_at = -1
 			return
 		var id = _id_of(msg)
 		if not _forwarded.has(id):
@@ -327,17 +339,19 @@ func _from_window(line: String) -> void:
 
 func _window_closed() -> void:
 	_window_open = false
-	_window_initializing = false
+	var failed := _window_starting
+	_window_starting = false
+	if failed:
+		_window_failed_at = Time.get_ticks_msec()
 	for thread in _window_threads:
 		thread.wait_to_finish()
 	_window_threads.clear()
 	if _window.has("pid") and OS.is_process_running(_window.pid):
 		_exited_windows.append(_window.pid)
 	_window = {}
-	WorldScene.refresh_custom()
 	var waiting := _forwarded.values()
 	_forwarded.clear()
 	for ctx in waiting:
-		respond(ctx, tools.failure("The Builders window was closed. Call the tool again to reopen it."))
+		respond(ctx, tools.failure("Builders' window failed to start, so nothing was done." if failed else "The Builders window was closed. Call the tool again to reopen it."))
 	if _closed:
 		_stdin_closed()

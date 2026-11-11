@@ -2237,10 +2237,14 @@ func _mcp_relay() -> void:
 	var listed := await _call_tool(relay, lines, 2, "list_worlds", {})
 	var items := await _call_tool(relay, lines, 3, "list_items", {"search": "stone"})
 	check(listed.get("isError") == false and items.get("isError") == false and launched.is_empty() and sent.is_empty(), "mcp: the relay lists worlds and items without opening a window")
+	var stale := CustomItems.PREFIX + "removed-in-another-window"
+	WorldScene.load_kit().models[stale] = {"label": "Removed", "group": "custom"}
+	var fresh := await _call_tool(relay, lines, 30, "list_items", {"search": "removed-in-another-window"})
+	check(_data(fresh).items.is_empty() and not WorldScene.load_kit().models.has(stale), "mcp: the relay's list_items reloads custom items another window changed")
 	lines.clear()
 	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "create_world", "arguments": {"template": "blank", "title": "T"}}}))
 	check(launched.size() == 1 and sent.size() == 2 and sent[0].method == "initialize" and sent[0].params.protocolVersion == "2025-11-25" and sent[1].id == 4 and sent[1].params.name == "create_world" and lines.is_empty(), "mcp: create_world opens the window, initializes it and goes to it")
-	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
 	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/progress", "params": {"progressToken": 1, "progress": 1}}))
 	relay._from_window("{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"content\":[],\"isError\":false}}")
 	check(lines.size() == 2 and lines[0].contains("notifications/progress") and lines[1].contains("\"id\":4,"), "mcp: the window's replies pass through and its initialize stays hidden")
@@ -2250,20 +2254,17 @@ func _mcp_relay() -> void:
 	check(sent.back().method == "notifications/cancelled", "mcp: a cancel goes to the window")
 	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
 	lines.clear()
-	var stale := CustomItems.PREFIX + "gone-after-the-window"
-	WorldScene.load_kit().models[stale] = {"label": "Gone", "group": "custom"}
 	relay._window_closed()
-	check(not WorldScene.load_kit().models.has(stale), "mcp: closing the window reloads custom items the window may have changed")
 	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 6 and JSON.parse_string(lines[0]).result.isError and lines[0].contains("closed"), "mcp: closing the window fails its calls, but not cancelled ones")
 	sent.clear()
 	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
 	check(launched.size() == 2 and sent.size() == 2 and sent[0].method == "initialize" and sent[1].id == 7, "mcp: the next call opens the window again")
 	lines.clear()
-	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
-	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
 	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": 7, "result": {}}))
-	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
-	check(lines.size() == 2 and JSON.parse_string(lines[0]).id == 7 and JSON.parse_string(lines[1]).id == McpServer.WINDOW_INIT, "mcp: a client id equal to the window's own initialize id still gets its reply")
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	check(lines.size() == 2 and JSON.parse_string(lines[0]).id == 7 and JSON.parse_string(lines[1]).id == McpServer.WINDOW_START, "mcp: a client id equal to the window's own initialize id still gets its reply")
 	stub.free()
 
 	lines = []
@@ -2275,9 +2276,35 @@ func _mcp_relay() -> void:
 	modern.launch_window = func(): return true
 	modern.write_window = func(line: String): sent.append(JSON.parse_string(line))
 	var meta := {McpServer.META_VERSION: McpServer.MODERN, McpServer.META_CAPABILITIES: {}}
-	modern.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "method": "tools/call", "params": {"_meta": meta, "name": "show_window", "arguments": {}}}))
-	modern._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
-	check(sent.size() == 1 and sent[0].method == "tools/call" and lines.size() == 1 and JSON.parse_string(lines[0]).id == McpServer.WINDOW_INIT, "mcp: a 2026-07-28 session sends the window no initialize and hides none of its replies")
+	modern.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "method": "tools/call", "params": {"_meta": meta, "name": "show_window", "arguments": {}}}))
+	modern._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	modern._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	check(sent.size() == 2 and sent[0].method == "ping" and sent[1].method == "tools/call" and lines.size() == 1 and JSON.parse_string(lines[0]).id == McpServer.WINDOW_START, "mcp: a 2026-07-28 session pings the window instead of initializing it, and only that reply is hidden")
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var failing := _mcp_server(stub, lines)
+	failing.relay = true
+	var starts := []
+	failing.launch_window = func():
+		starts.append(true)
+		return true
+	failing.write_window = func(_line: String): pass
+	var show := func(id: int): failing.receive(JSON.stringify({"jsonrpc": "2.0", "id": id, "method": "tools/call", "params": {"_meta": meta, "name": "show_window", "arguments": {}}}))
+	show.call(1)
+	failing._window_closed()
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 1 and lines[0].contains("failed to start"), "mcp: a window that exits before answering is reported as failing to start")
+	lines.clear()
+	show.call(2)
+	check(starts.size() == 1 and lines.size() == 1 and lines[0].contains("Try again in"), "mcp: a window that failed to start isn't relaunched straight away")
+	failing._window_failed_at -= McpServer.WINDOW_RETRY_MS
+	lines.clear()
+	show.call(3)
+	failing._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	failing._window_closed()
+	check(starts.size() == 2 and lines.size() == 1 and lines[0].contains("was closed") and failing._window_failed_at == -1, "mcp: once the wait is over the window starts again, and a normal close isn't a failed start")
 	stub.free()
 
 ## The tools against the real app and editor, as an agent would use them.
