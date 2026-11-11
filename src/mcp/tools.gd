@@ -7,7 +7,7 @@ extends RefCounted
 const EditorView := preload("res://src/ui/editor_view.gd")
 const PREVIEW_WIDTH := 1024
 const MAX_LISTED := 500
-const READING := ["list_worlds", "describe_world", "list_items"]
+const READING := ["list_worlds", "describe_world", "list_items", "show_window"]
 const OPENING := ["create_world", "open_world"]
 const RENDERING := ["render_preview", "export_world"]
 

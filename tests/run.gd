@@ -2165,6 +2165,8 @@ func _mcp() -> bool:
 	check(busy.get("isError") == true and _text(busy).contains("rendering"), "mcp: edits are refused while rendering")
 	var reading := await _call_tool(server, lines, 15, "list_items", {"search": "stone"})
 	check(reading.get("isError") == false and _data(reading).items.size() > 0, "mcp: reading tools still answer while rendering")
+	var showing := await _call_tool(server, lines, 17, "show_window", {})
+	check(showing.get("isError") == false, "mcp: show_window answers while rendering")
 	server._active = {}
 	check(lines.all(func(l): return not l.contains("\n") and JSON.parse_string(l) is Dictionary), "mcp: every line written is one JSON message")
 	server._stdin_closed()
@@ -2253,6 +2255,26 @@ func _mcp_relay() -> void:
 	sent.clear()
 	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
 	check(launched.size() == 2 and sent.size() == 2 and sent[0].method == "initialize" and sent[1].id == 7, "mcp: the next call opens the window again")
+	lines.clear()
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": 7, "result": {}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
+	check(lines.size() == 2 and JSON.parse_string(lines[0]).id == 7 and JSON.parse_string(lines[1]).id == McpServer.WINDOW_INIT, "mcp: a client id equal to the window's own initialize id still gets its reply")
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var modern := _mcp_server(stub, lines)
+	modern.relay = true
+	sent = []
+	modern.launch_window = func(): return true
+	modern.write_window = func(line: String): sent.append(JSON.parse_string(line))
+	var meta := {McpServer.META_VERSION: McpServer.MODERN, McpServer.META_CAPABILITIES: {}}
+	modern.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "method": "tools/call", "params": {"_meta": meta, "name": "show_window", "arguments": {}}}))
+	modern._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_INIT, "result": {}}))
+	check(sent.size() == 1 and sent[0].method == "tools/call" and lines.size() == 1 and JSON.parse_string(lines[0]).id == McpServer.WINDOW_INIT, "mcp: a 2026-07-28 session sends the window no initialize and hides none of its replies")
 	stub.free()
 
 ## The tools against the real app and editor, as an agent would use them.

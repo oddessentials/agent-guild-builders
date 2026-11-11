@@ -37,6 +37,7 @@ var _waiting_since := -1
 var _closed := false
 var _window := {}
 var _window_open := false
+var _window_initializing := false
 var _window_threads: Array = []
 var _forwarded := {}
 
@@ -282,7 +283,8 @@ func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 			respond(ctx, tools.failure("Builders couldn't open its window."))
 			return
 		_window_open = true
-		if _legacy_version != "":
+		_window_initializing = _legacy_version != ""
+		if _window_initializing:
 			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_INIT, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
 	_forwarded[ctx.id] = ctx
 	msg["id"] = ctx.id
@@ -310,7 +312,8 @@ func _from_window(line: String) -> void:
 	if not msg is Dictionary:
 		return
 	if msg.has("id") and not msg.has("method"):
-		if msg.id is String and msg.id == WINDOW_INIT:
+		if _window_initializing:
+			_window_initializing = false
 			return
 		var id = _id_of(msg)
 		if not _forwarded.has(id):
@@ -321,6 +324,7 @@ func _from_window(line: String) -> void:
 
 func _window_closed() -> void:
 	_window_open = false
+	_window_initializing = false
 	for thread in _window_threads:
 		thread.wait_to_finish()
 	_window_threads.clear()

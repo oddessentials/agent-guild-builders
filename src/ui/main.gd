@@ -463,6 +463,8 @@ func agent_editor() -> Control:
 	return _view if _view and is_instance_valid(_view) and not _loader else null
 
 func agent_show() -> void:
+	if get_window().mode == Window.MODE_MINIMIZED:
+		get_window().mode = Window.MODE_WINDOWED
 	get_window().grab_focus()
 
 func agent_loading() -> bool:
