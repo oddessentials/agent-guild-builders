@@ -44,6 +44,7 @@ func _ready() -> void:
 	elif _args.has("export"):
 		await _cli_export()
 	elif _args.has("mcp") and _args.mcp != "window" and DisplayServer.get_name() == "headless":
+		OS.low_processor_usage_mode = true
 		_mcp = McpServer.new()
 		_mcp.host = self
 		_mcp.relay = true
@@ -462,11 +463,6 @@ func _edit(doc: WorldDoc, path: String) -> void:
 
 func agent_editor() -> Control:
 	return _view if _view and is_instance_valid(_view) and not _loader else null
-
-func agent_show() -> void:
-	if get_window().mode == Window.MODE_MINIMIZED:
-		get_window().mode = Window.MODE_WINDOWED
-	get_window().grab_focus()
 
 func agent_loading() -> bool:
 	return _loader != null

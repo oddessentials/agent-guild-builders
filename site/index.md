@@ -1,6 +1,6 @@
 # Set up Agent Guild: Builders
 
-Agent Guild: Builders makes environments for Agent Guild Yards. It runs on Windows 10 or 11 (64-bit) or macOS 13 or later.
+Agent Guild: Builders makes environments for Agent Guild Yards. It runs on Windows 10 or 11 (64-bit) or macOS 13 or later, and opens a window the person can watch while you build.
 
 Agent Guild itself: [agentguild.oddessentials.ai/agents](https://agentguild.oddessentials.ai/agents/). Characters and companions for Agent Guild: World: [oddessentials.github.io/agent-guild-steam](https://oddessentials.github.io/agent-guild-steam/).
 
@@ -42,7 +42,9 @@ It prints the full path of `AgentGuildBuilders.exe`.
 
 ## 3. Connect
 
-If Builders is already connected to you, remove that connection first. Then run the block for the agent you are.
+Skip this step if Builders is already connected to you with `--headless` in its command. A connection without `--headless` opens the Builders window every time a session starts. Replace it: remove it with `claude mcp remove -s user agent-guild-builders`, `codex mcp remove agent-guild-builders`, `agy mcp remove agent-guild-builders` or `grok mcp remove agent-guild-builders`, then run the block below for the agent you are. In a Docker Agent YAML, make `'--headless'` the first entry in `args`.
+
+Otherwise run the block for the agent you are.
 
 Claude Code:
 
@@ -97,7 +99,7 @@ Builders is now set up. Its tools explain how to build.
 
 ## Update
 
-Run steps 2 and 3 again with the same folder. The person's worlds are kept. Then start a new session, so the Builders tools load again.
+Run step 2 again with the same folder. The connection and the person's worlds are kept. If the connection's command has no `--headless`, replace it as step 3 says, so the window stops opening when a session starts. Then start a new session, so the Builders tools load again.
 
 ## On a Mac
 
@@ -138,7 +140,9 @@ It prints the full path of the app's executable. Installed this way, macOS doesn
 
 ## Mac 3. Connect
 
-If Builders is already connected to you, remove that connection first. Then run the block for the agent you are.
+Skip this step if Builders is already connected to you with `--headless` in its command. Replace a connection without it as step 3 above says, then run the block below for the agent you are.
+
+Otherwise run the block for the agent you are.
 
 Claude Code:
 
@@ -180,4 +184,4 @@ Follow step 4 above.
 
 ## Mac update
 
-Run Mac steps 2 and 3 again with the same folder. The person's worlds are kept. Then start a new session, so the Builders tools load again.
+Run Mac step 2 again with the same folder. The connection and the person's worlds are kept. If the connection's command has no `--headless`, replace it as Mac step 3 says, so the window stops opening when a session starts. Then start a new session, so the Builders tools load again.

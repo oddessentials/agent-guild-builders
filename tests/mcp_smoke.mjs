@@ -50,7 +50,7 @@ try {
   const discover = await request('server/discover', { _meta: meta });
   check(discover.result?.supportedVersions?.includes('2026-07-28'), 'server/discover');
   const list = await request('tools/list', {});
-  check(list.result?.tools?.length === 17, 'tools/list has 17 tools');
+  check(list.result?.tools?.length === 16, 'tools/list has 16 tools');
   child.stdin.write('{not json\n');
   const made = await tool('create_world', { template: 'blank', title: 'Smoke', seed: 3 }, 120000);
   const world = made?.structuredContent?.world;

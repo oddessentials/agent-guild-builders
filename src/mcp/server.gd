@@ -15,7 +15,6 @@ const INVALID_PARAMS := -32602
 const UNSUPPORTED_VERSION := -32022
 const PERSON_WAIT_MS := 30000
 const WINDOW_START := "builders-window-start"
-const WINDOW_RETRY_MS := 10000
 const AGENT_LEFT := "notifications/builders/agent_disconnected"
 const WITHOUT_WINDOW := ["list_worlds", "list_items"]
 const INSTRUCTIONS := "Agent Guild: Builders makes environments for Agent Guild Yards.
@@ -42,9 +41,7 @@ var _left := false
 var _window := {}
 var _window_open := false
 var _window_starting := false
-var _window_failed_at := -1
 var _window_threads: Array = []
-var _exited_windows: Array = []
 var _forwarded := {}
 
 func _ready() -> void:
@@ -90,8 +87,6 @@ func _exit_tree() -> void:
 		_thread.wait_to_finish()
 
 func _process(_delta: float) -> void:
-	if not _exited_windows.is_empty():
-		_exited_windows = _exited_windows.filter(OS.is_process_running)
 	if not _queue.is_empty():
 		_pump()
 
@@ -294,12 +289,7 @@ func _send(msg: Dictionary) -> void:
 
 func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 	if not _window_open:
-		var wait := _window_failed_at + WINDOW_RETRY_MS - Time.get_ticks_msec() if _window_failed_at >= 0 else 0
-		if wait > 0:
-			respond(ctx, tools.failure("Builders' window failed to start. Try again in %d seconds." % ceili(wait / 1000.0)))
-			return
 		if not launch_window.call():
-			_window_failed_at = Time.get_ticks_msec()
 			respond(ctx, tools.failure("Builders couldn't open its window."))
 			return
 		_window_open = true
@@ -336,7 +326,6 @@ func _from_window(line: String) -> void:
 	if msg.has("id") and not msg.has("method"):
 		if _window_starting:
 			_window_starting = false
-			_window_failed_at = -1
 			return
 		var id = _id_of(msg)
 		if not _forwarded.has(id):
@@ -349,13 +338,9 @@ func _window_closed() -> void:
 	_window_open = false
 	var failed := _window_starting
 	_window_starting = false
-	if failed:
-		_window_failed_at = Time.get_ticks_msec()
 	for thread in _window_threads:
 		thread.wait_to_finish()
 	_window_threads.clear()
-	if _window.has("pid") and OS.is_process_running(_window.pid):
-		_exited_windows.append(_window.pid)
 	_window = {}
 	var waiting := _forwarded.values()
 	_forwarded.clear()

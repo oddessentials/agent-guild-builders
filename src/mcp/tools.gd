@@ -7,7 +7,7 @@ extends RefCounted
 const EditorView := preload("res://src/ui/editor_view.gd")
 const PREVIEW_WIDTH := 1024
 const MAX_LISTED := 500
-const READING := ["list_worlds", "describe_world", "list_items", "show_window"]
+const READING := ["list_worlds", "describe_world", "list_items"]
 const OPENING := ["create_world", "open_world"]
 const RENDERING := ["render_preview", "export_world"]
 
@@ -190,8 +190,6 @@ func _definitions() -> Array:
 			"inputSchema": _object({"world": _world(), "time": {"type": "string", "enum": ["day", "dusk"]}}, ["world"]), "annotations": read},
 		{"name": "export_world", "title": "Export the world", "description": "Saves, then renders by day and at dusk and writes the .agworld file Agent Guild loads. Final quality takes several minutes; draft is quicker. `to` is a full path ending in .agworld; an existing file is only replaced with `replace`.",
 			"inputSchema": _object({"world": _world(), "to": {"type": "string", "minLength": 1, "maxLength": 4096}, "replace": {"type": "boolean"}, "quality": {"type": "string", "enum": ["draft", "final"]}}, ["world", "to"]), "annotations": removes},
-		{"name": "show_window", "title": "Show the window", "description": "Opens the Builders window, or brings it to the front, so the person can watch.",
-			"inputSchema": _object({}, []), "annotations": read},
 	]
 
 static func _same_path(a: String, b: String) -> bool:
@@ -515,11 +513,6 @@ func _step(args: Dictionary, redo: bool) -> Dictionary:
 	if label == "":
 		return failure("Nothing to %s." % ("redo" if redo else "undo"))
 	return _done("%s: %s." % ["Redid" if redo else "Undid", label])
-
-func _tool_show_window(_ctx: Dictionary, _args: Dictionary) -> Dictionary:
-	if server.host and server.host.has_method("agent_show"):
-		server.host.agent_show()
-	return _done("The window is open.")
 
 func _tool_render_preview(ctx: Dictionary, args: Dictionary) -> Dictionary:
 	var view = _editing(args)
