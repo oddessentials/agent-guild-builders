@@ -23,7 +23,7 @@ Don't move Builders after connecting it.
 
 ## 2. Download and install
 
-If Builders is already running, ask the person to close its window first. The download is large.
+Before updating an existing installation, stop the `agent-guild-builders` MCP server in every connected agent, or fully exit those agent sessions. Then close any Builders windows and wait for all `AgentGuildBuilders.exe` processes for this installation to exit; check their paths in Task Manager's Details tab if needed. Closing the window alone leaves the headless server running and the executable locked. Keep the saved MCP registrations: do not run `mcp remove` to stop a server. Reconnect only after extraction finishes. The download is large.
 
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
@@ -99,7 +99,7 @@ Builders is now set up. Its tools explain how to build.
 
 ## Update
 
-Run step 2 again with the same folder. The connection and the person's worlds are kept. If the connection's command has no `--headless`, replace it as step 3 says, so the window stops opening when a session starts. Then start a new session, so the Builders tools load again.
+Stop the running MCP servers and close Builders as step 2 says, then run its download and install block again with the same folder. The saved connection, worlds and other user data are kept. If the connection's command has no `--headless`, replace it as step 3 says, so the window stops opening when a session starts. After extraction finishes, restart the MCP servers or start new agent sessions, then call `list_worlds` to check the connection.
 
 ## On a Mac
 

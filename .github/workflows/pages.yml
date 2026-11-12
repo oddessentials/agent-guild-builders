@@ -42,6 +42,7 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -58,10 +59,27 @@ jobs:
         with:
           path: build/site
           include-hidden-files: true
+      - name: Verify the triggering release is still latest
+        id: latest_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: build-${{ github.event.workflow_run.run_number }}
+        run: |
+          latest=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
+          if [ "$latest" = "$RELEASE_TAG" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Skipping $RELEASE_TAG; the latest release is $latest."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Deploy
         id: deployment
+        if: steps.latest_release.outputs.deploy == 'true'
         uses: actions/deploy-pages@v5
       - name: Check the published page
+        if: steps.latest_release.outputs.deploy == 'true'
         env:
           PAGE: ${{ steps.deployment.outputs.page_url }}
         run: |
