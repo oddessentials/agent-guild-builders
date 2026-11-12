@@ -25,6 +25,10 @@ var water_adjusted := false
 var notice := ""
 var save_error := ""
 
+static func version() -> String:
+	var stamped := String(ProjectSettings.get_setting("application/config/version", ""))
+	return stamped if stamped != "" else "dev"
+
 static func create(base: String, title: String, seed_value: int) -> WorldDoc:
 	var doc := WorldDoc.new()
 	doc.data = {

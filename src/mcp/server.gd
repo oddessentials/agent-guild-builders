@@ -7,7 +7,6 @@ const SUPPORTED := ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "202
 const META_VERSION := "io.modelcontextprotocol/protocolVersion"
 const META_CAPABILITIES := "io.modelcontextprotocol/clientCapabilities"
 const META_SERVER := "io.modelcontextprotocol/serverInfo"
-const SERVER_INFO := {"name": "agent-guild-builders", "title": "Agent Guild: Builders", "version": "1"}
 const PARSE_ERROR := -32700
 const INVALID_REQUEST := -32600
 const METHOD_NOT_FOUND := -32601
@@ -44,6 +43,9 @@ var _window_starting := false
 var _window_threads: Array = []
 var _exited_windows: Array = []
 var _forwarded := {}
+
+static func server_info() -> Dictionary:
+	return {"name": "agent-guild-builders", "title": "Agent Guild: Builders", "version": WorldDoc.version()}
 
 func _ready() -> void:
 	tools = McpTools.new(self)
@@ -229,7 +231,7 @@ func _dispatch(msg: Dictionary) -> void:
 				return
 			var asked = params.get("protocolVersion")
 			_legacy_version = asked if asked in LEGACY else LEGACY[0]
-			respond(ctx, {"protocolVersion": _legacy_version, "capabilities": {"tools": {}}, "serverInfo": SERVER_INFO, "instructions": INSTRUCTIONS})
+			respond(ctx, {"protocolVersion": _legacy_version, "capabilities": {"tools": {}}, "serverInfo": server_info(), "instructions": INSTRUCTIONS})
 		"server/discover":
 			if not ctx.modern:
 				_send_error(ctx.id, INVALID_PARAMS, "server/discover needs %s and %s in _meta." % [META_VERSION, META_CAPABILITIES])
@@ -273,7 +275,7 @@ func respond(ctx: Dictionary, result: Dictionary) -> void:
 	if ctx.modern:
 		result["resultType"] = "complete"
 		var meta: Dictionary = result.get("_meta", {})
-		meta[META_SERVER] = SERVER_INFO
+		meta[META_SERVER] = server_info()
 		result["_meta"] = meta
 	_send({"jsonrpc": "2.0", "id": ctx.id, "result": result})
 

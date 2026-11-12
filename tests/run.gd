@@ -2114,6 +2114,15 @@ func _mcp() -> bool:
 	var init := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 7, "method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}})
 	check(init.get("result", {}).get("protocolVersion") == "2025-11-25" and init.result.serverInfo.name == "agent-guild-builders" and init.result.has("instructions"), "mcp: initialize answers with the asked version")
 	check(lines.size() == 1 and lines[0].contains("\"id\":7,") and not lines[0].contains("7.0"), "mcp: integer ids come back as integers")
+	ProjectSettings.set_setting("application/config/version", "0.1.7")
+	var stamped := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "v", "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
+	ProjectSettings.set_setting("application/config/version", null)
+	check(init.result.serverInfo.version == "dev" and stamped.get("result", {}).get("serverInfo", {}).get("version") == "0.1.7", "mcp: serverInfo reports the build's version")
+	var asked := OS.execute_with_pipe(OS.get_executable_path(), ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/"), "--headless", "--no-header", "--", "--version"], false)
+	var asked_deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while not asked.is_empty() and OS.is_process_running(asked.pid) and Time.get_ticks_msec() < asked_deadline:
+		await process_frame
+	check(not asked.is_empty() and not OS.is_process_running(asked.pid) and OS.get_process_exit_code(asked.pid) == 0 and asked.stdio.get_buffer(4096).get_string_from_utf8().strip_edges() == "dev", "mcp: --version says dev for an unstamped build")
 	check(not init.result.has("resultType"), "mcp: legacy results carry no resultType")
 	var old := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 8, "method": "initialize", "params": {"protocolVersion": "1999-01-01"}})
 	check(old.result.protocolVersion == McpServer.LEGACY[0], "mcp: an unknown version gets the newest legacy one")
@@ -2896,6 +2905,16 @@ func _mcp_ux(server: McpServer, lines: Array, app: Control, world: String) -> vo
 	await _mcp_disconnect(app, view)
 
 	view._save_now()
+	app._start_screen()
+	await process_frame
+	var note: Label = app.find_child("BuildNote", true, false)
+	check(note != null and note.text == "Development build", "the start screen does not say it is a development build")
+	ProjectSettings.set_setting("application/config/version", "0.1.7")
+	app._start_screen()
+	await process_frame
+	note = app.find_child("BuildNote", true, false)
+	check(note != null and note.text == "Build 7", "the start screen does not show its build")
+	ProjectSettings.set_setting("application/config/version", null)
 	app._start_screen()
 	await process_frame
 	app._rename_dialog(WorldLibrary.list()[0])
