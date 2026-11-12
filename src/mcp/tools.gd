@@ -258,7 +258,10 @@ func _tool_list_worlds(_ctx: Dictionary, _args: Dictionary) -> Dictionary:
 	return _done("%d saved worlds." % out.size(), {"worlds": out})
 
 func _tool_create_world(ctx: Dictionary, args: Dictionary) -> Dictionary:
-	var title := WorldLibrary.unique_title(str(args.title).strip_edges())
+	var wanted := str(args.title).strip_edges()
+	if not WorldDoc.valid_title(wanted):
+		return failure("Agent Guild can't use that title. " + WorldDoc.TITLE_RULE)
+	var title := WorldLibrary.unique_title(wanted)
 	var base := str(args.get("preview_yard", "guild"))
 	var seed_value := int(args.get("seed", randi() % 100000))
 	var template := str(args.template)

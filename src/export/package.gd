@@ -458,7 +458,7 @@ static func _check_meta(meta: Variant, out: Array) -> bool:
 	if not meta.get("base") is String or not WorldDoc.BASES.has(meta.base):
 		out.append("The world names a base that doesn't exist.")
 	var title = meta.get("title", "")
-	if not title is String or title.strip_edges().is_empty() or title.length() > WorldDoc.MAX_TITLE:
+	if not WorldDoc.valid_title(title):
 		out.append("The world's title is missing or too long.")
 	if not meta.get("environment") is String or meta.environment != environment_abi():
 		out.append("This world was made for a different Yard layout, so it wouldn't line up.")

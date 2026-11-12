@@ -35,6 +35,9 @@ func run(doc: WorldDoc, out_path: String, quality := "final", replace := true) -
 	if _cancelled:
 		finished.emit(CANCELLED)
 		return
+	if not WorldDoc.valid_title(doc.data.title):
+		finished.emit("Agent Guild can't use this world's title, so it wasn't exported. " + WorldDoc.TITLE_RULE)
+		return
 	WorldScene.load_kit()
 	var checked := Clearance.check_world(doc)
 	if not checked.get("valid", false):

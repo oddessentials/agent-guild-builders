@@ -173,7 +173,7 @@ func _types() -> bool:
 			var missing: Dictionary = fixture.meta.duplicate(true)
 			missing.erase(key)
 			_refused(missing, fixture.files, "missing " + key)
-	for entry in [["kind", 5], ["environment", 7], ["title", 7], ["base", 7], ["format", 1.5], ["format", "1"], ["generator", 1.5]]:
+	for entry in [["kind", 5], ["environment", 7], ["title", 7], ["title", "A" + String.chr(1) + "B"], ["title", "\u00a0"], ["title", "😀".repeat(WorldDoc.MAX_TITLE / 2 + 1)], ["base", 7], ["format", 1.5], ["format", "1"], ["generator", 1.5]]:
 		var meta: Dictionary = fixture.meta.duplicate(true)
 		meta[entry[0]] = entry[1]
 		_refused(meta, fixture.files, "invalid value for " + entry[0])
@@ -241,6 +241,14 @@ func _recovery() -> bool:
 	var message: String = await job.finished
 	check(message.contains(blocked) and job._baker == null, "invalid destination refused before rendering starts")
 	job.queue_free()
+	var kept := work.path_join("kept.agworld")
+	_store(kept, "the last export".to_utf8_buffer())
+	var titled := BakeJob.new()
+	root.add_child(titled)
+	titled.run(WorldDoc.create("guild", "Old" + String.chr(1) + "name", 7), kept, "draft")
+	message = await titled.finished
+	check(message.contains("title") and titled._baker == null and FileAccess.get_file_as_string(kept) == "the last export", "a title the Yard refuses is refused before rendering, and the existing file is kept")
+	titled.queue_free()
 	await process_frame
 	var folder := OS.get_user_data_dir().path_join("bakes/package-recovery-test")
 	check(not DirAccess.dir_exists_absolute(folder), "recovery fixture starts clean")

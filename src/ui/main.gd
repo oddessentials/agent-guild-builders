@@ -282,7 +282,7 @@ func _add_new_world(col: VBoxContainer) -> void:
 			var title := name_box.text.strip_edges()
 			var chosen: String = WorldDoc.BASES[base.selected]
 			var seed_value := randi() % 100000
-			_load_world(func(): return Templates.create(template, chosen, title if title != "" else DEFAULT_TITLE, seed_value), "", "Building your world"))
+			_load_world(func(): return Templates.create(template, chosen, title if WorldDoc.valid_title(title) else DEFAULT_TITLE, seed_value), "", "Building your world"))
 		grid.add_child(card)
 
 func _add_your_worlds(col: VBoxContainer) -> void:
@@ -378,7 +378,7 @@ func _rename_dialog(w: Dictionary) -> void:
 	add_child(ask)
 	ask.confirmed.connect(func():
 		var title := box.text.strip_edges()
-		if title != "" and WorldLibrary.rename(w.path, title) != OK:
+		if WorldDoc.valid_title(title) and WorldLibrary.rename(w.path, title) != OK:
 			_notice = "That world couldn't be renamed."
 		_start_screen())
 	ask.canceled.connect(ask.queue_free)

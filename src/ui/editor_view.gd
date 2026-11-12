@@ -2024,7 +2024,7 @@ func _commit_title() -> void:
 	if not _finishing_edits:
 		_finish_edits()
 	var text := _title_box.text.strip_edges()
-	if text == "":
+	if not WorldDoc.valid_title(text):
 		_title_box.text = str(doc.data.title)
 	elif text != str(doc.data.title):
 		history.set_value("Rename", doc.data, "title", text)

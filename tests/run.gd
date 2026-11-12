@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["yard_reach", _yard_reach],["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp], ["lands", _lands]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["yard_reach", _yard_reach],["document", _document], ["titles", _titles], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp], ["lands", _lands]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -78,6 +78,49 @@ func _yard_reach() -> bool:
 		points.append(Vector2(float(roam.half), z))
 	for p in points:
 		check(Clearance.live_distance(p.x, p.y) == 0.0, "yard_reach: characters can reach (%.2f, %.2f), outside the live area" % [p.x, p.y])
+	return true
+
+func _titles() -> bool:
+	var wide := "😀".repeat(WorldDoc.MAX_TITLE / 2)
+	for t in ["A" + String.chr(1) + "B", "A\u000bB", "A\u0085B", "A\u007fB", String.chr(1) + "A", "\u00a0", "\u3000", "\ufeff", " \u2028 ", wide + "😀", "x".repeat(WorldDoc.MAX_TITLE + 1)]:
+		check(not WorldDoc.valid_title(t), "titles: the Yard refuses %s" % t.c_escape())
+	for t in ["My world", wide, "x".repeat(WorldDoc.MAX_TITLE), "x".repeat(WorldDoc.MAX_TITLE - 1) + "\u00a0\u00a0", "\tA ", "A\u200bB", "A\u180eB"]:
+		check(WorldDoc.valid_title(t), "titles: the Yard takes %s" % t.c_escape())
+	var historical := "Old" + String.chr(1) + "name"
+	var dir := OS.get_user_data_dir().path_join("test-titles")
+	WorldDoc.remove_folder(dir)
+	var made := WorldDoc.create("guild", "Legacy", 1)
+	made.add_thing("rock", 5, 5, 0, 1)
+	check(made.save(dir) == OK, "titles: saves")
+	var written = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("world.json")))
+	written.title = historical
+	var f := FileAccess.open(dir.path_join("world.json"), FileAccess.WRITE)
+	f.store_string(JSON.stringify(written, " "))
+	f.close()
+	var before := [FileAccess.get_file_as_bytes(dir.path_join("world.json")), FileAccess.get_file_as_bytes(dir.path_join("terrain.bin"))]
+	var legacy := WorldDoc.open(dir)
+	check(legacy != null and legacy.data.title == historical and legacy.data.things.size() == 1, "titles: a world saved with a title the Yard refuses still opens, title unchanged")
+	if legacy == null:
+		return false
+	legacy.add_thing("rock", 9, 9, 0, 1)
+	check(legacy.save(dir) == ERR_INVALID_DATA and legacy.save_error.contains("title"), "titles: saving it asks for another title")
+	check([FileAccess.get_file_as_bytes(dir.path_join("world.json")), FileAccess.get_file_as_bytes(dir.path_join("terrain.bin"))] == before, "titles: and keeps the last good save as it was")
+	check(not DirAccess.dir_exists_absolute(dir + ".old") and not DirAccess.dir_exists_absolute(dir + ".saving"), "titles: a refused save leaves nothing behind")
+	var view: Control = load("res://src/ui/editor_view.gd").new()
+	root.size = Vector2i(1200, 800)
+	root.add_child(view)
+	view.open(legacy, dir)
+	await process_frame
+	view._title_box.text = "B" + String.chr(1) + "ad"
+	view._commit_title()
+	check(legacy.data.title == historical and view._title_box.text == historical, "titles: the editor keeps the title it had when given one the Yard refuses")
+	view._title_box.text = "New name"
+	view._commit_title()
+	check(legacy.data.title == "New name", "titles: and takes a valid one")
+	view.queue_free()
+	await process_frame
+	check(legacy.save(dir) == OK and WorldDoc.open(dir).data.title == "New name" and WorldDoc.open(dir).data.things.size() == 2, "titles: with a valid title it saves")
+	WorldDoc.remove_folder(dir)
 	return true
 
 func _document() -> bool:
@@ -685,6 +728,12 @@ func _library() -> bool:
 	var long_copy := WorldLibrary.duplicate_world(long_folder)
 	check(long_copy != "" and WorldDoc.open(long_copy).data.title.length() <= WorldDoc.MAX_TITLE and WorldDoc.open(long_copy).data.title != longest, "library: duplicating a full-length title stays within the limit")
 	check(WorldLibrary.unique_title("x".repeat(WorldDoc.MAX_TITLE + 20)).length() == WorldDoc.MAX_TITLE, "library: an over-long title is cut to the limit")
+	var wide := "😀".repeat(WorldDoc.MAX_TITLE / 2)
+	var wide_folder := WorldLibrary.folder_for(wide)
+	WorldDoc.create("guild", wide, 3).save(wide_folder)
+	var wide_free := WorldLibrary.unique_title(wide)
+	check(wide_free != wide and WorldDoc.valid_title(wide_free), "library: a free name for a title of emoji stays within the Yard's limit")
+	WorldDoc.remove_folder(wide_folder)
 	WorldDoc.remove_folder(long_folder)
 	if long_copy != "":
 		WorldDoc.remove_folder(long_copy)
@@ -2428,6 +2477,9 @@ func _mcp_editor() -> bool:
 	await _rpc(server, lines, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
 	var made := await _call_tool(server, lines, 2, "create_world", {"template": "blank", "title": "Agent test", "seed": 5})
 	check(made.get("isError") == false and FileAccess.file_exists(str(_data(made).get("world", "")).path_join("world.json")), "mcp: create_world makes, opens and saves a world")
+	var count := WorldLibrary.list().size()
+	var refused := await _call_tool(server, lines, 19, "create_world", {"template": "blank", "title": "B" + String.chr(1) + "ad", "seed": 5})
+	check(refused.get("isError") == true and String(refused.content[0].text).contains("title") and WorldLibrary.list().size() == count, "mcp: create_world refuses a title the Yard refuses and makes no world")
 	var world := str(_data(made).get("world", ""))
 	var view: Control = app.agent_editor()
 	check(view != null and view.path == world and view._agent_label.visible, "mcp: the window shows the new world and that an agent is connected")
