@@ -2173,6 +2173,7 @@ func _mcp() -> bool:
 	server.receive(JSON.stringify({"jsonrpc": "2.0", "id": 16, "method": "ping"}))
 	check(lines.is_empty(), "mcp: nothing is answered after stdin closes")
 	stub.free()
+	await _mcp_relay()
 
 	var outside := OS.get_user_data_dir().path_join("mcp-export-test")
 	DirAccess.make_dir_recursive_absolute(outside)
@@ -2195,15 +2196,15 @@ func _mcp() -> bool:
 
 	var commands: Array = load("res://src/ui/main.gd").connect_commands("C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe", [], false)
 	check(commands.map(func(c): return c[0]) == ["Claude Code", "Codex CLI", "Antigravity CLI", "Grok Build", "Docker Agent"], "mcp: connect commands cover every Agent Guild provider")
-	check(commands[0][1] == "claude mcp add -s user agent-guild-builders \"--\" 'C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe' --no-header \"--\" --mcp", "mcp: the Claude Code command quotes the path and every --")
+	check(commands[0][1] == "claude mcp add -s user agent-guild-builders \"--\" 'C:/Program Files/Agent Guild Builders/AgentGuildBuilders.exe' --headless --no-header \"--\" --mcp", "mcp: the Claude Code command quotes the path and every --")
 	var brackets: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps(Builders)/AgentGuildBuilders.exe", [], false)
 	check(brackets[0][1].contains(" 'C:/Apps(Builders)/AgentGuildBuilders.exe' "), "mcp: a path PowerShell would read as an expression is single-quoted")
 	check(commands[2][1].begins_with("agy mcp add agent-guild-builders \"--\" "), "mcp: Antigravity flags come before the name")
-	check(commands[4][1].contains("type: mcp") and commands[4][1].contains("'--no-header', '--', '--mcp'"), "mcp: the Docker Agent toolset has the server's arguments")
+	check(commands[4][1].contains("type: mcp") and commands[4][1].contains("'--headless', '--no-header', '--', '--mcp'"), "mcp: the Docker Agent toolset has the server's arguments")
 	var dollar: Array = load("res://src/ui/main.gd").connect_commands("C:/Apps $x/it's/AgentGuildBuilders.exe", [], false)
 	check(dollar[1][1].contains("'C:/Apps $x/it''s/AgentGuildBuilders.exe'"), "mcp: paths PowerShell would expand are single-quoted")
 	var mac: Array = load("res://src/ui/main.gd").connect_commands("/Users/x/Bill's $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders", [], true)
-	check(mac[0][1] == "claude mcp add -s user agent-guild-builders \"--\" '/Users/x/Bill'\\''s $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders' --no-header \"--\" --mcp", "mcp: on a Mac the path is single-quoted for zsh, with a ' written as '\\''")
+	check(mac[0][1] == "claude mcp add -s user agent-guild-builders \"--\" '/Users/x/Bill'\\''s $x `y`/AgentGuildBuilders.app/Contents/MacOS/AgentGuildBuilders' --headless --no-header \"--\" --mcp", "mcp: on a Mac the path is single-quoted for zsh, with a ' written as '\\''")
 	check(mac[4][1].contains("command: '/Users/x/Bill''s $x `y`/"), "mcp: the Docker Agent YAML quotes the path the same everywhere")
 	check(ProjectSettings.get_setting("application/run/flush_stdout_on_print"), "mcp: every reply is flushed at once, which release builds don't do by default")
 	var job := BakeJob.new()
@@ -2217,6 +2218,152 @@ func _mcp() -> bool:
 	check(await job.preview(WorldDoc.create("guild", "T", 1), "light") == null and job.error == BakeJob.NEEDS_WINDOW, "mcp: previewing without a window fails at once")
 	job.free()
 	return await _mcp_editor()
+
+func _mcp_relay() -> void:
+	var lines := []
+	var stub := McpStubHost.new()
+	root.add_child(stub)
+	var relay := _mcp_server(stub, lines)
+	relay.relay = true
+	var launched := []
+	var sent := []
+	relay.launch_window = func():
+		launched.append(true)
+		return true
+	relay.write_window = func(line: String): sent.append(JSON.parse_string(line))
+	await _rpc(relay, lines, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
+	var listed := await _call_tool(relay, lines, 2, "list_worlds", {})
+	var items := await _call_tool(relay, lines, 3, "list_items", {"search": "stone"})
+	check(listed.get("isError") == false and items.get("isError") == false and launched.is_empty() and sent.is_empty(), "mcp: the relay lists worlds and items without opening a window")
+	var stale := CustomItems.PREFIX + "removed-in-another-window"
+	WorldScene.load_kit().models[stale] = {"label": "Removed", "group": "custom"}
+	var fresh := await _call_tool(relay, lines, 30, "list_items", {"search": "removed-in-another-window"})
+	check(_data(fresh).items.is_empty() and not WorldScene.load_kit().models.has(stale), "mcp: the relay's list_items reloads custom items another window changed")
+	lines.clear()
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "create_world", "arguments": {"template": "blank", "title": "T"}}}))
+	check(launched.size() == 1 and sent.size() == 2 and sent[0].method == "initialize" and sent[0].params.protocolVersion == "2025-11-25" and sent[1].id == 4 and sent[1].params.name == "create_world" and lines.is_empty(), "mcp: create_world opens the window, initializes it and goes to it")
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/progress", "params": {"progressToken": 1, "progress": 1}}))
+	relay._from_window("{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"content\":[],\"isError\":false}}")
+	check(lines.size() == 2 and lines[0].contains("notifications/progress") and lines[1].contains("\"id\":4,"), "mcp: the window's replies pass through and its initialize stays hidden")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "list_worlds", "arguments": {}}}))
+	check(launched.size() == 1 and sent.back().id == 5, "mcp: while the window is open, every call goes to it")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 5}}))
+	check(sent.back().method == "notifications/cancelled", "mcp: a cancel goes to the window")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "describe_world", "arguments": {"world": "w"}}}))
+	lines.clear()
+	relay._window_closed()
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 6 and JSON.parse_string(lines[0]).result.isError and lines[0].contains("closed"), "mcp: closing the window fails its calls, but not cancelled ones")
+	sent.clear()
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "describe_world", "arguments": {"world": "w"}}}))
+	check(launched.size() == 2 and sent.size() == 2 and sent[0].method == "initialize" and sent[1].id == 7, "mcp: the next call opens the window again")
+	lines.clear()
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "method": "tools/call", "params": {"name": "describe_world", "arguments": {"world": "w"}}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": 7, "result": {}}))
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	check(lines.size() == 2 and JSON.parse_string(lines[0]).id == 7 and JSON.parse_string(lines[1]).id == McpServer.WINDOW_START, "mcp: a client id equal to the window's own initialize id still gets its reply")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "describe_world", "arguments": {"world": "w"}}}))
+	var pipe_path := OS.get_user_data_dir().path_join("mcp-relay-pipe-test")
+	var pipe := FileAccess.open(pipe_path, FileAccess.WRITE)
+	relay._window = {"stdio": pipe}
+	lines.clear()
+	sent.clear()
+	relay._stdin_closed()
+	check(sent.size() == 1 and sent[0].method == McpServer.AGENT_LEFT and not sent[0].has("id") and pipe.is_open() and stub.disconnected == 0, "mcp: when the agent leaves with a call in flight, the relay tells the window and leaves its pipe open")
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": 8, "result": {}}))
+	relay._window_closed()
+	check(lines.is_empty() and stub.disconnected == 1 and relay._window.is_empty() and relay._window_threads.is_empty(), "mcp: the relay closes once the window has gone, answering nothing after the agent left")
+	pipe.close()
+	DirAccess.remove_absolute(pipe_path)
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var direct := _mcp_server(stub, lines)
+	direct.receive(JSON.stringify({"jsonrpc": "2.0", "method": McpServer.AGENT_LEFT}))
+	direct.receive(JSON.stringify({"jsonrpc": "2.0", "id": 1, "method": "ping"}))
+	check(stub.disconnected == 0 and lines.size() == 1, "mcp: only a window started by the relay takes the relay's word that the agent left")
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var window := _mcp_server(stub, lines)
+	window.from_relay = true
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "id": 1, "method": "ping"}))
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "method": McpServer.AGENT_LEFT}))
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "id": 2, "method": "ping"}))
+	check(stub.disconnected == 1 and lines.size() == 1 and JSON.parse_string(lines[0]).id == 1, "mcp: the relay's word that the agent left closes its window, after the calls sent before it")
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "method": McpServer.AGENT_LEFT}))
+	window._stdin_closed()
+	check(stub.disconnected == 1, "mcp: the window closes once, however often it hears the agent left")
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var modern := _mcp_server(stub, lines)
+	modern.relay = true
+	sent = []
+	modern.launch_window = func(): return true
+	modern.write_window = func(line: String): sent.append(JSON.parse_string(line))
+	var meta := {McpServer.META_VERSION: McpServer.MODERN, McpServer.META_CAPABILITIES: {}}
+	modern.receive(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "method": "tools/call", "params": {"_meta": meta, "name": "describe_world", "arguments": {"world": "w"}}}))
+	modern._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	modern._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	check(sent.size() == 2 and sent[0].method == "ping" and sent[1].method == "tools/call" and lines.size() == 1 and JSON.parse_string(lines[0]).id == McpServer.WINDOW_START, "mcp: a 2026-07-28 session pings the window instead of initializing it, and only that reply is hidden")
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var failing := _mcp_server(stub, lines)
+	failing.relay = true
+	var starts := []
+	failing.launch_window = func():
+		starts.append(true)
+		return true
+	failing.write_window = func(_line: String): pass
+	var describe := func(id: int): failing.receive(JSON.stringify({"jsonrpc": "2.0", "id": id, "method": "tools/call", "params": {"_meta": meta, "name": "describe_world", "arguments": {"world": "w"}}}))
+	describe.call(1)
+	failing._window_closed()
+	check(lines.size() == 1 and JSON.parse_string(lines[0]).id == 1 and lines[0].contains("failed to start"), "mcp: a window that exits before answering is reported as failing to start")
+	lines.clear()
+	describe.call(2)
+	failing._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
+	failing._window_closed()
+	check(starts.size() == 2 and lines.size() == 1 and lines[0].contains("was closed"), "mcp: the next call starts the window again, and a normal close isn't a failed start")
+	var pids := []
+	for i in 2:
+		var pid := OS.create_process(OS.get_executable_path(), ["--headless", "--version"])
+		pids.append(pid)
+		failing._window = {"pid": pid}
+		failing._window_closed()
+	check(pids.all(func(p): return p > 0) and failing._exited_windows == pids, "mcp: a closed window's process is kept until it has been collected")
+	var deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while not failing._exited_windows.is_empty() and Time.get_ticks_msec() < deadline:
+		await process_frame
+	check(failing._exited_windows.is_empty() and pids.all(func(p): return OS.get_process_exit_code(p) == 0), "mcp: every window closed and reopened in a session is collected once it exits")
+	stub.free()
+
+	check(McpServer.window_command("C:/x/AgentGuildBuilders.exe", ["--mcp=window"], true) == ["C:/x/AgentGuildBuilders.exe", ["--mcp=window"]], "mcp: on Windows the window starts directly")
+	var writer := OS.get_user_data_dir().path_join("mcp-orphan-writer.gd")
+	var script := FileAccess.open(writer, FileAccess.WRITE)
+	script.store_string("extends SceneTree\nfunc _initialize():\n\tOS.delay_msec(1000)\n\tfor i in 20:\n\t\tprint(\"x\")\n\t\tprinterr(\"y\")\n\tquit(0)\n")
+	script.close()
+	var command := McpServer.window_command(OS.get_executable_path(), ["--headless", "--no-header", "-s", writer])
+	var orphan := OS.execute_with_pipe(command[0], command[1], false)
+	orphan.stdio.close()
+	orphan.stderr.close()
+	var exit := -1
+	deadline = Time.get_ticks_msec() + REPLY_WAIT_MS
+	while exit == -1 and Time.get_ticks_msec() < deadline:
+		await process_frame
+		exit = OS.get_process_exit_code(orphan.pid)
+	check(exit == 0, "mcp: a window whose relay has gone survives writing to it (exit %d)" % exit)
+	DirAccess.remove_absolute(writer)
 
 ## The tools against the real app and editor, as an agent would use them.
 func _mcp_editor() -> bool:

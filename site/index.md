@@ -23,7 +23,7 @@ Don't move Builders after connecting it.
 
 ## 2. Download and install
 
-If Builders is already running, ask the person to close its window first. The download is large.
+Before updating an existing installation, stop the `agent-guild-builders` MCP server in every connected agent, or fully exit those agent sessions. Then close any Builders windows and wait for all `AgentGuildBuilders.exe` processes for this installation to exit; check their paths in Task Manager's Details tab if needed. Closing the window alone leaves the headless server running and the executable locked. Keep the saved MCP registrations: do not run `mcp remove` to stop a server. Reconnect only after extraction finishes. The download is large.
 
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
@@ -42,14 +42,16 @@ It prints the full path of `AgentGuildBuilders.exe`.
 
 ## 3. Connect
 
-Skip this step if Builders is already connected to you. Otherwise run the block for the agent you are.
+Skip this step if Builders is already connected to you with `--headless` in its command. A connection without `--headless` opens the Builders window every time a session starts. Replace it: remove it with `claude mcp remove -s user agent-guild-builders`, `codex mcp remove agent-guild-builders`, `agy mcp remove agent-guild-builders` or `grok mcp remove agent-guild-builders`, then run the block below for the agent you are. In a Docker Agent YAML, make `'--headless'` the first entry in `args`.
+
+Otherwise run the block for the agent you are.
 
 Claude Code:
 
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-claude mcp add -s user agent-guild-builders "--" $exe --no-header "--" --mcp
+claude mcp add -s user agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Codex CLI:
@@ -57,7 +59,7 @@ Codex CLI:
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-codex mcp add agent-guild-builders "--" $exe --no-header "--" --mcp
+codex mcp add agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Antigravity CLI:
@@ -65,7 +67,7 @@ Antigravity CLI:
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-agy mcp add agent-guild-builders "--" $exe --no-header "--" --mcp
+agy mcp add agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Grok Build:
@@ -73,7 +75,7 @@ Grok Build:
 ```powershell
 $dest = Join-Path $env:LOCALAPPDATA 'Programs'
 $exe = Join-Path $dest 'AgentGuildBuilders\AgentGuildBuilders.exe'
-grok mcp add agent-guild-builders "--" $exe --no-header "--" --mcp
+grok mcp add agent-guild-builders "--" $exe --headless --no-header "--" --mcp
 ```
 
 Docker Agent: add this toolset to your agent in its YAML file, with `root` replaced by your agent's name and `<exe>` by the path step 2 printed. Write any `'` in the path as `''`.
@@ -84,20 +86,20 @@ agents:
     toolsets:
       - type: mcp
         command: '<exe>'
-        args: ['--no-header', '--', '--mcp']
+        args: ['--headless', '--no-header', '--', '--mcp']
 ```
 
 ## 4. Check that it works
 
 1. Claude Code: `claude mcp get agent-guild-builders` reports it connected. Grok Build: `grok mcp doctor agent-guild-builders` reports it healthy. Other agents: go to the next step.
-2. Start a new session, so the Builders tools load. The Builders window opens with them.
+2. Start a new session, so the Builders tools load.
 3. Call the `list_worlds` tool. It lists the worlds saved on this computer, which are kept outside the install folder.
 
 Builders is now set up. Its tools explain how to build.
 
 ## Update
 
-Run step 2 again with the same folder. The connection and the person's worlds are kept. Then start a new session, so the Builders tools load again.
+Stop the running MCP servers and close Builders as step 2 says, then run its download and install block again with the same folder. The saved connection, worlds and other user data are kept. If the connection's command has no `--headless`, replace it as step 3 says, so the window stops opening when a session starts. After extraction finishes, restart the MCP servers or start new agent sessions, then call `list_worlds` to check the connection.
 
 ## On a Mac
 
@@ -138,14 +140,16 @@ It prints the full path of the app's executable. Installed this way, macOS doesn
 
 ## Mac 3. Connect
 
-Skip this step if Builders is already connected to you. Otherwise run the block for the agent you are.
+Skip this step if Builders is already connected to you with `--headless` in its command. Replace a connection without it as step 3 above says, then run the block below for the agent you are.
+
+Otherwise run the block for the agent you are.
 
 Claude Code:
 
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-claude mcp add -s user agent-guild-builders "--" "$exe" --no-header "--" --mcp
+claude mcp add -s user agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Codex CLI:
@@ -153,7 +157,7 @@ Codex CLI:
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-codex mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+codex mcp add agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Antigravity CLI:
@@ -161,7 +165,7 @@ Antigravity CLI:
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-agy mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+agy mcp add agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Grok Build:
@@ -169,7 +173,7 @@ Grok Build:
 ```zsh
 dest="$HOME/Applications"
 exe="$dest/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
-grok mcp add agent-guild-builders "--" "$exe" --no-header "--" --mcp
+grok mcp add agent-guild-builders "--" "$exe" --headless --no-header "--" --mcp
 ```
 
 Docker Agent: add the toolset shown in step 3 above, with `<exe>` the path Mac step 2 printed.
@@ -180,4 +184,4 @@ Follow step 4 above.
 
 ## Mac update
 
-Run Mac step 2 again with the same folder. The connection and the person's worlds are kept. Then start a new session, so the Builders tools load again.
+Run Mac step 2 again with the same folder. The connection and the person's worlds are kept. If the connection's command has no `--headless`, replace it as Mac step 3 says, so the window stops opening when a session starts. Then start a new session, so the Builders tools load again.

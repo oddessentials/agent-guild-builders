@@ -4,7 +4,6 @@ extends Control
 ##   --export=folder --to=file.agworld
 ##   --check=file.agworld
 ##   --shot=picture.png [--open=folder] [--dark]
-##   --mcp: also serve MCP on stdin and stdout, so an agent can build here
 
 const EditorView := preload("res://src/ui/editor_view.gd")
 const CONTENT_WIDTH := 960.0
@@ -31,6 +30,8 @@ var _agent_loader: WorldLoader
 
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
+		if not a.begins_with("--"):
+			continue
 		var parts := a.trim_prefix("--").split("=", true, 1)
 		_args[parts[0]] = parts[1] if parts.size() > 1 else "1"
 	ProTheme.dark = _args.has("dark")
@@ -42,14 +43,22 @@ func _ready() -> void:
 		_cli_new()
 	elif _args.has("export"):
 		await _cli_export()
+	elif _args.has("mcp") and _args.mcp != "window" and DisplayServer.get_name() == "headless":
+		OS.low_processor_usage_mode = true
+		_mcp = McpServer.new()
+		_mcp.host = self
+		_mcp.relay = true
+		_mcp.window_args = (["--headless"] if _args.mcp == "headless" else []) + ["--no-header", "--", "--mcp=window"]
+		add_child(_mcp)
 	else:
 		_gui = true
 		get_tree().auto_accept_quit = false
 		get_window().min_size = Vector2i(1120, 640)
 		OS.low_processor_usage_mode = not _args.has("shot")
-		if OS.get_cmdline_user_args().has("--mcp"):
+		if _args.has("mcp"):
 			_mcp = McpServer.new()
 			_mcp.host = self
+			_mcp.from_relay = _args.mcp == "window"
 			add_child(_mcp)
 		if _args.has("open"):
 			_load_world(func(): return WorldDoc.open(_args.open), _args.open, "Opening your world")
@@ -551,7 +560,7 @@ func agent_disconnected() -> void:
 
 ## For PowerShell on Windows, and for Terminal's shell (zsh) elsewhere.
 static func connect_commands(exe: String, before: Array, posix := OS.get_name() != "Windows") -> Array:
-	var args := before + ["--no-header", "--", "--mcp"]
+	var args := before + ["--headless", "--no-header", "--", "--mcp"]
 	var shell_args := " ".join(args.map(func(a): return _shell_quote(str(a), posix)))
 	var line := "%s %s" % [_shell_quote(exe, posix), shell_args]
 	var yaml_args := ", ".join(args.map(func(a): return "'%s'" % str(a).replace("'", "''")))

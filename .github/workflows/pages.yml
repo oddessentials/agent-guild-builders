@@ -1,19 +1,6 @@
 name: Pages
 
 on:
-  pull_request:
-    paths:
-      - site/**
-      - tools/make_site.py
-      - tests/site_check.ps1
-      - .github/workflows/pages.yml
-  push:
-    branches: [main]
-    paths:
-      - site/**
-      - tools/make_site.py
-      - tests/site_check.ps1
-      - .github/workflows/pages.yml
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -28,7 +15,7 @@ concurrency:
 
 jobs:
   check:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'
     runs-on: windows-latest
     timeout-minutes: 20
     defaults:
@@ -36,14 +23,26 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@v4
-      - name: Install Builders by following the page
-        run: ./tests/site_check.ps1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Install Builders by following the released page
+        env:
+          RELEASE_TAG: build-${{ github.event.workflow_run.run_number }}
+        run: |
+          $page = Get-Content -Raw -LiteralPath site/index.md
+          $latest = 'https://github.com/oddessentials/agent-guild-builders/releases/latest/download/AgentGuildBuilders-windows.zip'
+          if (-not $page.Contains($latest)) { throw 'The page has no expected Windows download URL.' }
+          $download = $latest.Replace('/latest/download/', "/download/$env:RELEASE_TAG/")
+          $pagePath = Join-Path $env:RUNNER_TEMP 'released-page.md'
+          Set-Content -LiteralPath $pagePath -Value $page.Replace($latest, $download)
+          ./tests/site_check.ps1 -Page $pagePath
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_run'
     needs: check
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -51,6 +50,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - name: Build the page
         run: python3 tools/make_site.py build/site
       - uses: actions/configure-pages@v6
@@ -58,10 +59,27 @@ jobs:
         with:
           path: build/site
           include-hidden-files: true
+      - name: Verify the triggering release is still latest
+        id: latest_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: build-${{ github.event.workflow_run.run_number }}
+        run: |
+          latest=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
+          if [ "$latest" = "$RELEASE_TAG" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Skipping $RELEASE_TAG; the latest release is $latest."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Deploy
         id: deployment
+        if: steps.latest_release.outputs.deploy == 'true'
         uses: actions/deploy-pages@v5
       - name: Check the published page
+        if: steps.latest_release.outputs.deploy == 'true'
         env:
           PAGE: ${{ steps.deployment.outputs.page_url }}
         run: |

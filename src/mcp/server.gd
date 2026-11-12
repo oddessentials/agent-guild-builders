@@ -1,9 +1,5 @@
 class_name McpServer
 extends Node
-## Model Context Protocol on stdin and stdout, so an agent can build in this
-## window. A thread only reads bytes. Every request runs on the main thread, one
-## at a time, through the editor's own operations, and is answered once it has
-## finished. stdout carries nothing but protocol messages.
 
 const MODERN := "2026-07-28"
 const LEGACY := ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
@@ -18,7 +14,10 @@ const METHOD_NOT_FOUND := -32601
 const INVALID_PARAMS := -32602
 const UNSUPPORTED_VERSION := -32022
 const PERSON_WAIT_MS := 30000
-const INSTRUCTIONS := "Agent Guild: Builders makes environments for Agent Guild Yards. This server drives a Builders window the person can watch; everything you do appears there and can be undone.
+const WINDOW_START := "builders-window-start"
+const AGENT_LEFT := "notifications/builders/agent_disconnected"
+const WITHOUT_WINDOW := ["list_worlds", "list_items"]
+const INSTRUCTIONS := "Agent Guild: Builders makes environments for Agent Guild Yards.
 Start with list_worlds, then create_world or open_world. Every world tool takes the `world` value those return, and refuses if a different world is open.
 Positions are metres on the ground with the Yard's plaza at (0, 0); negative z is behind the Yard, positive z in front of it. The ground spans -260 to 260. The courtyard and the view of it stay clear, and tall things only fit further out, so refusals explain why and are normal: try another spot.
 Use list_items for kinds. Check your work with render_preview, then export_world to write the .agworld file."
@@ -27,35 +26,47 @@ var host: Node
 var tools: McpTools
 var read_stdin := true
 var write_line := func(line: String): print(line)
+var relay := false
+var from_relay := false
+var window_args: Array = []
+var launch_window := _launch_window
+var write_window := _write_window
 var _thread: Thread
 var _legacy_version := ""
 var _queue: Array = []
 var _active: Dictionary = {}
 var _waiting_since := -1
 var _closed := false
+var _left := false
+var _window := {}
+var _window_open := false
+var _window_starting := false
+var _window_threads: Array = []
+var _exited_windows: Array = []
+var _forwarded := {}
 
 func _ready() -> void:
 	tools = McpTools.new(self)
 	if read_stdin:
 		_thread = Thread.new()
-		_thread.start(_read_stdin)
+		_thread.start(_read_lines.bind(OS.read_buffer_from_stdin.bind(1), receive, _stdin_closed))
 
-func _read_stdin() -> void:
-	# One byte at a time: on Windows pipes, larger reads return stale memory
-	# past the real data (godotengine/godot#124296).
+# One byte at a time: on Windows pipes, larger reads return stale memory
+# past the real data (godotengine/godot#124296).
+static func _read_lines(next: Callable, got: Callable, ended: Callable) -> void:
 	var line := PackedByteArray()
 	while true:
-		var b := OS.read_buffer_from_stdin(1)
+		var b: PackedByteArray = next.call()
 		if b.is_empty():
 			break
 		if b[0] == 10:
-			receive.call_deferred(line.get_string_from_utf8())
+			got.call_deferred(line.get_string_from_utf8())
 			line = PackedByteArray()
 		else:
 			line.append(b[0])
 	if not line.is_empty():
-		receive.call_deferred(line.get_string_from_utf8())
-	_stdin_closed.call_deferred()
+		got.call_deferred(line.get_string_from_utf8())
+	ended.call_deferred()
 
 func _stdin_closed() -> void:
 	_closed = true
@@ -63,6 +74,12 @@ func _stdin_closed() -> void:
 	if _thread and not _thread.is_alive():
 		_thread.wait_to_finish()
 		_thread = null
+	if _window_open:
+		write_window.call(JSON.stringify({"jsonrpc": "2.0", "method": AGENT_LEFT}))
+		return
+	if _left:
+		return
+	_left = true
 	if host and host.has_method("agent_disconnected"):
 		host.agent_disconnected()
 
@@ -71,6 +88,8 @@ func _exit_tree() -> void:
 		_thread.wait_to_finish()
 
 func _process(_delta: float) -> void:
+	if not _exited_windows.is_empty():
+		_exited_windows = _exited_windows.filter(func(pid): return OS.get_process_exit_code(pid) == -1)
 	if not _queue.is_empty():
 		_pump()
 
@@ -115,6 +134,9 @@ static func _id_of(msg: Variant) -> Variant:
 	return null
 
 func _notification_received(msg: Dictionary) -> void:
+	if msg.method == AGENT_LEFT and from_relay:
+		_stdin_closed()
+		return
 	if msg.method != "notifications/cancelled":
 		return
 	var params = msg.get("params", {})
@@ -130,6 +152,10 @@ func _notification_received(msg: Dictionary) -> void:
 			if i == 0:
 				_waiting_since = -1
 			return
+	if _forwarded.has(id):
+		_forwarded.erase(id)
+		write_window.call(JSON.stringify(msg))
+		return
 	if not _active.is_empty() and typeof(_active.ctx.id) == typeof(id) and _active.ctx.id == id:
 		_active.ctx.cancelled = true
 		tools.cancel(_active.ctx)
@@ -226,6 +252,11 @@ func _dispatch(msg: Dictionary) -> void:
 			if not args is Dictionary:
 				respond(ctx, tools.failure("arguments must be an object."))
 				return
+			if relay and (_window_open or name not in WITHOUT_WINDOW):
+				_forward(ctx, msg)
+				return
+			if relay and name == "list_items":
+				WorldScene.refresh_custom()
 			if tools.is_async(name):
 				_active = {"ctx": ctx, "long": tools.is_long(name)}
 				await tools.call_tool(ctx, name, args)
@@ -258,3 +289,73 @@ func _send_error(id: Variant, code: int, message: String) -> void:
 
 func _send(msg: Dictionary) -> void:
 	write_line.call(JSON.stringify(msg))
+
+func _forward(ctx: Dictionary, msg: Dictionary) -> void:
+	if not _window_open:
+		if not launch_window.call():
+			respond(ctx, tools.failure("Builders couldn't open its window."))
+			return
+		_window_open = true
+		_window_starting = true
+		if _legacy_version != "":
+			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
+		else:
+			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "ping"}))
+	_forwarded[ctx.id] = ctx
+	msg["id"] = ctx.id
+	write_window.call(JSON.stringify(msg))
+
+func _launch_window() -> bool:
+	var before := [] if OS.has_feature("template") else ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/")]
+	var command := window_command(OS.get_executable_path(), before + window_args)
+	var started := OS.execute_with_pipe(command[0], command[1], true)
+	if started.is_empty():
+		return false
+	_window = started
+	_window_threads = [Thread.new(), Thread.new()]
+	_window_threads[0].start(_read_lines.bind(started.stdio.get_buffer.bind(1), _from_window, _window_closed))
+	_window_threads[1].start(_read_lines.bind(started.stderr.get_buffer.bind(1), func(line: String): printerr(line), func(): pass))
+	return true
+
+static func window_command(exe: String, args: Array, windows := OS.get_name() == "Windows") -> Array:
+	if windows:
+		return [exe, args]
+	return ["/bin/sh", ["-c", "trap '' PIPE; exec \"$0\" \"$@\"", exe] + args]
+
+func _write_window(line: String) -> void:
+	if _window.is_empty():
+		return
+	_window.stdio.store_line(line)
+	_window.stdio.flush()
+
+func _from_window(line: String) -> void:
+	var msg = JSON.parse_string(line)
+	if not msg is Dictionary:
+		return
+	if msg.has("id") and not msg.has("method"):
+		if _window_starting:
+			_window_starting = false
+			return
+		var id = _id_of(msg)
+		if not _forwarded.has(id):
+			return
+		_forwarded.erase(id)
+	if not _closed:
+		write_line.call(line)
+
+func _window_closed() -> void:
+	_window_open = false
+	var failed := _window_starting
+	_window_starting = false
+	for thread in _window_threads:
+		thread.wait_to_finish()
+	_window_threads.clear()
+	if _window.has("pid"):
+		_exited_windows.append(_window.pid)
+	_window = {}
+	var waiting := _forwarded.values()
+	_forwarded.clear()
+	for ctx in waiting:
+		respond(ctx, tools.failure("Builders' window failed to start, so nothing was done." if failed else "The Builders window was closed. Call the tool again to reopen it."))
+	if _closed:
+		_stdin_closed()
