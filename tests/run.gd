@@ -2335,6 +2335,17 @@ func _mcp_relay() -> void:
 	failing._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
 	failing._window_closed()
 	check(starts.size() == 2 and lines.size() == 1 and lines[0].contains("was closed"), "mcp: the next call starts the window again, and a normal close isn't a failed start")
+	var pids := []
+	for i in 2:
+		var pid := OS.create_process(OS.get_executable_path(), ["--headless", "--version"])
+		pids.append(pid)
+		failing._window = {"pid": pid}
+		failing._window_closed()
+	check(pids.all(func(p): return p > 0) and failing._exited_windows == pids, "mcp: a closed window's process is kept until it has been collected")
+	var deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while not failing._exited_windows.is_empty() and Time.get_ticks_msec() < deadline:
+		await process_frame
+	check(failing._exited_windows.is_empty() and not pids.any(OS.is_process_running), "mcp: every window closed and reopened in a session is collected once it exits")
 	stub.free()
 
 ## The tools against the real app and editor, as an agent would use them.
