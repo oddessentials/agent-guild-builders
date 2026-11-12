@@ -2348,6 +2348,23 @@ func _mcp_relay() -> void:
 	check(failing._exited_windows.is_empty() and pids.all(func(p): return OS.get_process_exit_code(p) == 0), "mcp: every window closed and reopened in a session is collected once it exits")
 	stub.free()
 
+	check(McpServer.window_command("C:/x/AgentGuildBuilders.exe", ["--mcp=window"], true) == ["C:/x/AgentGuildBuilders.exe", ["--mcp=window"]], "mcp: on Windows the window starts directly")
+	var writer := OS.get_user_data_dir().path_join("mcp-orphan-writer.gd")
+	var script := FileAccess.open(writer, FileAccess.WRITE)
+	script.store_string("extends SceneTree\nfunc _initialize():\n\tOS.delay_msec(1000)\n\tfor i in 20:\n\t\tprint(\"x\")\n\t\tprinterr(\"y\")\n\tquit(0)\n")
+	script.close()
+	var command := McpServer.window_command(OS.get_executable_path(), ["--headless", "--no-header", "-s", writer])
+	var orphan := OS.execute_with_pipe(command[0], command[1], false)
+	orphan.stdio.close()
+	orphan.stderr.close()
+	var exit := -1
+	deadline = Time.get_ticks_msec() + REPLY_WAIT_MS
+	while exit == -1 and Time.get_ticks_msec() < deadline:
+		await process_frame
+		exit = OS.get_process_exit_code(orphan.pid)
+	check(exit == 0, "mcp: a window whose relay has gone survives writing to it (exit %d)" % exit)
+	DirAccess.remove_absolute(writer)
+
 ## The tools against the real app and editor, as an agent would use them.
 func _mcp_editor() -> bool:
 	var library := OS.get_user_data_dir().path_join("mcp-test-worlds")

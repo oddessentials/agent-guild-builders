@@ -307,7 +307,8 @@ func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 
 func _launch_window() -> bool:
 	var before := [] if OS.has_feature("template") else ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/")]
-	var started := OS.execute_with_pipe(OS.get_executable_path(), before + window_args, true)
+	var command := window_command(OS.get_executable_path(), before + window_args)
+	var started := OS.execute_with_pipe(command[0], command[1], true)
 	if started.is_empty():
 		return false
 	_window = started
@@ -315,6 +316,11 @@ func _launch_window() -> bool:
 	_window_threads[0].start(_read_lines.bind(started.stdio.get_buffer.bind(1), _from_window, _window_closed))
 	_window_threads[1].start(_read_lines.bind(started.stderr.get_buffer.bind(1), func(line: String): printerr(line), func(): pass))
 	return true
+
+static func window_command(exe: String, args: Array, windows := OS.get_name() == "Windows") -> Array:
+	if windows:
+		return [exe, args]
+	return ["/bin/sh", ["-c", "trap '' PIPE; exec \"$0\" \"$@\"", exe] + args]
 
 func _write_window(line: String) -> void:
 	if _window.is_empty():
