@@ -66,9 +66,11 @@ try {
   }
   check(lines.every((l) => { try { return typeof JSON.parse(l) === 'object'; } catch { return false; } }), 'stdout carries only JSON');
   check(lines.some((l) => l.includes('"code":-32700')), 'a malformed line gets a parse error');
+  child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: nextId++, method: 'tools/call', params: { name: 'describe_world', arguments: { world } } }) + '\n');
   child.stdin.end();
   const code = await Promise.race([exited, new Promise((r) => setTimeout(() => r('timeout'), 60000))]);
-  check(code === 0, `exits cleanly when stdin closes (exit ${code})`);
+  check(code === 0, `exits cleanly when stdin closes with a call in flight (exit ${code})`);
+  check(!/Pipe must be opened|Parse JSON failed/.test(stderr), 'the window\'s pipe is read to its end');
   const saved = world && JSON.parse(fs.readFileSync(path.join(world, 'world.json'), 'utf8'));
   check(saved?.things?.some((t) => t.id === results[0]?.id), 'the placed item was saved on exit');
 } catch (e) {

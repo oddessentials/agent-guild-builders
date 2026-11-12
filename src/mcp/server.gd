@@ -16,6 +16,7 @@ const UNSUPPORTED_VERSION := -32022
 const PERSON_WAIT_MS := 30000
 const WINDOW_START := "builders-window-start"
 const WINDOW_RETRY_MS := 10000
+const AGENT_LEFT := "notifications/builders/agent_disconnected"
 const WITHOUT_WINDOW := ["list_worlds", "list_items"]
 const INSTRUCTIONS := "Agent Guild: Builders makes environments for Agent Guild Yards.
 Start with list_worlds, then create_world or open_world. Every world tool takes the `world` value those return, and refuses if a different world is open.
@@ -27,6 +28,7 @@ var tools: McpTools
 var read_stdin := true
 var write_line := func(line: String): print(line)
 var relay := false
+var from_relay := false
 var window_args: Array = []
 var launch_window := _launch_window
 var write_window := _write_window
@@ -36,6 +38,7 @@ var _queue: Array = []
 var _active: Dictionary = {}
 var _waiting_since := -1
 var _closed := false
+var _left := false
 var _window := {}
 var _window_open := false
 var _window_starting := false
@@ -74,9 +77,11 @@ func _stdin_closed() -> void:
 		_thread.wait_to_finish()
 		_thread = null
 	if _window_open:
-		if not _window.is_empty():
-			_window.stdio.close()
+		write_window.call(JSON.stringify({"jsonrpc": "2.0", "method": AGENT_LEFT}))
 		return
+	if _left:
+		return
+	_left = true
 	if host and host.has_method("agent_disconnected"):
 		host.agent_disconnected()
 
@@ -131,6 +136,9 @@ static func _id_of(msg: Variant) -> Variant:
 	return null
 
 func _notification_received(msg: Dictionary) -> void:
+	if msg.method == AGENT_LEFT and from_relay:
+		_stdin_closed()
+		return
 	if msg.method != "notifications/cancelled":
 		return
 	var params = msg.get("params", {})

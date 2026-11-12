@@ -57,6 +57,7 @@ func _ready() -> void:
 		if _args.has("mcp"):
 			_mcp = McpServer.new()
 			_mcp.host = self
+			_mcp.from_relay = _args.mcp == "window"
 			add_child(_mcp)
 		if _args.has("open"):
 			_load_world(func(): return WorldDoc.open(_args.open), _args.open, "Opening your world")

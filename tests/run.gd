@@ -2265,6 +2265,42 @@ func _mcp_relay() -> void:
 	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": 7, "result": {}}))
 	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": McpServer.WINDOW_START, "result": {}}))
 	check(lines.size() == 2 and JSON.parse_string(lines[0]).id == 7 and JSON.parse_string(lines[1]).id == McpServer.WINDOW_START, "mcp: a client id equal to the window's own initialize id still gets its reply")
+	relay.receive(JSON.stringify({"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "show_window", "arguments": {}}}))
+	var pipe_path := OS.get_user_data_dir().path_join("mcp-relay-pipe-test")
+	var pipe := FileAccess.open(pipe_path, FileAccess.WRITE)
+	relay._window = {"stdio": pipe}
+	lines.clear()
+	sent.clear()
+	relay._stdin_closed()
+	check(sent.size() == 1 and sent[0].method == McpServer.AGENT_LEFT and not sent[0].has("id") and pipe.is_open() and stub.disconnected == 0, "mcp: when the agent leaves with a call in flight, the relay tells the window and leaves its pipe open")
+	relay._from_window(JSON.stringify({"jsonrpc": "2.0", "id": 8, "result": {}}))
+	relay._window_closed()
+	check(lines.is_empty() and stub.disconnected == 1 and relay._window.is_empty() and relay._window_threads.is_empty(), "mcp: the relay closes once the window has gone, answering nothing after the agent left")
+	pipe.close()
+	DirAccess.remove_absolute(pipe_path)
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var direct := _mcp_server(stub, lines)
+	direct.receive(JSON.stringify({"jsonrpc": "2.0", "method": McpServer.AGENT_LEFT}))
+	direct.receive(JSON.stringify({"jsonrpc": "2.0", "id": 1, "method": "ping"}))
+	check(stub.disconnected == 0 and lines.size() == 1, "mcp: only a window started by the relay takes the relay's word that the agent left")
+	stub.free()
+
+	lines = []
+	stub = McpStubHost.new()
+	root.add_child(stub)
+	var window := _mcp_server(stub, lines)
+	window.from_relay = true
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "id": 1, "method": "ping"}))
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "method": McpServer.AGENT_LEFT}))
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "id": 2, "method": "ping"}))
+	check(stub.disconnected == 1 and lines.size() == 1 and JSON.parse_string(lines[0]).id == 1, "mcp: the relay's word that the agent left closes its window, after the calls sent before it")
+	window.receive(JSON.stringify({"jsonrpc": "2.0", "method": McpServer.AGENT_LEFT}))
+	window._stdin_closed()
+	check(stub.disconnected == 1, "mcp: the window closes once, however often it hears the agent left")
 	stub.free()
 
 	lines = []
