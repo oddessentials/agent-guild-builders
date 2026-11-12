@@ -2144,10 +2144,18 @@ func _mcp() -> bool:
 	var asked := OS.execute_with_pipe(OS.get_executable_path(), ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/"), "--headless", "--no-header", "--", "--version"], false)
 	var asked_deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
 	var asked_said := ""
+	var asked_err := ""
 	while not asked.is_empty() and OS.is_process_running(asked.pid) and Time.get_ticks_msec() < asked_deadline:
 		asked_said += asked.stdio.get_buffer(4096).get_string_from_utf8()
+		asked_err += asked.stderr.get_buffer(4096).get_string_from_utf8()
 		await process_frame
-	check(not asked.is_empty() and not OS.is_process_running(asked.pid) and OS.get_process_exit_code(asked.pid) == 0 and (asked_said + asked.stdio.get_buffer(4096).get_string_from_utf8()).strip_edges() == "dev", "mcp: --version says dev for an unstamped build")
+	var asked_ended := not asked.is_empty() and not OS.is_process_running(asked.pid)
+	if not asked.is_empty() and not asked_ended:
+		OS.kill(asked.pid)
+	if not asked.is_empty():
+		asked_said += asked.stdio.get_buffer(4096).get_string_from_utf8()
+		asked_err += asked.stderr.get_buffer(4096).get_string_from_utf8()
+	check(asked_ended and OS.get_process_exit_code(asked.pid) == 0 and asked_said.strip_edges() == "dev", "mcp: --version says dev for an unstamped build: %s | %s" % [asked_said, asked_err])
 	check(not init.result.has("resultType"), "mcp: legacy results carry no resultType")
 	var old := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 8, "method": "initialize", "params": {"protocolVersion": "1999-01-01"}})
 	check(old.result.protocolVersion == McpServer.LEGACY[0], "mcp: an unknown version gets the newest legacy one")
@@ -2601,13 +2609,15 @@ func _mcp_edit_rules(server: McpServer, lines: Array, view: Control, world: Stri
 	var tree: Dictionary = _item(doc, int(_data(oak).results[0].get("id", -1)))
 	check(not tree.is_empty() and is_equal_approx(float(tree.scale), 1.0), "mcp: a full-size oak far back")
 	var tree_was: Dictionary = tree.duplicate()
+	var snug_limit: float = view.size_range("tree_oak", -12, 44)[1]
+	check(snug_limit > 0.5 and snug_limit < 0.85, "mcp: an oak in front of the Yard at (-12, 44) can be half size but not its usual size: %.2f" % snug_limit)
 	id += 1
-	var tall := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 41}]})
+	var tall := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 44}]})
 	check(_data(tall).results[0].has("refused") and _item(doc, tree.id).x == tree_was.x, "mcp: a full-size oak can't move in front of the Yard")
 	id += 1
-	var small := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 41, "scale": 0.5}]})
+	var small := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 44, "scale": 0.5}]})
 	var shrunk: Dictionary = _item(doc, tree.id)
-	check(_data(small).results[0].has("id") and is_equal_approx(float(shrunk.x), -12.0) and is_equal_approx(float(shrunk.z), 41.0) and is_equal_approx(float(shrunk.scale), 0.5), "mcp: moving and shrinking is judged at the new size")
+	check(_data(small).results[0].has("id") and is_equal_approx(float(shrunk.x), -12.0) and is_equal_approx(float(shrunk.z), 44.0) and is_equal_approx(float(shrunk.scale), 0.5), "mcp: moving and shrinking is judged at the new size")
 	_round_trip(doc, "a move with a resize")
 	id += 1
 	await _call_tool(server, lines, id, "undo", {"world": world})
@@ -2617,7 +2627,7 @@ func _mcp_edit_rules(server: McpServer, lines: Array, view: Control, world: Stri
 	id += 1
 	await _call_tool(server, lines, id, "redo", {"world": world})
 	var redone: Dictionary = _item(doc, tree.id)
-	check(is_equal_approx(float(redone.x), -12.0) and is_equal_approx(float(redone.scale), 0.5), "mcp: redo moves and shrinks it again")
+	check(is_equal_approx(float(redone.x), -12.0) and is_equal_approx(float(redone.z), 44.0) and is_equal_approx(float(redone.scale), 0.5), "mcp: redo moves and shrinks it again")
 	_round_trip(doc, "redoing a move with a resize")
 	id += 1
 	var too_big := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "scale": 2.0}]})
@@ -2729,8 +2739,10 @@ func _mcp_review(server: McpServer, lines: Array, view: Control, world: String, 
 	_round_trip(doc, "placing at explicit scales")
 	count = doc.data.things.size()
 	id += 1
-	var big := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": -12, "z": 41, "scale": 1.0}]})
-	check(_data(big).results[0].get("refused", "").contains("0.50×") and doc.data.things.size() == count, "mcp: a scale past the size slider's limit is refused with the range, and nothing is placed")
+	var big_limit: float = view.size_range("tree_oak", -12, 44)[1]
+	check(big_limit > 0.5 and big_limit < 0.85, "mcp: an oak's usual size doesn't fit at (-12, 44): %.2f" % big_limit)
+	var big := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": -12, "z": 44, "scale": 1.0}]})
+	check(_data(big).results[0].get("refused", "").contains("%.2f×" % big_limit) and doc.data.things.size() == count, "mcp: a scale past the size slider's limit is refused with the range, and nothing is placed")
 	var snug := Vector2.INF
 	for x in range(-80, 81, 4):
 		for z in [30.0, 36.0, 42.0, 48.0]:
