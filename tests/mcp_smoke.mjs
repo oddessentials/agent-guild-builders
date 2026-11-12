@@ -9,7 +9,7 @@ import path from 'node:path';
 const [exe, ...flags] = process.argv.slice(2);
 const windowed = flags.includes('--windowed');
 const appData = fs.mkdtempSync(path.join(os.tmpdir(), 'agb-mcp-'));
-const args = ['--headless', '--', windowed ? '--mcp' : '--mcp=headless'];
+const args = windowed ? ['--', '--mcp'] : ['--headless', '--', '--mcp=headless'];
 // Builders keeps its data under APPDATA on Windows and under HOME on a Mac.
 const child = spawn(exe, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, APPDATA: appData, ...(process.platform === 'darwin' ? { HOME: appData } : {}) } });
 const lines = [];

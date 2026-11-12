@@ -16,7 +16,7 @@ try {
     $exe = @($printed)[-1]
     $expected = Join-Path $env:LOCALAPPDATA 'Programs\AgentGuildBuilders\AgentGuildBuilders.exe'
     if ($exe -ne $expected) { throw "The install block printed '$exe', not '$expected'." }
-    node (Join-Path $PSScriptRoot 'mcp_smoke.mjs') $exe
+    node (Join-Path $PSScriptRoot 'mcp_smoke.mjs') $exe --windowed
     if ($LASTEXITCODE -ne 0) { throw 'Builders installed from the page did not serve MCP.' }
     Write-Output 'ok   the page installs a working Builders'
 } finally {
