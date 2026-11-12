@@ -2345,7 +2345,7 @@ func _mcp_relay() -> void:
 	var deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
 	while not failing._exited_windows.is_empty() and Time.get_ticks_msec() < deadline:
 		await process_frame
-	check(failing._exited_windows.is_empty() and not pids.any(OS.is_process_running), "mcp: every window closed and reopened in a session is collected once it exits")
+	check(failing._exited_windows.is_empty() and pids.all(func(p): return OS.get_process_exit_code(p) == 0), "mcp: every window closed and reopened in a session is collected once it exits")
 	stub.free()
 
 ## The tools against the real app and editor, as an agent would use them.

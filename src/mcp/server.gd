@@ -89,7 +89,7 @@ func _exit_tree() -> void:
 
 func _process(_delta: float) -> void:
 	if not _exited_windows.is_empty():
-		_exited_windows = _exited_windows.filter(OS.is_process_running)
+		_exited_windows = _exited_windows.filter(func(pid): return OS.get_process_exit_code(pid) == -1)
 	if not _queue.is_empty():
 		_pump()
 
