@@ -2120,9 +2120,11 @@ func _mcp() -> bool:
 	check(init.result.serverInfo.version == "dev" and stamped.get("result", {}).get("serverInfo", {}).get("version") == "0.1.7", "mcp: serverInfo reports the build's version")
 	var asked := OS.execute_with_pipe(OS.get_executable_path(), ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/"), "--headless", "--no-header", "--", "--version"], false)
 	var asked_deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	var asked_said := ""
 	while not asked.is_empty() and OS.is_process_running(asked.pid) and Time.get_ticks_msec() < asked_deadline:
+		asked_said += asked.stdio.get_buffer(4096).get_string_from_utf8()
 		await process_frame
-	check(not asked.is_empty() and not OS.is_process_running(asked.pid) and OS.get_process_exit_code(asked.pid) == 0 and asked.stdio.get_buffer(4096).get_string_from_utf8().strip_edges() == "dev", "mcp: --version says dev for an unstamped build")
+	check(not asked.is_empty() and not OS.is_process_running(asked.pid) and OS.get_process_exit_code(asked.pid) == 0 and (asked_said + asked.stdio.get_buffer(4096).get_string_from_utf8()).strip_edges() == "dev", "mcp: --version says dev for an unstamped build")
 	check(not init.result.has("resultType"), "mcp: legacy results carry no resultType")
 	var old := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 8, "method": "initialize", "params": {"protocolVersion": "1999-01-01"}})
 	check(old.result.protocolVersion == McpServer.LEGACY[0], "mcp: an unknown version gets the newest legacy one")
