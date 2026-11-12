@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp], ["lands", _lands]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["yard_reach", _yard_reach],["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp], ["lands", _lands]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -55,6 +55,29 @@ func _clearance() -> bool:
 	check(Clearance.tall_clear(-120, -120, 8), "far back is clear")
 	check(not Clearance.tall_clear(40, 45, 30), "tall in front rises over the yard")
 	check(Clearance.refuse(120, -120, 1.0) == "", "low, far away is fine")
+	return true
+
+func _yard_reach() -> bool:
+	var yard := Yard.data()
+	var points := []
+	for p in yard.places + yard.restSpots:
+		points.append(Vector2(p.x, p.z))
+	var reach: float = yard.hall.margin
+	for id in yard.halls:
+		var at := Vector2(yard.halls[id].x, yard.halls[id].z)
+		var half: float = (yard.hall.docker if id == "docker" else yard.hall.half) + reach
+		for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+			points.append(at + corner * half)
+	var roam: Dictionary = yard.roam
+	for i in 72:
+		var angle := TAU * i / 72.0
+		points.append(Vector2(sin(angle), cos(angle)) * float(roam.radius))
+	for i in 31:
+		var z: float = float(roam.front) * i / 30.0
+		points.append(Vector2(-float(roam.half), z))
+		points.append(Vector2(float(roam.half), z))
+	for p in points:
+		check(Clearance.live_distance(p.x, p.y) == 0.0, "yard_reach: characters can reach (%.2f, %.2f), outside the live area" % [p.x, p.y])
 	return true
 
 func _document() -> bool:

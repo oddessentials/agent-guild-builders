@@ -3,6 +3,7 @@ extends RefCounted
 
 const COURTYARD_RADIUS := 13.7
 const CLEAR_MARGIN := 4.0
+const FRONT_HALF := 14.7
 ## How far up the screen each metre of height rises.
 const RISE := 1.55
 const MISSING_UPLOAD := "An item's custom upload is missing or damaged. Upload the same file again, or remove the missing items."
@@ -12,7 +13,7 @@ static var _terrain_limits := PackedFloat32Array()
 ## in front of it (z 0 to 32).
 static func live_distance(x: float, z: float) -> float:
 	var ring: float = max(0.0, Vector2(x, z).length() - COURTYARD_RADIUS - 1.0)
-	var dx: float = max(abs(x) - 13.0, 0.0)
+	var dx: float = max(abs(x) - FRONT_HALF, 0.0)
 	var dz: float = max(max(z - 32.0, 0.0), -z)
 	return min(ring, Vector2(dx, dz).length())
 
@@ -30,9 +31,9 @@ static func max_elevation(x: float, z: float, margin := CLEAR_MARGIN) -> float:
 	var p := Vector2(x, z)
 	var up := _ground_up()
 	var reach := _ray_circle(p, up, Vector2.ZERO, COURTYARD_RADIUS + 1.0 + margin)
-	reach = minf(reach, _ray_rect(p, up, Vector2(-13.0, -margin), Vector2(13.0, 32.0 + margin)))
-	reach = minf(reach, _ray_rect(p, up, Vector2(-13.0 - margin, 0.0), Vector2(13.0 + margin, 32.0)))
-	for corner in [Vector2(-13, 0), Vector2(13, 0), Vector2(-13, 32), Vector2(13, 32)]:
+	reach = minf(reach, _ray_rect(p, up, Vector2(-FRONT_HALF, -margin), Vector2(FRONT_HALF, 32.0 + margin)))
+	reach = minf(reach, _ray_rect(p, up, Vector2(-FRONT_HALF - margin, 0.0), Vector2(FRONT_HALF + margin, 32.0)))
+	for corner in [Vector2(-FRONT_HALF, 0), Vector2(FRONT_HALF, 0), Vector2(-FRONT_HALF, 32), Vector2(FRONT_HALF, 32)]:
 		reach = minf(reach, _ray_circle(p, up, corner, margin))
 	return maxf(0.0, reach / RISE - 0.01)
 
