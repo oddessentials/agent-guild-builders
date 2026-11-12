@@ -55,14 +55,19 @@ static func unique_title(title: String) -> String:
 	var taken := {}
 	for w in list():
 		taken[w.title.to_lower()] = true
-	var whole := title.left(WorldDoc.MAX_TITLE).strip_edges()
+	var whole := _fit(title, WorldDoc.MAX_TITLE)
 	var candidate := whole
 	var n := 2
 	while taken.has(candidate.to_lower()):
 		var suffix := " %d" % n
-		candidate = whole.left(WorldDoc.MAX_TITLE - suffix.length()).strip_edges() + suffix
+		candidate = _fit(whole, WorldDoc.MAX_TITLE - suffix.length()) + suffix
 		n += 1
 	return candidate
+
+static func _fit(text: String, units: int) -> String:
+	while text.to_utf16_buffer().size() > units * 2:
+		text = text.left(-1)
+	return text.strip_edges()
 
 static func rename(path: String, title: String) -> Error:
 	var doc := WorldDoc.open(path)

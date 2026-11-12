@@ -12,6 +12,7 @@ const TERRAIN_SIZE := 520.0
 const MAX_WATER_LEVEL := -0.1
 const NO_WATER_BELOW := -50.0
 const MAX_TITLE := 128
+const TITLE_RULE := "A title needs visible text, at most 128 characters (an emoji counts as two) and no control characters."
 ## Each entry takes a document of format N to N+1. Append only.
 const MIGRATIONS: Array[Callable] = []
 const THUMB := "thumb.webp"
@@ -24,6 +25,9 @@ var _next_id := 1
 var water_adjusted := false
 var notice := ""
 var save_error := ""
+
+static var _title_edges := RegEx.create_from_string("^[\\t-\\r \\x{a0}\\x{1680}\\x{2000}-\\x{200a}\\x{2028}\\x{2029}\\x{202f}\\x{205f}\\x{3000}\\x{feff}]+|[\\t-\\r \\x{a0}\\x{1680}\\x{2000}-\\x{200a}\\x{2028}\\x{2029}\\x{202f}\\x{205f}\\x{3000}\\x{feff}]+$")
+static var _title_control := RegEx.create_from_string("\\p{Cc}")
 
 static func version() -> String:
 	var stamped := String(ProjectSettings.get_setting("application/config/version", ""))
@@ -93,6 +97,9 @@ func save(dir_path: String) -> Error:
 	out["next_id"] = _next_id
 	if not _valid_data(out) or not _valid_terrain(heights, ground):
 		save_error = "Couldn't save: this world's data is inconsistent and couldn't be opened again, so the last good save was kept."
+		return ERR_INVALID_DATA
+	if not valid_title(out.title):
+		save_error = "Couldn't save: Agent Guild can't use this world's title, so the last good save was kept. " + TITLE_RULE
 		return ERR_INVALID_DATA
 	var tmp := dir_path + ".saving"
 	var old := dir_path + ".old"
@@ -272,6 +279,12 @@ static func _valid_terrain(h: PackedFloat32Array, g: PackedByteArray) -> bool:
 
 static func valid_kind(kind: String) -> bool:
 	return kind.is_valid_identifier() or (kind.begins_with(CustomItems.PREFIX) and CustomItems.valid_id(kind.trim_prefix(CustomItems.PREFIX)))
+
+static func valid_title(title: Variant) -> bool:
+	if not title is String:
+		return false
+	var trimmed := _title_edges.sub(title, "", true)
+	return trimmed != "" and trimmed.to_utf16_buffer().size() <= MAX_TITLE * 2 and _title_control.search(trimmed) == null
 
 static func _number(value: Variant) -> bool:
 	return (value is int or value is float) and is_finite(float(value))
