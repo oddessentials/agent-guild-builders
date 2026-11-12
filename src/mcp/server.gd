@@ -7,7 +7,6 @@ const SUPPORTED := ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "202
 const META_VERSION := "io.modelcontextprotocol/protocolVersion"
 const META_CAPABILITIES := "io.modelcontextprotocol/clientCapabilities"
 const META_SERVER := "io.modelcontextprotocol/serverInfo"
-const SERVER_INFO := {"name": "agent-guild-builders", "title": "Agent Guild: Builders", "version": "1"}
 const PARSE_ERROR := -32700
 const INVALID_REQUEST := -32600
 const METHOD_NOT_FOUND := -32601
@@ -45,6 +44,9 @@ var _window_threads: Array = []
 var _exited_windows: Array = []
 var _forwarded := {}
 
+static func server_info() -> Dictionary:
+	return {"name": "agent-guild-builders", "title": "Agent Guild: Builders", "version": WorldDoc.version()}
+
 func _ready() -> void:
 	tools = McpTools.new(self)
 	if read_stdin:
@@ -75,7 +77,7 @@ func _stdin_closed() -> void:
 		_thread.wait_to_finish()
 		_thread = null
 	if _window_open:
-		write_window.call(JSON.stringify({"jsonrpc": "2.0", "method": AGENT_LEFT}))
+		write_window.call(StrictJson.stringify({"jsonrpc": "2.0", "method": AGENT_LEFT}))
 		return
 	if _left:
 		return
@@ -154,7 +156,7 @@ func _notification_received(msg: Dictionary) -> void:
 			return
 	if _forwarded.has(id):
 		_forwarded.erase(id)
-		write_window.call(JSON.stringify(msg))
+		write_window.call(StrictJson.stringify(msg))
 		return
 	if not _active.is_empty() and typeof(_active.ctx.id) == typeof(id) and _active.ctx.id == id:
 		_active.ctx.cancelled = true
@@ -229,7 +231,7 @@ func _dispatch(msg: Dictionary) -> void:
 				return
 			var asked = params.get("protocolVersion")
 			_legacy_version = asked if asked in LEGACY else LEGACY[0]
-			respond(ctx, {"protocolVersion": _legacy_version, "capabilities": {"tools": {}}, "serverInfo": SERVER_INFO, "instructions": INSTRUCTIONS})
+			respond(ctx, {"protocolVersion": _legacy_version, "capabilities": {"tools": {}}, "serverInfo": server_info(), "instructions": INSTRUCTIONS})
 		"server/discover":
 			if not ctx.modern:
 				_send_error(ctx.id, INVALID_PARAMS, "server/discover needs %s and %s in _meta." % [META_VERSION, META_CAPABILITIES])
@@ -273,7 +275,7 @@ func respond(ctx: Dictionary, result: Dictionary) -> void:
 	if ctx.modern:
 		result["resultType"] = "complete"
 		var meta: Dictionary = result.get("_meta", {})
-		meta[META_SERVER] = SERVER_INFO
+		meta[META_SERVER] = server_info()
 		result["_meta"] = meta
 	_send({"jsonrpc": "2.0", "id": ctx.id, "result": result})
 
@@ -288,7 +290,7 @@ func _send_error(id: Variant, code: int, message: String) -> void:
 	_send({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
 
 func _send(msg: Dictionary) -> void:
-	write_line.call(JSON.stringify(msg))
+	write_line.call(StrictJson.stringify(msg))
 
 func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 	if not _window_open:
@@ -298,12 +300,12 @@ func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 		_window_open = true
 		_window_starting = true
 		if _legacy_version != "":
-			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
+			write_window.call(StrictJson.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
 		else:
-			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "ping"}))
+			write_window.call(StrictJson.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "ping"}))
 	_forwarded[ctx.id] = ctx
 	msg["id"] = ctx.id
-	write_window.call(JSON.stringify(msg))
+	write_window.call(StrictJson.stringify(msg))
 
 func _launch_window() -> bool:
 	var before := [] if OS.has_feature("template") else ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/")]

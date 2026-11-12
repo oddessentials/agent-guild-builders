@@ -150,7 +150,7 @@ static func write(doc: WorldDoc, plates_dir: String, skies: Dictionary, preview:
 		"environment": environment_abi(), "generator": WorldDoc.GENERATOR,
 		"lights": hall_lights(doc, skies), "files": listing,
 	}
-	var entries := [[MANIFEST, JSON.stringify(meta, " ").to_utf8_buffer()]]
+	var entries := [[MANIFEST, StrictJson.stringify(meta, " ").to_utf8_buffer()]]
 	entries.append_array(content)
 	return _write_package(tar_gz(entries), out_path, report)
 

@@ -25,6 +25,10 @@ var water_adjusted := false
 var notice := ""
 var save_error := ""
 
+static func version() -> String:
+	var stamped := String(ProjectSettings.get_setting("application/config/version", ""))
+	return stamped if stamped != "" else "dev"
+
 static func create(base: String, title: String, seed_value: int) -> WorldDoc:
 	var doc := WorldDoc.new()
 	doc.data = {
@@ -106,7 +110,7 @@ func save(dir_path: String) -> Error:
 	var f := FileAccess.open(tmp.path_join("world.json"), FileAccess.WRITE)
 	if f == null:
 		return _save_failed(FileAccess.get_open_error(), "write", tmp.path_join("world.json"))
-	f.store_string(JSON.stringify(out, " "))
+	f.store_string(StrictJson.stringify(out, " "))
 	f.flush()
 	var failed := f.get_error()
 	f.close()

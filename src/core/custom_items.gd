@@ -759,7 +759,7 @@ static func add(path: String, settings: Dictionary) -> Dictionary:
 	if err == OK:
 		err = plain_icon(type).save_webp(staging.path_join(THUMB), true, 0.82)
 	if err == OK:
-		err = _write(staging.path_join(ITEM_FILE), (JSON.stringify(info, " ") + "\n").to_utf8_buffer())
+		err = _write(staging.path_join(ITEM_FILE), (StrictJson.stringify(info, " ") + "\n").to_utf8_buffer())
 	if err == OK and (_read_item(staging, id).is_empty() or _stored_mesh(staging, info).get_surface_count() == 0):
 		err = ERR_FILE_CORRUPT
 	if err == OK:
@@ -811,7 +811,7 @@ static func rename(kind: String, label: String) -> String:
 	if named != "":
 		return named
 	info.label = label.strip_edges()
-	var err := _write(folder(info.id).path_join(ITEM_FILE), (JSON.stringify(info, " ") + "\n").to_utf8_buffer())
+	var err := _write(folder(info.id).path_join(ITEM_FILE), (StrictJson.stringify(info, " ") + "\n").to_utf8_buffer())
 	return "" if err == OK else "It couldn't be renamed (%s)." % error_string(err)
 
 static func remove(kind: String) -> Error:

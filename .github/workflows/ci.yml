@@ -93,9 +93,9 @@ jobs:
       - name: File lock checks
         run: ./tests/file_locks.ps1 -Godot $env:GODOT
       - name: Package
-        run: ./tools/package.ps1 -Godot $env:GODOT
+        run: ./tools/package.ps1 -Godot $env:GODOT -Release ${{ github.run_number }}
       - name: Run the packaged app
-        run: ./tests/package_smoke.ps1 -Zip build/AgentGuildBuilders-windows.zip -Dir .smoke
+        run: ./tests/package_smoke.ps1 -Zip build/AgentGuildBuilders-windows.zip -Dir .smoke -Release ${{ github.run_number }}
       - id: zip
         if: github.event_name != 'pull_request'
         run: Add-Content $env:GITHUB_OUTPUT "sha256=$((Get-FileHash build/AgentGuildBuilders-windows.zip).Hash.ToLower())"
@@ -157,7 +157,7 @@ jobs:
           Compress-Archive -LiteralPath "$env:RUNNER_TEMP/stage/AgentGuildBuilders" -DestinationPath $zip
           Add-Content $env:GITHUB_OUTPUT "sha256=$((Get-FileHash $zip).Hash.ToLower())"
       - name: Run the signed app
-        run: ./tests/package_smoke.ps1 -Zip "$env:RUNNER_TEMP/signed/AgentGuildBuilders-windows.zip" -Dir "$env:RUNNER_TEMP/smoke"
+        run: ./tests/package_smoke.ps1 -Zip "$env:RUNNER_TEMP/signed/AgentGuildBuilders-windows.zip" -Dir "$env:RUNNER_TEMP/smoke" -Release ${{ github.run_number }}
       - name: Check the signature
         env:
           PUBLISHER: ${{ vars.WINDOWS_PUBLISHER }}
@@ -236,7 +236,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "$suite failed" }
           }
       - name: Package
-        run: ./tools/package.ps1 -Godot $env:GODOT -Platform macOS
+        run: ./tools/package.ps1 -Godot $env:GODOT -Platform macOS -Release ${{ github.run_number }}
       - name: Run the packaged app
         run: |
           ditto -x -k build/AgentGuildBuilders-macos.zip .smoke
@@ -246,6 +246,10 @@ jobs:
           if (-not [IO.Path]::GetExtension($iconFile)) { $iconFile += '.icns' }
           if ((Get-FileHash ".smoke/AgentGuildBuilders.app/Contents/Resources/$iconFile").Hash -ne (Get-FileHash data/brand/icon.icns).Hash) { throw 'The packaged app does not use data/brand/icon.icns.' }
           $exe = '.smoke/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders'
+          $version = '0.1.${{ github.run_number }}'
+          $said = & $exe --headless --no-header -- --version
+          $short = & /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' .smoke/AgentGuildBuilders.app/Contents/Info.plist
+          if ($LASTEXITCODE -ne 0 -or "$said" -ne $version -or $short -ne $version) { throw "The packaged app says it is $said ($short), not $version." }
           $world = Join-Path $PWD '.smoke/world'
           & $exe --headless -- --new=meadow --title=Smoke "--save=$world"
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path "$world/world.json")) { throw 'The packaged app did not create a world.' }
@@ -310,6 +314,13 @@ jobs:
         run: |
           ditto -x -k "$RUNNER_TEMP/signed/AgentGuildBuilders-macos.zip" "$RUNNER_TEMP/smoke"
           exe="$RUNNER_TEMP/smoke/AgentGuildBuilders.app/Contents/MacOS/Agent Guild Builders"
+          version="0.1.${{ github.run_number }}"
+          said="$("$exe" --headless --no-header -- --version)"
+          short="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$RUNNER_TEMP/smoke/AgentGuildBuilders.app/Contents/Info.plist")"
+          if [ "$said" != "$version" ] || [ "$short" != "$version" ]; then
+            echo "::error::The signed app says it is $said ($short), not $version."
+            exit 1
+          fi
           "$exe" --headless -- --new=meadow --title=Smoke "--save=$RUNNER_TEMP/smoke/world"
           if [ ! -f "$RUNNER_TEMP/smoke/world/world.json" ]; then
             echo "::error::The signed app did not create a world."

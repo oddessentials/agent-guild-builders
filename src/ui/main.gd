@@ -4,6 +4,7 @@ extends Control
 ##   --export=folder --to=file.agworld
 ##   --check=file.agworld
 ##   --shot=picture.png [--open=folder] [--dark]
+##   --version
 
 const EditorView := preload("res://src/ui/editor_view.gd")
 const CONTENT_WIDTH := 960.0
@@ -34,6 +35,10 @@ func _ready() -> void:
 			continue
 		var parts := a.trim_prefix("--").split("=", true, 1)
 		_args[parts[0]] = parts[1] if parts.size() > 1 else "1"
+	if _args.has("version"):
+		print(WorldDoc.version())
+		get_tree().quit()
+		return
 	ProTheme.dark = _args.has("dark")
 	theme = ProTheme.make()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -228,6 +233,10 @@ func _hero() -> Control:
 	line.add_theme_font_size_override("font_size", 17)
 	line.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	words.add_child(line)
+	var version := WorldDoc.version()
+	var build := ProTheme.note("Development build" if version == "dev" else "Build " + version.get_slice(".", 2))
+	build.name = "BuildNote"
+	words.add_child(build)
 	hero.resized.connect(func():
 		var wide := clampf(hero.size.x * HERO_HEIGHT / HERO_WIDTH, HERO_HEIGHT, HERO_MAX_HEIGHT) * HERO_WIDTH / HERO_HEIGHT
 		var crew_starts := hero.size.x - wide * HERO_CREW_STARTS

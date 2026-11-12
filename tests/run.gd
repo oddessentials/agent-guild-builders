@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var only := OS.get_cmdline_user_args()
-	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp], ["lands", _lands]]:
+	for t in [["grid", _grid_matches_shipped_plates], ["cover", _tiles_cover_every_view], ["clearance", _clearance], ["yard_reach", _yard_reach],["document", _document], ["history", _history], ["templates", _templates], ["packages", _packages], ["editor", _editor], ["library", _library], ["land", _land], ["placing", _placing], ["loader", _loader], ["arrange", _arrange], ["place_panel", _place_panel], ["seasons", _seasons], ["review", _review], ["review_slider_edits", _review_slider_edits], ["review_hidden", _review_hidden], ["castle", _castle], ["seating", _seating], ["custom", _custom], ["mcp", _mcp], ["lands", _lands]]:
 		if only.is_empty() or only.has(t[0]):
 			check(await t[1].call() == true, t[0] + ": completes without a script error")
 	print("%d passed, %d failed" % [passed, failed])
@@ -55,6 +55,29 @@ func _clearance() -> bool:
 	check(Clearance.tall_clear(-120, -120, 8), "far back is clear")
 	check(not Clearance.tall_clear(40, 45, 30), "tall in front rises over the yard")
 	check(Clearance.refuse(120, -120, 1.0) == "", "low, far away is fine")
+	return true
+
+func _yard_reach() -> bool:
+	var yard := Yard.data()
+	var points := []
+	for p in yard.places + yard.restSpots:
+		points.append(Vector2(p.x, p.z))
+	var reach: float = yard.hall.margin
+	for id in yard.halls:
+		var at := Vector2(yard.halls[id].x, yard.halls[id].z)
+		var half: float = (yard.hall.docker if id == "docker" else yard.hall.half) + reach
+		for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+			points.append(at + corner * half)
+	var roam: Dictionary = yard.roam
+	for i in 72:
+		var angle := TAU * i / 72.0
+		points.append(Vector2(sin(angle), cos(angle)) * float(roam.radius))
+	for i in 31:
+		var z: float = float(roam.front) * i / 30.0
+		points.append(Vector2(-float(roam.half), z))
+		points.append(Vector2(float(roam.half), z))
+	for p in points:
+		check(Clearance.live_distance(p.x, p.y) == 0.0, "yard_reach: characters can reach (%.2f, %.2f), outside the live area" % [p.x, p.y])
 	return true
 
 func _document() -> bool:
@@ -2114,6 +2137,25 @@ func _mcp() -> bool:
 	var init := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 7, "method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}})
 	check(init.get("result", {}).get("protocolVersion") == "2025-11-25" and init.result.serverInfo.name == "agent-guild-builders" and init.result.has("instructions"), "mcp: initialize answers with the asked version")
 	check(lines.size() == 1 and lines[0].contains("\"id\":7,") and not lines[0].contains("7.0"), "mcp: integer ids come back as integers")
+	ProjectSettings.set_setting("application/config/version", "0.1.7")
+	var stamped := await _rpc(server, lines, {"jsonrpc": "2.0", "id": "v", "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
+	ProjectSettings.set_setting("application/config/version", null)
+	check(init.result.serverInfo.version == "dev" and stamped.get("result", {}).get("serverInfo", {}).get("version") == "0.1.7", "mcp: serverInfo reports the build's version")
+	var asked := OS.execute_with_pipe(OS.get_executable_path(), ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/"), "--headless", "--no-header", "--", "--version"], false)
+	var asked_deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	var asked_said := ""
+	var asked_err := ""
+	while not asked.is_empty() and OS.is_process_running(asked.pid) and Time.get_ticks_msec() < asked_deadline:
+		asked_said += asked.stdio.get_buffer(4096).get_string_from_utf8()
+		asked_err += asked.stderr.get_buffer(4096).get_string_from_utf8()
+		await process_frame
+	var asked_ended := not asked.is_empty() and not OS.is_process_running(asked.pid)
+	if not asked.is_empty() and not asked_ended:
+		OS.kill(asked.pid)
+	if not asked.is_empty():
+		asked_said += asked.stdio.get_buffer(4096).get_string_from_utf8()
+		asked_err += asked.stderr.get_buffer(4096).get_string_from_utf8()
+	check(asked_ended and OS.get_process_exit_code(asked.pid) == 0 and asked_said.strip_edges() == "dev", "mcp: --version says dev for an unstamped build: %s | %s" % [asked_said, asked_err])
 	check(not init.result.has("resultType"), "mcp: legacy results carry no resultType")
 	var old := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 8, "method": "initialize", "params": {"protocolVersion": "1999-01-01"}})
 	check(old.result.protocolVersion == McpServer.LEGACY[0], "mcp: an unknown version gets the newest legacy one")
@@ -2138,6 +2180,14 @@ func _mcp() -> bool:
 	check(listed.result.resultType == "complete", "mcp: 2026-07-28 results carry resultType")
 	var unknown := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "fly", "arguments": {}}})
 	check(unknown.get("error", {}).get("code") == McpServer.INVALID_PARAMS, "mcp: an unknown tool is a protocol error")
+	# Text from a person (a title, a name) can hold control characters; the
+	# agent's client reads each line with a strict JSON parser.
+	lines.clear()
+	server.receive(StrictJson.stringify({"jsonrpc": "2.0", "id": "odd", "method": "tools/call", "params": {"name": "fly" + String.chr(1) + String.chr(11), "arguments": {}}}))
+	var odd_deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while lines.is_empty() and Time.get_ticks_msec() < odd_deadline:
+		await process_frame
+	check(lines.size() == 1 and lines[0].contains("fly\\u0001\\u000b") and RegEx.create_from_string("[\\x00-\\x1f]|\\\\v").search(lines[0]) == null, "mcp: replies escape control characters as strict JSON: %s" % [lines])
 	var nothing := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 10, "method": "resources/list"})
 	check(nothing.get("error", {}).get("code") == McpServer.METHOD_NOT_FOUND, "mcp: unknown methods are refused")
 	var wrong := await _call_tool(server, lines, 11, "place_items", {"world": "x"})
@@ -2559,13 +2609,15 @@ func _mcp_edit_rules(server: McpServer, lines: Array, view: Control, world: Stri
 	var tree: Dictionary = _item(doc, int(_data(oak).results[0].get("id", -1)))
 	check(not tree.is_empty() and is_equal_approx(float(tree.scale), 1.0), "mcp: a full-size oak far back")
 	var tree_was: Dictionary = tree.duplicate()
+	var snug_limit: float = view.size_range("tree_oak", -12, 44)[1]
+	check(snug_limit > 0.5 and snug_limit < 0.85, "mcp: an oak in front of the Yard at (-12, 44) can be half size but not its usual size: %.2f" % snug_limit)
 	id += 1
-	var tall := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 41}]})
+	var tall := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 44}]})
 	check(_data(tall).results[0].has("refused") and _item(doc, tree.id).x == tree_was.x, "mcp: a full-size oak can't move in front of the Yard")
 	id += 1
-	var small := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 41, "scale": 0.5}]})
+	var small := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "x": -12, "z": 44, "scale": 0.5}]})
 	var shrunk: Dictionary = _item(doc, tree.id)
-	check(_data(small).results[0].has("id") and is_equal_approx(float(shrunk.x), -12.0) and is_equal_approx(float(shrunk.z), 41.0) and is_equal_approx(float(shrunk.scale), 0.5), "mcp: moving and shrinking is judged at the new size")
+	check(_data(small).results[0].has("id") and is_equal_approx(float(shrunk.x), -12.0) and is_equal_approx(float(shrunk.z), 44.0) and is_equal_approx(float(shrunk.scale), 0.5), "mcp: moving and shrinking is judged at the new size")
 	_round_trip(doc, "a move with a resize")
 	id += 1
 	await _call_tool(server, lines, id, "undo", {"world": world})
@@ -2575,7 +2627,7 @@ func _mcp_edit_rules(server: McpServer, lines: Array, view: Control, world: Stri
 	id += 1
 	await _call_tool(server, lines, id, "redo", {"world": world})
 	var redone: Dictionary = _item(doc, tree.id)
-	check(is_equal_approx(float(redone.x), -12.0) and is_equal_approx(float(redone.scale), 0.5), "mcp: redo moves and shrinks it again")
+	check(is_equal_approx(float(redone.x), -12.0) and is_equal_approx(float(redone.z), 44.0) and is_equal_approx(float(redone.scale), 0.5), "mcp: redo moves and shrinks it again")
 	_round_trip(doc, "redoing a move with a resize")
 	id += 1
 	var too_big := await _call_tool(server, lines, id, "move_items", {"world": world, "moves": [{"id": tree.id, "scale": 2.0}]})
@@ -2687,8 +2739,10 @@ func _mcp_review(server: McpServer, lines: Array, view: Control, world: String, 
 	_round_trip(doc, "placing at explicit scales")
 	count = doc.data.things.size()
 	id += 1
-	var big := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": -12, "z": 41, "scale": 1.0}]})
-	check(_data(big).results[0].get("refused", "").contains("0.50×") and doc.data.things.size() == count, "mcp: a scale past the size slider's limit is refused with the range, and nothing is placed")
+	var big_limit: float = view.size_range("tree_oak", -12, 44)[1]
+	check(big_limit > 0.5 and big_limit < 0.85, "mcp: an oak's usual size doesn't fit at (-12, 44): %.2f" % big_limit)
+	var big := await _call_tool(server, lines, id, "place_items", {"world": world, "items": [{"kind": "tree_oak", "x": -12, "z": 44, "scale": 1.0}]})
+	check(_data(big).results[0].get("refused", "").contains("%.2f×" % big_limit) and doc.data.things.size() == count, "mcp: a scale past the size slider's limit is refused with the range, and nothing is placed")
 	var snug := Vector2.INF
 	for x in range(-80, 81, 4):
 		for z in [30.0, 36.0, 42.0, 48.0]:
@@ -2888,6 +2942,16 @@ func _mcp_ux(server: McpServer, lines: Array, app: Control, world: String) -> vo
 	await _mcp_disconnect(app, view)
 
 	view._save_now()
+	app._start_screen()
+	await process_frame
+	var note: Label = app.find_child("BuildNote", true, false)
+	check(note != null and note.text == "Development build", "the start screen does not say it is a development build")
+	ProjectSettings.set_setting("application/config/version", "0.1.7")
+	app._start_screen()
+	await process_frame
+	note = app.find_child("BuildNote", true, false)
+	check(note != null and note.text == "Build 7", "the start screen does not show its build")
+	ProjectSettings.set_setting("application/config/version", null)
 	app._start_screen()
 	await process_frame
 	app._rename_dialog(WorldLibrary.list()[0])
