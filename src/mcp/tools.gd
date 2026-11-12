@@ -46,7 +46,7 @@ func failure(text: String) -> Dictionary:
 	return {"content": [{"type": "text", "text": text}], "isError": true}
 
 func _done(text: String, data: Variant = null) -> Dictionary:
-	var out := {"content": [{"type": "text", "text": text if data == null else text + "\n" + JSON.stringify(data)}], "isError": false}
+	var out := {"content": [{"type": "text", "text": text if data == null else text + "\n" + StrictJson.stringify(data)}], "isError": false}
 	if data != null:
 		out["structuredContent"] = data
 	return out

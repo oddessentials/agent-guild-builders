@@ -106,7 +106,7 @@ func save(dir_path: String) -> Error:
 	var f := FileAccess.open(tmp.path_join("world.json"), FileAccess.WRITE)
 	if f == null:
 		return _save_failed(FileAccess.get_open_error(), "write", tmp.path_join("world.json"))
-	f.store_string(JSON.stringify(out, " "))
+	f.store_string(StrictJson.stringify(out, " "))
 	f.flush()
 	var failed := f.get_error()
 	f.close()

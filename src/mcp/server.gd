@@ -75,7 +75,7 @@ func _stdin_closed() -> void:
 		_thread.wait_to_finish()
 		_thread = null
 	if _window_open:
-		write_window.call(JSON.stringify({"jsonrpc": "2.0", "method": AGENT_LEFT}))
+		write_window.call(StrictJson.stringify({"jsonrpc": "2.0", "method": AGENT_LEFT}))
 		return
 	if _left:
 		return
@@ -154,7 +154,7 @@ func _notification_received(msg: Dictionary) -> void:
 			return
 	if _forwarded.has(id):
 		_forwarded.erase(id)
-		write_window.call(JSON.stringify(msg))
+		write_window.call(StrictJson.stringify(msg))
 		return
 	if not _active.is_empty() and typeof(_active.ctx.id) == typeof(id) and _active.ctx.id == id:
 		_active.ctx.cancelled = true
@@ -288,7 +288,7 @@ func _send_error(id: Variant, code: int, message: String) -> void:
 	_send({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
 
 func _send(msg: Dictionary) -> void:
-	write_line.call(JSON.stringify(msg))
+	write_line.call(StrictJson.stringify(msg))
 
 func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 	if not _window_open:
@@ -298,12 +298,12 @@ func _forward(ctx: Dictionary, msg: Dictionary) -> void:
 		_window_open = true
 		_window_starting = true
 		if _legacy_version != "":
-			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
+			write_window.call(StrictJson.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "initialize", "params": {"protocolVersion": _legacy_version}}))
 		else:
-			write_window.call(JSON.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "ping"}))
+			write_window.call(StrictJson.stringify({"jsonrpc": "2.0", "id": WINDOW_START, "method": "ping"}))
 	_forwarded[ctx.id] = ctx
 	msg["id"] = ctx.id
-	write_window.call(JSON.stringify(msg))
+	write_window.call(StrictJson.stringify(msg))
 
 func _launch_window() -> bool:
 	var before := [] if OS.has_feature("template") else ["--path", ProjectSettings.globalize_path("res://").trim_suffix("/")]

@@ -2138,6 +2138,14 @@ func _mcp() -> bool:
 	check(listed.result.resultType == "complete", "mcp: 2026-07-28 results carry resultType")
 	var unknown := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "fly", "arguments": {}}})
 	check(unknown.get("error", {}).get("code") == McpServer.INVALID_PARAMS, "mcp: an unknown tool is a protocol error")
+	# Text from a person (a title, a name) can hold control characters; the
+	# agent's client reads each line with a strict JSON parser.
+	lines.clear()
+	server.receive(StrictJson.stringify({"jsonrpc": "2.0", "id": "odd", "method": "tools/call", "params": {"name": "fly" + String.chr(1) + String.chr(11), "arguments": {}}}))
+	var odd_deadline := Time.get_ticks_msec() + REPLY_WAIT_MS
+	while lines.is_empty() and Time.get_ticks_msec() < odd_deadline:
+		await process_frame
+	check(lines.size() == 1 and lines[0].contains("fly\\u0001\\u000b") and RegEx.create_from_string("[\\x00-\\x1f]|\\\\v").search(lines[0]) == null, "mcp: replies escape control characters as strict JSON: %s" % [lines])
 	var nothing := await _rpc(server, lines, {"jsonrpc": "2.0", "id": 10, "method": "resources/list"})
 	check(nothing.get("error", {}).get("code") == McpServer.METHOD_NOT_FOUND, "mcp: unknown methods are refused")
 	var wrong := await _call_tool(server, lines, 11, "place_items", {"world": "x"})
