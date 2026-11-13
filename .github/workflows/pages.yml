@@ -5,6 +5,7 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +16,9 @@ concurrency:
 
 jobs:
   check:
-    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: windows-latest
     timeout-minutes: 20
     defaults:
@@ -24,11 +27,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Install Builders by following the released page
         env:
-          RELEASE_TAG: build-${{ github.event.workflow_run.run_number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_run' && format('build-{0}', github.event.workflow_run.run_number) || '' }}
         run: |
+          if (-not $env:RELEASE_TAG) {
+            $env:RELEASE_TAG = gh api "repos/$env:GH_REPO/releases/latest" --jq .tag_name
+            if ($LASTEXITCODE -ne 0 -or $env:RELEASE_TAG -notmatch '^build-[0-9]+$') { throw 'The latest release could not be read.' }
+          }
           $page = Get-Content -Raw -LiteralPath site/index.md
           $latest = 'https://github.com/oddessentials/agent-guild-builders/releases/latest/download/AgentGuildBuilders-windows.zip'
           if (-not $page.Contains($latest)) { throw 'The page has no expected Windows download URL.' }
@@ -38,7 +47,7 @@ jobs:
           ./tests/site_check.ps1 -Page $pagePath
 
   deploy:
-    if: github.event_name == 'workflow_run'
+    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
     needs: check
     runs-on: ubuntu-latest
     permissions:
@@ -51,7 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Build the page
         run: python3 tools/make_site.py build/site
       - uses: actions/configure-pages@v6
@@ -67,6 +76,16 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: build-${{ github.event.workflow_run.run_number }}
         run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            head=$(gh api "repos/$GH_REPO/commits/main" --jq .sha)
+            if [ "$head" = "$GITHUB_SHA" ]; then
+              echo "deploy=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::notice::Skipping $GITHUB_SHA; main is now at $head."
+              echo "deploy=false" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
           latest=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
           if [ "$latest" = "$RELEASE_TAG" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"

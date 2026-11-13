@@ -21,8 +21,15 @@ assert.ok(steps[guardIndex + 1].includes(condition), 'deployment is guarded imme
 assert.ok(steps.find((step) => step.startsWith('name: Check the published page\n')).includes(condition));
 assert.match(deploy, /needs: check\n/);
 assert.match(deploy, /permissions:\n      contents: read\n/);
-assert.match(workflow, /if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'/);
-assert.equal(workflow.match(/ref: \$\{\{ github.event.workflow_run.head_sha \}\}/g)?.length, 2);
+assert.match(workflow, /\n  workflow_dispatch:\n/);
+assert.ok(workflow.includes(`    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+`));
+assert.match(deploy, /^    if: github.event_name == 'workflow_run' \|\| github.event_name == 'workflow_dispatch'\n/);
+assert.equal(workflow.match(/ref: \$\{\{ github.event.workflow_run.head_sha \|\| github.sha \}\}/g)?.length, 2);
+assert.ok(workflow.includes("RELEASE_TAG: ${{ github.event_name == 'workflow_run' && format('build-{0}', github.event.workflow_run.run_number) || '' }}"));
+assert.ok(workflow.includes("$env:RELEASE_TAG -notmatch '^build-[0-9]+$'"));
 assert.ok(workflow.includes('$latest.Replace(\'/latest/download/\', "/download/$env:RELEASE_TAG/")'));
 assert.ok(workflow.includes('./tests/site_check.ps1 -Page $pagePath'));
 assert.ok(workflow.includes('cmp -s "published-$file" "build/site/$file"'));
@@ -35,27 +42,46 @@ const calls = path.join(root, 'calls');
 const stub = `
 gh() {
   printf '%s\\n' "$*" >> "$CALLS"
-  if [ "$*" != "api repos/example/builders/releases/latest --jq .tag_name" ]; then
+  if [ "$*" != "$EXPECTED_CALL" ]; then
     return 97
   fi
   if [ "$API_ERROR" != 0 ]; then
     echo 'simulated API failure' >&2
     return "$API_ERROR"
   fi
-  printf '%s\\n' "$LATEST_TAG"
+  printf '%s\\n' "$API_VALUE"
 }
 `;
-function run(latest, error = 0) {
+const sha = 'a'.repeat(40);
+function call(event, value, error) {
   fs.writeFileSync(output, '');
   fs.writeFileSync(calls, '');
+  const expected = event === 'workflow_dispatch'
+    ? 'api repos/example/builders/commits/main --jq .sha'
+    : 'api repos/example/builders/releases/latest --jq .tag_name';
   const result = spawnSync(bash, ['--noprofile', '--norc', '-eo', 'pipefail', '-c', stub + script], {
     encoding: 'utf8', timeout: 10000,
-    env: { ...process.env, GH_REPO: 'example/builders', RELEASE_TAG: 'build-100', LATEST_TAG: latest,
-      API_ERROR: String(error), GITHUB_OUTPUT: output.replaceAll('\\', '/'), CALLS: calls.replaceAll('\\', '/') },
+    env: { ...process.env, GITHUB_EVENT_NAME: event, GITHUB_SHA: sha, GH_REPO: 'example/builders', RELEASE_TAG: 'build-100',
+      EXPECTED_CALL: expected, API_VALUE: value, API_ERROR: String(error),
+      GITHUB_OUTPUT: output.replaceAll('\\', '/'), CALLS: calls.replaceAll('\\', '/') },
   });
   assert.ifError(result.error);
-  assert.equal(fs.readFileSync(calls, 'utf8'), 'api repos/example/builders/releases/latest --jq .tag_name\n');
-  const outputs = fs.readFileSync(output, 'utf8');
+  assert.equal(fs.readFileSync(calls, 'utf8'), `${expected}\n`);
+  return { result, outputs: fs.readFileSync(output, 'utf8') };
+}
+function dispatch(head, error = 0) {
+  const { result, outputs } = call('workflow_dispatch', head, error);
+  if (error) {
+    assert.equal(result.status, error, result.stderr);
+    assert.equal(outputs, '', 'an API error must not authorize deployment');
+  } else {
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(outputs, `deploy=${head === sha}\n`);
+    if (head !== sha) assert.match(result.stdout, /::notice::Skipping a{40}; main is now at /);
+  }
+}
+function run(latest, error = 0) {
+  const { result, outputs } = call('workflow_run', latest, error);
   if (error) {
     assert.equal(result.status, error, result.stderr);
     assert.equal(outputs, '', 'an API error must not authorize deployment');
@@ -77,6 +103,14 @@ try {
   run('build-100', 4);
   run('');
   console.log('ok   API failures and an empty latest tag never authorize deployment');
+  dispatch(sha);
+  console.log('ok   a manual run deploys while its commit is still the head of main');
+  dispatch('b'.repeat(40));
+  dispatch('');
+  console.log('ok   a manual run skips once main has moved on');
+  dispatch(sha, 1);
+  dispatch(sha, 4);
+  console.log('ok   API failures never authorize a manual deployment');
   console.log('ok   the release gate, pinned checkouts and smoke assertions remain');
 } finally {
   assert.equal(path.dirname(root), path.resolve(os.tmpdir()));
