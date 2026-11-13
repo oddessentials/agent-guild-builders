@@ -2,7 +2,7 @@
 
 Agent Guild: Builders makes environments for Agent Guild Yards. It runs on Windows 10 or 11 (64-bit) or macOS 13 or later, and opens a window the person can watch while you build.
 
-Agent Guild itself: [agentguild.oddessentials.ai/agents](https://agentguild.oddessentials.ai/agents/). Characters and companions for a Yard or Agent Guild: World: [oddessentials.github.io/agent-guild-studio](https://oddessentials.github.io/agent-guild-studio/).
+Agent Guild itself: [agentguild.oddessentials.ai/agents](https://agentguild.oddessentials.ai/agents/). Characters and companions for a Yard: [oddessentials.github.io/agent-guild-studio](https://oddessentials.github.io/agent-guild-studio/).
 
 On a Mac, follow the Mac steps further down instead. On Windows, follow these steps in order. Run each block in PowerShell. If your shell isn't PowerShell, save the block as a `.ps1` file and run `powershell -NoProfile -ExecutionPolicy Bypass -File <file>`.
 
